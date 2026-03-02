@@ -13,11 +13,11 @@ function getSmartResponse(userMessage: string): string | null {
   const lower = userMessage.toLowerCase();
 
   if (lower.includes("price") || lower.includes("cost") || lower.includes("how much")) {
-    return "We have three plans: **Growth** at $199/mo (1,000 appointments, 2 locations), **Professional** at $499/mo (10,000 appointments, 10 locations, AI waitlist + calendar optimization), and **Enterprise** at $999/mo (unlimited everything, FHIR, SSO, dedicated support). All plans include a 14-day free trial. Annual billing saves you 15-20%.";
+    return "Every plan includes our AI engine. **Growth** at $199/mo gives you AI-timed reminders, AI no-show risk scoring, and AI waitlist with auto-fill (1,000 appointments, 2 locations). **Professional** at $499/mo adds AI calendar optimization, proactive reschedule suggestions, and advanced waitlist ranking (10,000 appointments, 10 locations). **Enterprise** at $999/mo is unlimited with the full AI decision engine, custom models, FHIR, and SSO. All plans include a 14-day free trial. Annual billing saves you 15-20%.";
   }
 
   if (lower.includes("waitlist") || lower.includes("wait list")) {
-    return "Our AI-powered waitlist automatically fills cancelled slots. When an opening appears, the system scores waitlisted clients based on clinical urgency, reliability history, time preferences, distance, and provider match — then instantly notifies the best candidate. It's available on Pro and Enterprise plans.";
+    return "Our AI-powered waitlist is included in every plan. When a slot opens up, the AI scores waitlisted clients based on clinical urgency, reliability history, time preferences, distance, and provider match — then instantly offers the slot to the best candidate. Professional and Enterprise plans get advanced ranking with even more scoring factors and proactive reschedule suggestions.";
   }
 
   if (lower.includes("integration") || lower.includes("api") || lower.includes("connect")) {
