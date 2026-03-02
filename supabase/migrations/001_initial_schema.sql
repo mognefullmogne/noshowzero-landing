@@ -1,4 +1,4 @@
--- NoShowZero Landing — Supabase Schema
+-- NowShow Landing — Supabase Schema
 -- Run this in the Supabase SQL Editor (Dashboard > SQL Editor > New Query)
 
 -- Tenants table

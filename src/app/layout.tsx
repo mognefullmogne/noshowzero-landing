@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "NoShowZero — Eliminate No-Shows with AI",
+  title: "NowShow — Eliminate No-Shows with AI",
   description:
     "AI-powered appointment management that reduces no-shows by up to 80%. Smart reminders, AI waitlists, and automatic slot filling for any appointment-based business.",
   keywords: [
@@ -22,15 +22,15 @@ export const metadata: Metadata = {
     "booking",
   ],
   openGraph: {
-    title: "NoShowZero — Eliminate No-Shows with AI",
+    title: "NowShow — Eliminate No-Shows with AI",
     description:
       "Smart reminders, AI-powered waitlists, and automatic slot filling. Reduce no-shows by up to 80%.",
     type: "website",
-    url: "https://noshowzero.vercel.app",
+    url: "https://noshowzero-landing.vercel.app",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NoShowZero — Eliminate No-Shows with AI",
+    title: "NowShow — Eliminate No-Shows with AI",
     description:
       "Smart reminders, AI-powered waitlists, and automatic slot filling. Reduce no-shows by up to 80%.",
   },

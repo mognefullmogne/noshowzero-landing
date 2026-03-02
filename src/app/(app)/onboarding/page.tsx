@@ -94,7 +94,7 @@ export default function OnboardingPage() {
 
   async function handleStep2() {
     if (selectedPlan === "enterprise") {
-      location.assign("mailto:sales@noshowzero.com?subject=Enterprise%20Inquiry");
+      location.assign("mailto:sales@nowshow.com?subject=Enterprise%20Inquiry");
       return;
     }
 
@@ -377,7 +377,7 @@ export default function OnboardingPage() {
           </div>
 
           <h1 className="mt-6 text-2xl font-bold text-gray-900">
-            Welcome to NoShowZero!
+            Welcome to NowShow!
           </h1>
           <p className="mt-2 text-sm text-gray-500">
             Your account is ready. Here&apos;s your API key to get started with integrations.

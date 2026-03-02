@@ -35,7 +35,7 @@ export function Navbar() {
             <Zap className="h-5 w-5 text-white" />
           </div>
           <span className="text-xl font-bold tracking-tight">
-            NoShow<span className="text-blue-600">Zero</span>
+            Now<span className="text-blue-600">Show</span>
           </span>
         </Link>
 

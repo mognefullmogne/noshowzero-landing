@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-// NoShowZero AI Assistant — rule-based responses for common questions
+// NowShow AI Assistant — rule-based responses for common questions
 // Can be upgraded to use an LLM API (e.g., Anthropic) for more natural conversations
 
 interface ChatMessage {
@@ -21,7 +21,7 @@ function getSmartResponse(userMessage: string): string | null {
   }
 
   if (lower.includes("integration") || lower.includes("api") || lower.includes("connect")) {
-    return "NoShowZero offers a full REST API with webhooks for seamless integration with any scheduling or EHR system. Growth plans get REST API access, Professional adds webhooks and custom templates, and Enterprise includes FHIR + SSO support. We provide SDKs, documentation, and sample code — most integrations take under 15 minutes.";
+    return "NowShow offers a full REST API with webhooks for seamless integration with any scheduling or EHR system. Growth plans get REST API access, Professional adds webhooks and custom templates, and Enterprise includes FHIR + SSO support. We provide SDKs, documentation, and sample code — most integrations take under 15 minutes.";
   }
 
   if (lower.includes("setup") || lower.includes("start") || lower.includes("how fast") || lower.includes("get started")) {
@@ -45,11 +45,11 @@ function getSmartResponse(userMessage: string): string | null {
   }
 
   if (lower.includes("industry") || lower.includes("business") || lower.includes("who") || lower.includes("salon") || lower.includes("dental") || lower.includes("clinic") || lower.includes("gym") || lower.includes("fitness")) {
-    return "NoShowZero works for any appointment-based business: healthcare clinics, dental offices, salons & spas, auto service shops, fitness studios, consulting firms, legal practices, and more. If your business runs on appointments, we can help you eliminate no-shows.";
+    return "NowShow works for any appointment-based business: healthcare clinics, dental offices, salons & spas, auto service shops, fitness studios, consulting firms, legal practices, and more. If your business runs on appointments, we can help you eliminate no-shows.";
   }
 
   if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
-    return "Hello! Welcome to NoShowZero. I'm here to help you learn about our AI-powered appointment management platform. What would you like to know? I can tell you about pricing, features, integrations, or how to get started.";
+    return "Hello! Welcome to NowShow. I'm here to help you learn about our AI-powered appointment management platform. What would you like to know? I can tell you about pricing, features, integrations, or how to get started.";
   }
 
   return null;
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage || lastMessage.role !== "user") {
-      return NextResponse.json({ message: "I'm ready to help! Ask me anything about NoShowZero." });
+      return NextResponse.json({ message: "I'm ready to help! Ask me anything about NowShow." });
     }
 
     // Try smart response first (fast, no API needed)
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     // Fallback: general helpful response
     return NextResponse.json({
       message:
-        "That's a great question! NoShowZero helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. For specific details, I'd recommend starting a free trial at noshowzero.com/signup or reaching out to our team at sales@noshowzero.com. Is there something specific about our features, pricing, or setup I can help with?",
+        "That's a great question! NowShow helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. For specific details, I'd recommend starting a free trial at nowshow.com/signup or reaching out to our team at sales@nowshow.com. Is there something specific about our features, pricing, or setup I can help with?",
     });
   } catch {
     return NextResponse.json(

@@ -34,7 +34,7 @@ export function Footer() {
                 <Zap className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold tracking-tight">
-                NoShow<span className="text-blue-600">Zero</span>
+                Now<span className="text-blue-600">Show</span>
               </span>
             </Link>
             <p className="mt-4 text-sm text-gray-500 leading-relaxed">
@@ -65,7 +65,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-black/[0.04] pt-8">
           <p className="text-center text-sm text-gray-400">
-            &copy; {new Date().getFullYear()} NoShowZero. All rights reserved.
+            &copy; {new Date().getFullYear()} NowShow. All rights reserved.
           </p>
         </div>
       </div>

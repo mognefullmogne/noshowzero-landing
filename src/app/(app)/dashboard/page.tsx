@@ -100,7 +100,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500">
-            Welcome to {tenant?.name ?? "NoShowZero"}
+            Welcome to {tenant?.name ?? "NowShow"}
           </p>
         </div>
         <Badge
@@ -125,7 +125,7 @@ export default function DashboardPage() {
               Your free trial ends on {trialEnds}
             </p>
             <p className="text-xs text-blue-600">
-              Add your payment details to continue using NoShowZero after the trial.
+              Add your payment details to continue using NowShow after the trial.
             </p>
           </div>
           <Button
@@ -228,7 +228,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-lg font-bold text-gray-900">API Keys</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Use your API key to authenticate requests to the NoShowZero API.
+              Use your API key to authenticate requests to the NowShow API.
             </p>
           </div>
           <Button
@@ -313,7 +313,7 @@ export default function DashboardPage() {
       {/* Quick Links */}
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <a
-          href="https://noshowzero.com"
+          href="https://nowshow.com"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-4 rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm transition-all hover:shadow-md"
@@ -323,12 +323,12 @@ export default function DashboardPage() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold text-gray-900">API Documentation</p>
-            <p className="text-xs text-gray-500">Learn how to integrate with the NoShowZero API</p>
+            <p className="text-xs text-gray-500">Learn how to integrate with the NowShow API</p>
           </div>
           <ExternalLink className="h-4 w-4 text-gray-300" />
         </a>
         <a
-          href="mailto:support@noshowzero.com"
+          href="mailto:support@nowshow.com"
           className="flex items-center gap-4 rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm transition-all hover:shadow-md"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">

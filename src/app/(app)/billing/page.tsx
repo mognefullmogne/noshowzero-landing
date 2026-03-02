@@ -202,7 +202,7 @@ export default function BillingPage() {
                         variant="outline"
                         className="w-full rounded-xl text-sm"
                         onClick={() =>
-                          location.assign("mailto:sales@noshowzero.com?subject=Enterprise%20Inquiry")
+                          location.assign("mailto:sales@nowshow.com?subject=Enterprise%20Inquiry")
                         }
                       >
                         Contact Sales

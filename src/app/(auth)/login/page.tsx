@@ -67,7 +67,7 @@ function LoginForm() {
     <div className="w-full max-w-md">
       <div className="rounded-2xl border border-black/[0.04] bg-white p-8 shadow-xl shadow-black/[0.03]">
         <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-gray-500">Log in to your NoShowZero account.</p>
+        <p className="mt-1 text-sm text-gray-500">Log in to your NowShow account.</p>
 
         {message && (
           <div className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-600">

@@ -1,4 +1,4 @@
-export const SITE_NAME = "NoShowZero";
+export const SITE_NAME = "NowShow";
 export const SITE_DESCRIPTION =
   "Eliminate no-shows, fill empty slots, and boost revenue with AI-powered appointment management.";
 export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -122,7 +122,7 @@ export const FAQ_ITEMS = [
   {
     question: "Can I integrate with my existing scheduling software?",
     answer:
-      "Yes! Our REST API and webhooks let you connect NoShowZero with any scheduling system. We provide SDKs, documentation, and sample code to get you started in minutes.",
+      "Yes! Our REST API and webhooks let you connect NowShow with any scheduling system. We provide SDKs, documentation, and sample code to get you started in minutes.",
   },
   {
     question: "Is my data secure?",
@@ -158,7 +158,7 @@ export const TESTIMONIALS = [
     name: "Marco Rossi",
     role: "Manager, UrbanFit Gym",
     content:
-      "We used to lose thousands every month to missed PT sessions. NoShowZero's smart reminders and automatic rebooking recovered over $12K in the first quarter.",
+      "We used to lose thousands every month to missed PT sessions. NowShow's smart reminders and automatic rebooking recovered over $12K in the first quarter.",
     avatar: "MR",
   },
   {

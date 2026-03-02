@@ -16,7 +16,7 @@ const INITIAL_MESSAGE: Message = {
   id: "welcome",
   role: "assistant",
   content:
-    "Hi! I'm the NoShowZero AI assistant. I can help you understand how our platform works, answer questions about pricing, integrations, and features. What would you like to know?",
+    "Hi! I'm the NowShow AI assistant. I can help you understand how our platform works, answer questions about pricing, integrations, and features. What would you like to know?",
 };
 
 const QUICK_QUESTIONS = [
@@ -130,7 +130,7 @@ export function ChatWidget() {
                   <Bot className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">NoShowZero AI</p>
+                  <p className="text-sm font-semibold text-white">NowShow AI</p>
                   <p className="text-xs text-white/70">Ask me anything</p>
                 </div>
               </div>
