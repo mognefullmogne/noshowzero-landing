@@ -29,12 +29,14 @@ export async function POST(request: Request) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       const tenantId = session.metadata?.tenant_id;
-      const tier = session.metadata?.tier ?? "growth";
+      const rawTier = session.metadata?.tier ?? "growth";
+      const VALID_TIERS = ["growth", "pro", "enterprise"];
+      const tier = VALID_TIERS.includes(rawTier) ? rawTier : "growth";
       const customerId = session.customer as string;
       const subscriptionId = session.subscription as string;
 
       if (tenantId) {
-        await supabase
+        const { error: dbError } = await supabase
           .from("tenants")
           .update({
             plan: tier,
@@ -44,6 +46,11 @@ export async function POST(request: Request) {
             updated_at: new Date().toISOString(),
           })
           .eq("id", tenantId);
+
+        if (dbError) {
+          console.error("Failed to update tenant after checkout:", dbError);
+          return NextResponse.json({ error: "Database update failed" }, { status: 500 });
+        }
       }
       break;
     }
@@ -62,13 +69,18 @@ export async function POST(request: Request) {
               ? "past_due"
               : "canceled";
 
-      await supabase
+      const { error: dbError } = await supabase
         .from("tenants")
         .update({
           plan_status: planStatus,
           updated_at: new Date().toISOString(),
         })
         .eq("stripe_customer_id", customerId);
+
+      if (dbError) {
+        console.error("Failed to update subscription status:", dbError);
+        return NextResponse.json({ error: "Database update failed" }, { status: 500 });
+      }
       break;
     }
 
@@ -76,13 +88,18 @@ export async function POST(request: Request) {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
 
-      await supabase
+      const { error: dbError } = await supabase
         .from("tenants")
         .update({
           plan_status: "canceled",
           updated_at: new Date().toISOString(),
         })
         .eq("stripe_customer_id", customerId);
+
+      if (dbError) {
+        console.error("Failed to mark subscription canceled:", dbError);
+        return NextResponse.json({ error: "Database update failed" }, { status: 500 });
+      }
       break;
     }
 
@@ -90,13 +107,18 @@ export async function POST(request: Request) {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = invoice.customer as string;
 
-      await supabase
+      const { error: dbError } = await supabase
         .from("tenants")
         .update({
           plan_status: "past_due",
           updated_at: new Date().toISOString(),
         })
         .eq("stripe_customer_id", customerId);
+
+      if (dbError) {
+        console.error("Failed to mark payment as past_due:", dbError);
+        return NextResponse.json({ error: "Database update failed" }, { status: 500 });
+      }
       break;
     }
   }

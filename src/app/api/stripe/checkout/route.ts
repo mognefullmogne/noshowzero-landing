@@ -14,13 +14,21 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { tier, interval } = body as { tier: string; interval: "monthly" | "annual" };
+    const { tier, interval } = body as { tier: string; interval: string };
 
-    if (!tier || !interval) {
-      return NextResponse.json({ error: "Missing tier or interval" }, { status: 400 });
+    const VALID_TIERS = ["growth", "pro", "enterprise"] as const;
+    const VALID_INTERVALS = ["monthly", "annual"] as const;
+
+    if (
+      !tier ||
+      !interval ||
+      !VALID_TIERS.includes(tier as typeof VALID_TIERS[number]) ||
+      !VALID_INTERVALS.includes(interval as typeof VALID_INTERVALS[number])
+    ) {
+      return NextResponse.json({ error: "Invalid tier or interval" }, { status: 400 });
     }
 
-    const priceId = getPriceId(tier, interval);
+    const priceId = getPriceId(tier, interval as "monthly" | "annual");
     if (!priceId) {
       return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 });
     }

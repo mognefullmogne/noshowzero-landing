@@ -28,11 +28,23 @@ export default function LoginPage() {
   );
 }
 
+const ALLOWED_MESSAGES: Record<string, string> = {
+  "check-email": "Check your email to confirm your account.",
+  "session-expired": "Your session has expired. Please log in again.",
+  "password-reset": "Password reset successfully. Please log in.",
+};
+
+function isSafeRedirect(url: string): boolean {
+  return url.startsWith("/") && !url.startsWith("//") && !url.includes(":");
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const message = searchParams.get("message");
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const messageKey = searchParams.get("message") ?? "";
+  const message = ALLOWED_MESSAGES[messageKey] ?? null;
+  const rawRedirect = searchParams.get("redirect") ?? "/dashboard";
+  const redirect = isSafeRedirect(rawRedirect) ? rawRedirect : "/dashboard";
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);

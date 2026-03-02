@@ -73,7 +73,7 @@ function SignupForm() {
     if (session) {
       router.push("/onboarding");
     } else {
-      router.push("/login?message=Check your email to confirm your account");
+      router.push("/login?message=check-email");
     }
   }
 

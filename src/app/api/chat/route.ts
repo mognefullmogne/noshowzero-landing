@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 // NowShow AI Assistant — rule-based responses for common questions
 // Can be upgraded to use an LLM API (e.g., Anthropic) for more natural conversations
 
-interface ChatMessage {
-  readonly role: "user" | "assistant";
-  readonly content: string;
-}
+const MAX_MESSAGE_LENGTH = 2000;
+const MAX_MESSAGES = 50;
+
+const ChatMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().max(MAX_MESSAGE_LENGTH),
+});
+
+const BodySchema = z.object({
+  messages: z.array(ChatMessageSchema).max(MAX_MESSAGES),
+});
 
 // Smart rule-based responses for common questions
 function getSmartResponse(userMessage: string): string | null {
@@ -58,7 +66,13 @@ function getSmartResponse(userMessage: string): string | null {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const messages: readonly ChatMessage[] = body.messages ?? [];
+    const parsed = BodySchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json({ message: "Invalid request." }, { status: 400 });
+    }
+
+    const messages = parsed.data.messages;
 
     if (messages.length === 0) {
       return NextResponse.json({ message: "Please send a message to get started." });

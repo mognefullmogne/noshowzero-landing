@@ -2,8 +2,175 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Play, Zap, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const EASE_OUT_EXPO = [0.21, 0.47, 0.32, 0.98] as const;
+
+interface MockSlot {
+  readonly time: string;
+  readonly type: "booked" | "open" | "at-risk";
+  readonly specialty?: string;
+  readonly doctor?: string;
+  readonly patient?: string;
+  readonly risk?: number;
+}
+
+interface MockDay {
+  readonly label: string;
+  readonly desktopOnly?: boolean;
+  readonly slots: readonly MockSlot[];
+}
+
+const CALENDAR_DAYS: readonly MockDay[] = [
+  {
+    label: "MON 3",
+    slots: [
+      { time: "9:00–9:30", type: "booked", specialty: "General Checkup", doctor: "Dr. Sarah Chen", patient: "James Wilson" },
+      { time: "10:00–10:45", type: "at-risk", specialty: "Dermatology", doctor: "Dr. Marco Rossi", patient: "Emily Davis", risk: 72 },
+      { time: "11:00–11:30", type: "booked", specialty: "Orthopedics", doctor: "Dr. Lisa Park", patient: "Tom Martinez" },
+      { time: "14:00–14:30", type: "open" },
+    ],
+  },
+  {
+    label: "TUE 4",
+    slots: [
+      { time: "9:00–9:45", type: "booked", specialty: "Cardiology", doctor: "Dr. Sarah Chen", patient: "Anna Lopez" },
+      { time: "10:00–10:30", type: "booked", specialty: "Neurology", doctor: "Dr. Lisa Park", patient: "David Kim" },
+      { time: "11:00–12:00", type: "booked", specialty: "Physical Therapy", doctor: "Dr. Marco Rossi", patient: "Rachel Green" },
+      { time: "14:00–14:30", type: "booked", specialty: "Follow-up", doctor: "Dr. Sarah Chen", patient: "Mike Johnson" },
+    ],
+  },
+  {
+    label: "WED 5",
+    slots: [
+      { time: "9:00–9:30", type: "booked", specialty: "Eye Exam", doctor: "Dr. Lisa Park", patient: "Chris Taylor" },
+      { time: "10:00–10:45", type: "at-risk", specialty: "Dental Cleaning", doctor: "Dr. Marco Rossi", patient: "Sarah Brown", risk: 65 },
+      { time: "12:00–12:30", type: "open" },
+      { time: "14:00–15:00", type: "booked", specialty: "Consultation", doctor: "Dr. Sarah Chen", patient: "Laura White" },
+    ],
+  },
+  {
+    label: "THU 6",
+    desktopOnly: true,
+    slots: [
+      { time: "9:00–9:45", type: "booked", specialty: "Pediatrics", doctor: "Dr. Lisa Park", patient: "Mia Rodriguez" },
+      { time: "10:00–10:30", type: "booked", specialty: "Allergy Test", doctor: "Dr. Marco Rossi", patient: "Jake Thomas" },
+      { time: "11:00–11:30", type: "booked", specialty: "Dermatology", doctor: "Dr. Sarah Chen", patient: "Olivia Scott" },
+      { time: "13:00–13:30", type: "booked", specialty: "Follow-up", doctor: "Dr. Lisa Park", patient: "Ben Clark" },
+    ],
+  },
+  {
+    label: "FRI 7",
+    desktopOnly: true,
+    slots: [
+      { time: "9:00–9:30", type: "booked", specialty: "General Checkup", doctor: "Dr. Sarah Chen", patient: "Noah Harris" },
+      { time: "10:00–10:45", type: "booked", specialty: "Cardiology", doctor: "Dr. Marco Rossi", patient: "Sophia Lee" },
+      { time: "11:30–12:00", type: "open" },
+      { time: "14:00–14:30", type: "booked", specialty: "Orthopedics", doctor: "Dr. Lisa Park", patient: "Ethan Moore" },
+    ],
+  },
+  {
+    label: "SAT 8",
+    desktopOnly: true,
+    slots: [
+      { time: "9:00–9:30", type: "booked", specialty: "Eye Exam", doctor: "Dr. Sarah Chen", patient: "Grace Allen" },
+      { time: "10:00–10:30", type: "booked", specialty: "Dental Cleaning", doctor: "Dr. Marco Rossi", patient: "Liam Walker" },
+    ],
+  },
+] as const;
+
+const SLOT_STYLES = {
+  booked: "border-emerald-400 bg-emerald-50",
+  open: "border-blue-400 bg-blue-50",
+  "at-risk": "border-amber-400 bg-amber-50",
+} as const;
+
+function SlotCard({ slot }: { readonly slot: MockSlot }) {
+  return (
+    <div className={cn("rounded-md border-l-2 px-1.5 py-1", SLOT_STYLES[slot.type])}>
+      <p className="font-semibold text-gray-700">{slot.time}</p>
+      {slot.type === "open" ? (
+        <p className="text-blue-500 italic">Open slot</p>
+      ) : (
+        <>
+          <p className="text-gray-500 truncate">{slot.specialty}</p>
+          <p className="text-gray-400 truncate">{slot.doctor}</p>
+          <p className="font-medium text-gray-600 truncate">{slot.patient}</p>
+          {slot.risk && (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-1 text-[8px] font-bold text-amber-700 mt-0.5">
+              AI: {slot.risk}% risk
+            </span>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function DayColumn({ day }: { readonly day: MockDay }) {
+  const isLast = day.label === "SAT 8";
+  return (
+    <div
+      className={cn(
+        "flex flex-col",
+        !isLast && "border-r border-gray-100",
+        day.desktopOnly && "hidden sm:flex",
+      )}
+    >
+      <div className="px-1.5 py-1.5 text-center border-b border-gray-100 bg-gray-50/50">
+        <p className="font-semibold text-gray-900">{day.label}</p>
+      </div>
+      <div className="flex-1 p-1 space-y-1 overflow-hidden">
+        {day.slots.map((slot) => (
+          <SlotCard key={slot.time} slot={slot} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const SIDEBAR_NAV = [
+  { label: "Dashboard", icon: "grid", active: false },
+  { label: "Calendar", icon: "calendar", active: true },
+  { label: "Appointments", icon: "clipboard", active: false },
+  { label: "Waitlist", icon: "list", active: false },
+  { label: "Messages", icon: "chat", active: false },
+] as const;
+
+const SIDEBAR_ADMIN = [
+  { label: "Analytics", icon: "chart" },
+  { label: "Settings", icon: "settings" },
+  { label: "AI Chat", icon: "zap" },
+] as const;
+
+const NAV_ICONS: Record<string, string> = {
+  grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
+  calendar: "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18",
+  clipboard: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
+  list: "M4 6h16M4 12h16M4 18h7",
+  chat: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z",
+  chart: "M12 20V10M18 20V4M6 20v-4",
+  settings: "M12 12m-3 0a3 3 0 106 0 3 3 0 10-6 0",
+  zap: "M13 10V3L4 14h7v7l9-11h-7z",
+};
+
+function SidebarIcon({ icon }: { readonly icon: string }) {
+  const path = NAV_ICONS[icon] ?? "";
+  if (icon === "zap") {
+    return (
+      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d={path} />
+      </svg>
+    );
+  }
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d={path} />
+    </svg>
+  );
+}
 
 export function Hero() {
   return (
@@ -66,7 +233,7 @@ export function Hero() {
             <Button
               size="lg"
               asChild
-              className="h-13 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-all hover:shadow-xl hover:shadow-blue-600/30"
+              className="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-all hover:shadow-xl hover:shadow-blue-600/30"
             >
               <Link href="/signup">
                 Get Started Free
@@ -77,7 +244,7 @@ export function Hero() {
               size="lg"
               variant="outline"
               asChild
-              className="h-13 rounded-xl px-8 text-base font-semibold"
+              className="h-12 rounded-xl px-8 text-base font-semibold"
             >
               <Link href="/#how-it-works">
                 <Play className="mr-2 h-4 w-4" />
@@ -102,17 +269,18 @@ export function Hero() {
           className="relative mx-auto mt-16 max-w-5xl"
           initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4, ease: [0.21, 0.47, 0.32, 0.98] }}
+          transition={{ duration: 0.8, delay: 0.4, ease: [...EASE_OUT_EXPO] }}
         >
           {/* Floating AI notification - top right */}
           <motion.div
+            aria-hidden="true"
             className="absolute -top-4 -right-3 z-20 hidden sm:flex items-center gap-2 rounded-xl border border-green-200 bg-white px-3 py-2 shadow-lg shadow-green-600/10"
             initial={{ opacity: 0, x: 20, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             transition={{ duration: 0.5, delay: 1.2 }}
           >
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
-              <svg className="h-3.5 w-3.5 text-green-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+              <Check className="h-3.5 w-3.5 text-green-600" />
             </div>
             <div>
               <p className="text-[11px] font-semibold text-gray-900">Slot auto-filled by AI</p>
@@ -122,22 +290,23 @@ export function Hero() {
 
           {/* Floating AI notification - bottom left */}
           <motion.div
+            aria-hidden="true"
             className="absolute -bottom-3 -left-3 z-20 hidden sm:flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-3 py-2 shadow-lg shadow-blue-600/10"
             initial={{ opacity: 0, x: -20, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             transition={{ duration: 0.5, delay: 1.6 }}
           >
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
-              <svg className="h-3.5 w-3.5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <Zap className="h-3.5 w-3.5 text-blue-600" />
             </div>
             <div>
               <p className="text-[11px] font-semibold text-gray-900">AI reminder sent</p>
               <p className="text-[10px] text-gray-400">Emily Davis — tomorrow 10:00 AM</p>
             </div>
           </motion.div>
-          <div className="animate-float rounded-2xl border border-black/[0.08] bg-white p-1.5 shadow-2xl shadow-black/[0.08]">
+
+          <div aria-hidden="true" role="presentation" className="animate-float rounded-2xl border border-black/[0.08] bg-white p-1.5 shadow-2xl shadow-black/[0.08]">
             <div className="overflow-hidden rounded-xl bg-white">
-              {/* Mock dashboard UI */}
               <div className="flex h-[420px] sm:h-[480px] flex-col text-[10px] sm:text-xs select-none">
                 {/* Top bar */}
                 <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50/80 px-4 py-2">
@@ -150,62 +319,46 @@ export function Hero() {
                     <span className="text-[9px] text-gray-400">app.nowshow.com/calendar</span>
                   </div>
                 </div>
+
                 {/* Content */}
                 <div className="flex flex-1 min-h-0">
                   {/* Sidebar */}
                   <div className="hidden w-40 shrink-0 border-r border-gray-100 bg-gray-50/50 px-2 py-3 sm:block">
-                    {/* Logo */}
                     <div className="flex items-center gap-1.5 px-2 mb-4">
                       <div className="h-5 w-5 rounded-md bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
-                        <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <Zap className="h-3 w-3 text-white" />
                       </div>
                       <span className="font-bold text-[11px] text-gray-900">NowShow</span>
                     </div>
-                    {/* Nav items */}
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-gray-500">
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-                        <span>Dashboard</span>
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-2 py-1.5 font-semibold text-blue-700">
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                        <span>Calendar</span>
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-gray-500">
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                        <span>Appointments</span>
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-gray-500">
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
-                        <span>Waitlist</span>
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-gray-500">
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                        <span>Messages</span>
-                      </div>
+                      {SIDEBAR_NAV.map((item) => (
+                        <div
+                          key={item.label}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg px-2 py-1.5",
+                            item.active ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-500",
+                          )}
+                        >
+                          <SidebarIcon icon={item.icon} />
+                          <span>{item.label}</span>
+                        </div>
+                      ))}
                     </div>
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <p className="px-2 mb-1.5 text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Admin</p>
                       <div className="space-y-0.5">
-                        <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-gray-500">
-                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
-                          <span>Analytics</span>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-gray-500">
-                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.2.65.77 1.1 1.45 1.1H21a2 2 0 010 4h-.09c-.68 0-1.25.45-1.45 1.1z"/></svg>
-                          <span>Settings</span>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-gray-500">
-                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                          <span>AI Chat</span>
-                        </div>
+                        {SIDEBAR_ADMIN.map((item) => (
+                          <div key={item.label} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-gray-500">
+                            <SidebarIcon icon={item.icon} />
+                            <span>{item.label}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
 
                   {/* Main area */}
                   <div className="flex-1 min-w-0 flex flex-col bg-white">
-                    {/* Header */}
                     <div className="px-4 pt-3 pb-2 border-b border-gray-100">
                       <div className="flex items-center justify-between">
                         <div>
@@ -215,16 +368,12 @@ export function Hero() {
                         <div className="hidden sm:flex items-center gap-2">
                           <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-1">
                             <span className="text-gray-600">Downtown Clinic</span>
-                            <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
                           </div>
                           <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-gray-600">
-                            <span>Mar 3</span>
-                            <span className="text-gray-300">—</span>
-                            <span>Mar 9, 2026</span>
+                            <span>Mar 3 — Mar 9</span>
                           </div>
                         </div>
                       </div>
-                      {/* Stats bar */}
                       <div className="mt-2 flex items-center gap-4 text-[9px]">
                         <span className="font-semibold text-gray-700">21 slots</span>
                         <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-blue-400" />3 free</span>
@@ -236,187 +385,9 @@ export function Hero() {
                     {/* Calendar grid */}
                     <div className="flex-1 min-h-0 overflow-hidden">
                       <div className="grid grid-cols-3 sm:grid-cols-6 h-full">
-                        {/* Monday */}
-                        <div className="border-r border-gray-100 flex flex-col">
-                          <div className="px-1.5 py-1.5 text-center border-b border-gray-100 bg-gray-50/50">
-                            <p className="font-semibold text-gray-900">MON 3</p>
-                          </div>
-                          <div className="flex-1 p-1 space-y-1 overflow-hidden">
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">9:00–9:30</p>
-                              <p className="text-gray-500 truncate">General Checkup</p>
-                              <p className="text-gray-400 truncate">Dr. Sarah Chen</p>
-                              <p className="font-medium text-gray-600 truncate">James Wilson</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-amber-400 bg-amber-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">10:00–10:45</p>
-                              <p className="text-gray-500 truncate">Dermatology</p>
-                              <p className="text-gray-400 truncate">Dr. Marco Rossi</p>
-                              <p className="font-medium text-gray-600 truncate">Emily Davis</p>
-                              <span className="inline-flex items-center rounded-full bg-amber-100 px-1 text-[8px] font-bold text-amber-700 mt-0.5">AI: 72% risk</span>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">11:00–11:30</p>
-                              <p className="text-gray-500 truncate">Orthopedics</p>
-                              <p className="text-gray-400 truncate">Dr. Lisa Park</p>
-                              <p className="font-medium text-gray-600 truncate">Tom Martinez</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-blue-400 bg-blue-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">14:00–14:30</p>
-                              <p className="text-blue-500 italic">Open slot</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Tuesday */}
-                        <div className="border-r border-gray-100 flex flex-col">
-                          <div className="px-1.5 py-1.5 text-center border-b border-gray-100 bg-gray-50/50">
-                            <p className="font-semibold text-gray-900">TUE 4</p>
-                          </div>
-                          <div className="flex-1 p-1 space-y-1 overflow-hidden">
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">9:00–9:45</p>
-                              <p className="text-gray-500 truncate">Cardiology</p>
-                              <p className="text-gray-400 truncate">Dr. Sarah Chen</p>
-                              <p className="font-medium text-gray-600 truncate">Anna Lopez</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">10:00–10:30</p>
-                              <p className="text-gray-500 truncate">Neurology</p>
-                              <p className="text-gray-400 truncate">Dr. Lisa Park</p>
-                              <p className="font-medium text-gray-600 truncate">David Kim</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">11:00–12:00</p>
-                              <p className="text-gray-500 truncate">Physical Therapy</p>
-                              <p className="text-gray-400 truncate">Dr. Marco Rossi</p>
-                              <p className="font-medium text-gray-600 truncate">Rachel Green</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">14:00–14:30</p>
-                              <p className="text-gray-500 truncate">Follow-up</p>
-                              <p className="text-gray-400 truncate">Dr. Sarah Chen</p>
-                              <p className="font-medium text-gray-600 truncate">Mike Johnson</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Wednesday */}
-                        <div className="border-r border-gray-100 flex flex-col">
-                          <div className="px-1.5 py-1.5 text-center border-b border-gray-100 bg-gray-50/50">
-                            <p className="font-semibold text-gray-900">WED 5</p>
-                          </div>
-                          <div className="flex-1 p-1 space-y-1 overflow-hidden">
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">9:00–9:30</p>
-                              <p className="text-gray-500 truncate">Eye Exam</p>
-                              <p className="text-gray-400 truncate">Dr. Lisa Park</p>
-                              <p className="font-medium text-gray-600 truncate">Chris Taylor</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-amber-400 bg-amber-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">10:00–10:45</p>
-                              <p className="text-gray-500 truncate">Dental Cleaning</p>
-                              <p className="text-gray-400 truncate">Dr. Marco Rossi</p>
-                              <p className="font-medium text-gray-600 truncate">Sarah Brown</p>
-                              <span className="inline-flex items-center rounded-full bg-amber-100 px-1 text-[8px] font-bold text-amber-700 mt-0.5">AI: 65% risk</span>
-                            </div>
-                            <div className="rounded-md border-l-2 border-blue-400 bg-blue-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">12:00–12:30</p>
-                              <p className="text-blue-500 italic">Open slot</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">14:00–15:00</p>
-                              <p className="text-gray-500 truncate">Consultation</p>
-                              <p className="text-gray-400 truncate">Dr. Sarah Chen</p>
-                              <p className="font-medium text-gray-600 truncate">Laura White</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Thursday - hidden on mobile */}
-                        <div className="border-r border-gray-100 hidden sm:flex flex-col">
-                          <div className="px-1.5 py-1.5 text-center border-b border-gray-100 bg-gray-50/50">
-                            <p className="font-semibold text-gray-900">THU 6</p>
-                          </div>
-                          <div className="flex-1 p-1 space-y-1 overflow-hidden">
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">9:00–9:45</p>
-                              <p className="text-gray-500 truncate">Pediatrics</p>
-                              <p className="text-gray-400 truncate">Dr. Lisa Park</p>
-                              <p className="font-medium text-gray-600 truncate">Mia Rodriguez</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">10:00–10:30</p>
-                              <p className="text-gray-500 truncate">Allergy Test</p>
-                              <p className="text-gray-400 truncate">Dr. Marco Rossi</p>
-                              <p className="font-medium text-gray-600 truncate">Jake Thomas</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">11:00–11:30</p>
-                              <p className="text-gray-500 truncate">Dermatology</p>
-                              <p className="text-gray-400 truncate">Dr. Sarah Chen</p>
-                              <p className="font-medium text-gray-600 truncate">Olivia Scott</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">13:00–13:30</p>
-                              <p className="text-gray-500 truncate">Follow-up</p>
-                              <p className="text-gray-400 truncate">Dr. Lisa Park</p>
-                              <p className="font-medium text-gray-600 truncate">Ben Clark</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Friday - hidden on mobile */}
-                        <div className="border-r border-gray-100 hidden sm:flex flex-col">
-                          <div className="px-1.5 py-1.5 text-center border-b border-gray-100 bg-gray-50/50">
-                            <p className="font-semibold text-gray-900">FRI 7</p>
-                          </div>
-                          <div className="flex-1 p-1 space-y-1 overflow-hidden">
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">9:00–9:30</p>
-                              <p className="text-gray-500 truncate">General Checkup</p>
-                              <p className="text-gray-400 truncate">Dr. Sarah Chen</p>
-                              <p className="font-medium text-gray-600 truncate">Noah Harris</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">10:00–10:45</p>
-                              <p className="text-gray-500 truncate">Cardiology</p>
-                              <p className="text-gray-400 truncate">Dr. Marco Rossi</p>
-                              <p className="font-medium text-gray-600 truncate">Sophia Lee</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-blue-400 bg-blue-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">11:30–12:00</p>
-                              <p className="text-blue-500 italic">Open slot</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">14:00–14:30</p>
-                              <p className="text-gray-500 truncate">Orthopedics</p>
-                              <p className="text-gray-400 truncate">Dr. Lisa Park</p>
-                              <p className="font-medium text-gray-600 truncate">Ethan Moore</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Saturday - hidden on mobile */}
-                        <div className="hidden sm:flex flex-col">
-                          <div className="px-1.5 py-1.5 text-center border-b border-gray-100 bg-gray-50/50">
-                            <p className="font-semibold text-gray-900">SAT 8</p>
-                          </div>
-                          <div className="flex-1 p-1 space-y-1 overflow-hidden">
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">9:00–9:30</p>
-                              <p className="text-gray-500 truncate">Eye Exam</p>
-                              <p className="text-gray-400 truncate">Dr. Sarah Chen</p>
-                              <p className="font-medium text-gray-600 truncate">Grace Allen</p>
-                            </div>
-                            <div className="rounded-md border-l-2 border-emerald-400 bg-emerald-50 px-1.5 py-1">
-                              <p className="font-semibold text-gray-700">10:00–10:30</p>
-                              <p className="text-gray-500 truncate">Dental Cleaning</p>
-                              <p className="text-gray-400 truncate">Dr. Marco Rossi</p>
-                              <p className="font-medium text-gray-600 truncate">Liam Walker</p>
-                            </div>
-                          </div>
-                        </div>
+                        {CALENDAR_DAYS.map((day) => (
+                          <DayColumn key={day.label} day={day} />
+                        ))}
                       </div>
                     </div>
                   </div>
