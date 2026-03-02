@@ -1,0 +1,257 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Loader2, Check, User, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
+
+const profileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email(),
+});
+
+const passwordSchema = z
+  .object({
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+type ProfileValues = z.infer<typeof profileSchema>;
+type PasswordValues = z.infer<typeof passwordSchema>;
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const profileForm = useForm<ProfileValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { name: "", email: "" },
+  });
+
+  const passwordForm = useForm<PasswordValues>({
+    resolver: zodResolver(passwordSchema),
+  });
+
+  useEffect(() => {
+    async function loadUser() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        profileForm.reset({
+          name: user.user_metadata?.full_name ?? "",
+          email: user.email ?? "",
+        });
+      }
+    }
+    loadUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function onProfileSubmit(values: ProfileValues) {
+    setProfileError(null);
+    setProfileSaved(false);
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: values.name },
+    });
+
+    if (error) {
+      setProfileError(error.message);
+      return;
+    }
+
+    setProfileSaved(true);
+    setTimeout(() => setProfileSaved(false), 3000);
+  }
+
+  async function onPasswordSubmit(values: PasswordValues) {
+    setPasswordError(null);
+    setPasswordSaved(false);
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.updateUser({
+      password: values.password,
+    });
+
+    if (error) {
+      setPasswordError(error.message);
+      return;
+    }
+
+    setPasswordSaved(true);
+    passwordForm.reset();
+    setTimeout(() => setPasswordSaved(false), 3000);
+  }
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+      <p className="mt-1 text-sm text-gray-500">Manage your account and preferences.</p>
+
+      {/* Profile */}
+      <div className="mt-8 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+            <User className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Profile</h2>
+            <p className="text-sm text-gray-500">Update your personal information.</p>
+          </div>
+        </div>
+
+        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="mt-6 space-y-4">
+          <div>
+            <Label htmlFor="name">Full name</Label>
+            <Input
+              id="name"
+              className="mt-1 rounded-xl"
+              {...profileForm.register("name")}
+            />
+            {profileForm.formState.errors.name && (
+              <p className="mt-1 text-xs text-red-500">
+                {profileForm.formState.errors.name.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              className="mt-1 rounded-xl"
+              disabled
+              {...profileForm.register("email")}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Email cannot be changed from here.
+            </p>
+          </div>
+
+          {profileError && (
+            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              {profileError}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={profileForm.formState.isSubmitting}
+            className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+          >
+            {profileForm.formState.isSubmitting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : profileSaved ? (
+              <Check className="mr-2 h-4 w-4" />
+            ) : null}
+            {profileSaved ? "Saved" : "Save Changes"}
+          </Button>
+        </form>
+      </div>
+
+      {/* Password */}
+      <div className="mt-6 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
+            <Lock className="h-5 w-5 text-indigo-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Password</h2>
+            <p className="text-sm text-gray-500">Update your password.</p>
+          </div>
+        </div>
+
+        <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="mt-6 space-y-4">
+          <div>
+            <Label htmlFor="password">New password</Label>
+            <Input
+              id="password"
+              type="password"
+              className="mt-1 rounded-xl"
+              placeholder="Min. 8 characters"
+              {...passwordForm.register("password")}
+            />
+            {passwordForm.formState.errors.password && (
+              <p className="mt-1 text-xs text-red-500">
+                {passwordForm.formState.errors.password.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="confirmPassword">Confirm new password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              className="mt-1 rounded-xl"
+              placeholder="Repeat password"
+              {...passwordForm.register("confirmPassword")}
+            />
+            {passwordForm.formState.errors.confirmPassword && (
+              <p className="mt-1 text-xs text-red-500">
+                {passwordForm.formState.errors.confirmPassword.message}
+              </p>
+            )}
+          </div>
+
+          {passwordError && (
+            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              {passwordError}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={passwordForm.formState.isSubmitting}
+            className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+          >
+            {passwordForm.formState.isSubmitting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : passwordSaved ? (
+              <Check className="mr-2 h-4 w-4" />
+            ) : null}
+            {passwordSaved ? "Password Updated" : "Update Password"}
+          </Button>
+        </form>
+      </div>
+
+      {/* Danger zone */}
+      <div className="mt-6 rounded-2xl border border-red-200 bg-red-50/50 p-6">
+        <h2 className="text-lg font-bold text-red-900">Danger Zone</h2>
+        <p className="mt-1 text-sm text-red-600">
+          Sign out of your account. This won&apos;t delete your data.
+        </p>
+        <Button
+          variant="outline"
+          className="mt-4 rounded-xl border-red-300 text-red-600 hover:bg-red-50"
+          onClick={handleSignOut}
+        >
+          Sign Out
+        </Button>
+      </div>
+    </div>
+  );
+}
