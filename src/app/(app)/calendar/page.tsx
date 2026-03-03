@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarRange,
   ChevronLeft,
@@ -16,6 +16,8 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { EmptyState } from "@/components/shared/empty-state";
 import type { AppointmentSlot, Appointment } from "@/lib/types";
 import { AppointmentDetail } from "@/components/appointments/appointment-detail";
+import { useTenant } from "@/hooks/use-tenant";
+import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 7); // 7:00–18:00
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -52,6 +54,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function CalendarPage() {
+  const { tenant } = useTenant();
+  const { appointments: realtimeAppointments } = useRealtimeAppointments(tenant?.id);
+
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [slots, setSlots] = useState<AppointmentSlot[]>([]);
   const [appointments, setAppointments] = useState<CalendarAppointment[]>([]);
@@ -115,12 +120,21 @@ export default function CalendarPage() {
     }
   }, [weekStart]);
 
+  // Initial load (no polling)
   useEffect(() => {
     setLoading(true);
     fetchData();
-    const interval = setInterval(fetchData, 15_000);
-    return () => clearInterval(interval);
   }, [fetchData]);
+
+  // Re-fetch calendar data when Realtime delivers a change
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    fetchData();
+  }, [realtimeAppointments, fetchData]);
 
   const handleGenerateSlots = useCallback(async () => {
     setGenerating(true);
@@ -208,28 +222,34 @@ export default function CalendarPage() {
   const nextWeek = () =>
     setWeekStart(new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000));
 
-  // Group slots by day/hour
-  const slotGrid: Record<string, AppointmentSlot[]> = {};
-  for (const slot of slots) {
-    const d = new Date(slot.start_at);
-    const dayIdx = (d.getDay() + 6) % 7; // Monday=0
-    const hour = d.getHours();
-    const key = `${dayIdx}-${hour}`;
-    if (!slotGrid[key]) slotGrid[key] = [];
-    slotGrid[key].push(slot);
-  }
+  // Group slots by day/hour (memoized to prevent flicker on Realtime re-renders)
+  const slotGrid = useMemo(() => {
+    const grid: Record<string, AppointmentSlot[]> = {};
+    for (const slot of slots) {
+      const d = new Date(slot.start_at);
+      const dayIdx = (d.getDay() + 6) % 7; // Monday=0
+      const hour = d.getHours();
+      const key = `${dayIdx}-${hour}`;
+      if (!grid[key]) grid[key] = [];
+      grid[key].push(slot);
+    }
+    return grid;
+  }, [slots]);
 
-  // Group appointments by day/hour
-  const apptGrid: Record<string, CalendarAppointment[]> = {};
-  for (const appt of appointments) {
-    if (appt.status === "cancelled") continue;
-    const d = new Date(appt.scheduled_at);
-    const dayIdx = (d.getDay() + 6) % 7;
-    const hour = d.getHours();
-    const key = `${dayIdx}-${hour}`;
-    if (!apptGrid[key]) apptGrid[key] = [];
-    apptGrid[key].push(appt);
-  }
+  // Group appointments by day/hour (memoized to prevent flicker on Realtime re-renders)
+  const apptGrid = useMemo(() => {
+    const grid: Record<string, CalendarAppointment[]> = {};
+    for (const appt of appointments) {
+      if (appt.status === "cancelled") continue;
+      const d = new Date(appt.scheduled_at);
+      const dayIdx = (d.getDay() + 6) % 7;
+      const hour = d.getHours();
+      const key = `${dayIdx}-${hour}`;
+      if (!grid[key]) grid[key] = [];
+      grid[key].push(appt);
+    }
+    return grid;
+  }, [appointments]);
 
   const weekDates = DAYS.map((_, i) => {
     const d = new Date(weekStart);

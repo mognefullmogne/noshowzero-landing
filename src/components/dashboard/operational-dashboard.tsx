@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/hooks/use-tenant";
+import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
 import {
   CalendarDays,
   CalendarRange,
@@ -98,6 +100,9 @@ interface OperationalDashboardProps {
 
 export function OperationalDashboard({ tenantName }: OperationalDashboardProps) {
   const router = useRouter();
+  const { tenant } = useTenant();
+  const { appointments: realtimeAppointments } = useRealtimeAppointments(tenant?.id);
+
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [recentOffers, setRecentOffers] = useState<readonly OfferPreview[]>([]);
@@ -133,19 +138,38 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
     if (!silent) setLoading(false);
   }, []);
 
+  // Initial load
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  // Auto-poll every 30 seconds
+  // Re-fetch dashboard data when Realtime delivers a change
+  const isInitialMount = useRef(true);
   useEffect(() => {
-    const poll = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        fetchAll(true);
-      }
-    }, 30_000);
-    return () => clearInterval(poll);
-  }, [fetchAll]);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Silent re-fetch (no loading spinner) when Realtime updates arrive
+    fetchAll(true);
+  }, [realtimeAppointments, fetchAll]);
+
+  // Derive live recent activity from Realtime appointments for instant updates
+  const liveRecentActivity: readonly RecentAppointment[] = useMemo(() => {
+    return realtimeAppointments
+      .slice(0, 10)
+      .map((a) => ({
+        id: a.id,
+        status: a.status,
+        scheduled_at: a.scheduled_at,
+        updated_at: a.updated_at,
+        risk_score: a.risk_score,
+        service_name: a.service_name,
+        patient: a.patient
+          ? { id: a.patient.id, first_name: a.patient.first_name, last_name: a.patient.last_name }
+          : null,
+      }));
+  }, [realtimeAppointments]);
 
   const today = new Date();
   const isMorning = today.getHours() < 13;
@@ -269,11 +293,11 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
             <Activity className="h-4 w-4 text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">Attivita' recente</h2>
           </div>
-          {!dashboard?.recentActivity.length ? (
+          {!(liveRecentActivity.length > 0 ? liveRecentActivity : dashboard?.recentActivity)?.length ? (
             <p className="text-sm text-gray-400">Nessun appuntamento in programma</p>
           ) : (
             <ul className="space-y-2.5">
-              {dashboard.recentActivity.slice(0, 10).map((a) => {
+              {(liveRecentActivity.length > 0 ? liveRecentActivity : dashboard?.recentActivity ?? []).slice(0, 10).map((a) => {
                 const cfg = STATUS_CONFIG[a.status] ?? { label: a.status, color: "bg-gray-100 text-gray-700" };
                 return (
                   <li key={a.id} className="flex items-center gap-3 text-sm">
@@ -297,7 +321,7 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
               })}
             </ul>
           )}
-          {(dashboard?.recentActivity.length ?? 0) > 0 && (
+          {((liveRecentActivity.length > 0 ? liveRecentActivity : dashboard?.recentActivity)?.length ?? 0) > 0 && (
             <Button
               variant="ghost"
               size="sm"
