@@ -468,10 +468,11 @@ function extractReplyText(raw: string): string | null {
     }
   }
 
-  // Use as plain text — strip any remaining code fences or quotes
+  // Use as plain text — strip code fences, quotes, and any JSON-like fragments
   let plain = trimmed;
   plain = plain.replace(/^```(?:json)?\s*\n?/gi, "").replace(/\n?\s*```\s*$/g, "");
   plain = plain.replace(/^["']|["']$/g, "");
+  plain = plain.replace(/[{}[\]]/g, " ").replace(/\s+/g, " ");
   plain = plain.trim();
 
   return plain ? sanitizeReply(plain) : null;
@@ -481,18 +482,6 @@ function sanitizeReply(text: string): string {
   let cleaned = text.trim().replace(/^["']|["']$/g, "");
   // Strip control characters
   cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
-  // If it looks like JSON, try to extract the "reply" field
-  const jsonCandidate = stripToJson(cleaned);
-  if (jsonCandidate.startsWith("{")) {
-    try {
-      const obj = JSON.parse(jsonCandidate) as Record<string, unknown>;
-      if (typeof obj.reply === "string") {
-        cleaned = obj.reply.trim();
-      }
-    } catch {
-      // Not valid JSON, use as-is
-    }
-  }
   // Cap at 500 chars for WhatsApp/SMS
   return cleaned.length > 500 ? `${cleaned.slice(0, 497)}...` : cleaned;
 }
