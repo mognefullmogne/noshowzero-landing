@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-03T21:42:01Z"
-last_activity: 2026-03-03 — Plan 03-01 complete (reconnection + stale data recovery)
+status: completed
+stopped_at: Completed 03-02-PLAN.md — all plans complete
+last_updated: "2026-03-03T22:14:00Z"
+last_activity: 2026-03-03 — Plan 03-02 complete (connection status indicator)
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** When a patient confirms or cancels via WhatsApp, every staff member sees the change instantly — no refresh, no lag, no stale data.
-**Current focus:** Phase 3 — Resilience
+**Current focus:** Milestone complete
 
 ## Current Position
 
 Phase: 3 of 3 (Resilience)
-Plan: 1 of 2 in current phase
-Status: Plan 03-01 complete
-Last activity: 2026-03-03 — Plan 03-01 complete (reconnection + stale data recovery)
+Plan: 2 of 2 in current phase
+Status: All plans complete
+Last activity: 2026-03-03 — Plan 03-02 complete (connection status indicator)
 
-Progress: [████████░░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [████████░░] 86%
 | Phase 02 P02 | 3 | 2 tasks | 3 files |
 | Phase 02 P03 | 2 | 2 tasks | 4 files |
 | Phase 03 P01 | 2 | 2 tasks | 3 files |
+| Phase 03 P02 | 8 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Extract notifyIfConfirmed as standalone function for DRY toast logic between live callback and pending drain
 - [Phase 03]: reconnectTrigger pattern: state counter forces useEffect re-run for clean channel teardown/recreation
 - [Phase 03]: Fire-and-forget auth.getSession() before subscription to handle overnight token expiry
+- [Phase 03]: React context bridge for page-to-layout status sharing -- lightest-weight solution, no prop drilling
+- [Phase 03]: Only SUBSCRIBED maps to "Live" -- all other statuses show non-live state for safety
+- [Phase 03]: Removed hardcoded badge entirely rather than replacing with dynamic version in dashboard body
 
 ### Pending Todos
 
@@ -87,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-03T21:42:01Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-03-03T22:14:00Z
+Stopped at: Completed 03-02-PLAN.md — all milestone plans complete
 Resume file: None

@@ -20,7 +20,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **RT-01**: Appointments list page updates within 1-2 seconds when any appointment status changes (no manual refresh)
 - [x] **RT-02**: Operational dashboard KPI cards (today's appointments, pending confirmations, urgent deadlines) update in real-time
 - [x] **RT-03**: Calendar view reflects appointment status changes in real-time
-- [ ] **RT-04**: Connection state indicator visible to staff (connected / reconnecting / offline)
+- [x] **RT-04**: Connection state indicator visible to staff (connected / reconnecting / offline)
 - [x] **RT-05**: Automatic reconnection with stale data recovery when WebSocket disconnects and reconnects
 - [x] **RT-06**: 30-second polling replaced by Supabase Realtime subscriptions (no duplicate data paths)
 - [x] **RT-07**: Multi-channel sync — status changes from WhatsApp, SMS, email, cron, and manual dashboard actions all trigger the same real-time update
@@ -83,7 +83,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RT-07 | Phase 2 | Complete |
 | SEC-01 | Phase 2 | Complete |
 | SEC-02 | Phase 2 | Complete |
-| RT-04 | Phase 3 | Pending |
+| RT-04 | Phase 3 | Complete |
 | RT-05 | Phase 3 | Complete |
 
 **Coverage:**

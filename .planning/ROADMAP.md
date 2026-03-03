@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Infrastructure** - Synchronize production DB and enable Realtime publication prerequisites
 - [ ] **Phase 2: Core Realtime** - Implement useRealtimeAppointments hook, replace polling, add toast notifications
-- [ ] **Phase 3: Resilience** - Add reconnection logic, stale data recovery, and connection status indicator
+- [x] **Phase 3: Resilience** - Add reconnection logic, stale data recovery, and connection status indicator (completed 2026-03-03)
 
 ## Phase Details
 
@@ -61,7 +61,7 @@ Plans:
   2. Simulating a network interruption (browser DevTools > offline for 10s then back online) results in the appointments list refreshing to current state without requiring a page reload
   3. After reconnection, any appointment status changes that occurred during the disconnection are reflected (stale data recovery via REST re-fetch, not event replay)
   4. The connection indicator never shows "Live" when the WebSocket channel is not actually SUBSCRIBED
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 03-01-PLAN.md — Add channel-level reconnection with exponential backoff, stale data recovery, and Web Worker heartbeat to useRealtimeAppointments
@@ -76,4 +76,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 2/2 | Complete | 2026-03-03 |
 | 2. Core Realtime | 3/3 | Complete | 2026-03-03 |
-| 3. Resilience | 1/2 | In progress | - |
+| 3. Resilience | 2/2 | Complete   | 2026-03-03 |
