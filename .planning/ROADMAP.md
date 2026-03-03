@@ -45,12 +45,12 @@ Plans:
   4. A toast notification appears top-right when an appointment is confirmed (auto-dismisses after 4-5 seconds, stacks max 3)
   5. The browser Network tab shows no recurring polling requests to /api/appointments (30-second polling is gone)
   6. Opening the app in two different browser tabs for two different tenants shows each tenant's appointments only — no cross-tenant data leaks
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 02-01: Implement useRealtimeAppointments hook (subscribe, delta-merge, cleanup)
-- [ ] 02-02: Wire hook into OperationalDashboard and AppointmentsPage, remove polling
-- [ ] 02-03: Add Sonner toast notification layer and tenant-scoped subscription enforcement
+- [ ] 02-01-PLAN.md — Create useRealtimeAppointments hook (subscribe-first-then-fetch, delta-merge, channel cleanup)
+- [ ] 02-02-PLAN.md — Wire hook into AppointmentsPage, OperationalDashboard, and CalendarPage; remove all polling
+- [ ] 02-03-PLAN.md — Install Sonner toast notifications, add confirmation toasts, verify SEC-02
 
 ### Phase 3: Resilience
 **Goal**: The real-time connection survives network drops, browser tab switches, and overnight clinic sessions — staff always know if they are live or offline
