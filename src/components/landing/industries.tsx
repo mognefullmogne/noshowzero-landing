@@ -23,13 +23,14 @@ const iconMap = {
 
 export function Industries() {
   return (
-    <SectionWrapper className="bg-gray-50/50">
+    <SectionWrapper className="bg-slate-50/60">
       <div className="text-center">
         <ScrollReveal>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Industries</p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
             Built for Every Industry
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
             If your business runs on appointments, NowShow works for you.
           </p>
         </ScrollReveal>
@@ -40,12 +41,12 @@ export function Industries() {
           const Icon = iconMap[industry.icon as keyof typeof iconMap];
           return (
             <ScrollReveal key={industry.name} delay={index * 0.08}>
-              <div className="group flex min-w-[160px] snap-center flex-col items-center rounded-2xl border border-black/[0.04] bg-white p-6 text-center shadow-lg shadow-black/[0.03] transition-all hover:border-blue-100 hover:shadow-xl">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition-all group-hover:scale-110 group-hover:bg-blue-100">
+              <div className="group flex min-w-[160px] snap-center flex-col items-center rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-md shadow-slate-900/[0.02] transition-all hover:border-teal-200/60 hover:shadow-lg card-glow">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-teal-50 text-teal-600 transition-all group-hover:scale-110 group-hover:bg-teal-100">
                   <Icon className="h-7 w-7" />
                 </div>
-                <h3 className="mt-4 text-sm font-bold text-gray-900">{industry.name}</h3>
-                <p className="mt-1 text-xs text-gray-400">{industry.description}</p>
+                <h3 className="mt-4 text-sm font-bold text-slate-900">{industry.name}</h3>
+                <p className="mt-1 text-xs text-slate-400">{industry.description}</p>
               </div>
             </ScrollReveal>
           );

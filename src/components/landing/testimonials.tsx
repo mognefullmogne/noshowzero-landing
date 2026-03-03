@@ -7,13 +7,14 @@ import { TESTIMONIALS } from "@/lib/constants";
 
 export function Testimonials() {
   return (
-    <SectionWrapper className="bg-gray-50/50">
+    <SectionWrapper className="bg-slate-50/60">
       <div className="text-center">
         <ScrollReveal>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Testimonials</p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
             Loved by Businesses Everywhere
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
             See what our customers have to say about eliminating no-shows.
           </p>
         </ScrollReveal>
@@ -22,25 +23,25 @@ export function Testimonials() {
       <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
         {TESTIMONIALS.map((t, index) => (
           <ScrollReveal key={t.name} delay={index * 0.1}>
-            <div className="flex h-full flex-col rounded-2xl border border-black/[0.04] bg-white p-8 shadow-xl shadow-black/[0.03]">
+            <div className="flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-8 shadow-lg shadow-slate-900/[0.03] transition-all hover:shadow-xl card-glow">
               <div className="flex gap-1">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className="h-4 w-4 fill-yellow-400 text-yellow-400"
+                    className="h-4 w-4 fill-amber-400 text-amber-400"
                   />
                 ))}
               </div>
-              <p className="mt-4 flex-1 text-sm text-gray-600 leading-relaxed">
+              <p className="mt-4 flex-1 text-sm text-slate-600 leading-relaxed">
                 &ldquo;{t.content}&rdquo;
               </p>
-              <div className="mt-6 flex items-center gap-3 border-t border-black/[0.04] pt-5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-sm font-bold text-white">
+              <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-cyan-500 text-sm font-bold text-white">
                   {t.avatar}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">{t.name}</p>
-                  <p className="text-xs text-gray-400">{t.role}</p>
+                  <p className="text-sm font-semibold text-slate-900">{t.name}</p>
+                  <p className="text-xs text-slate-400">{t.role}</p>
                 </div>
               </div>
             </div>
