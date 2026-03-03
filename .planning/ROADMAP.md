@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The appointments table appears in Supabase Dashboard > Database > Publications under supabase_realtime
   4. Every table introduced by migrations 004-011 has RLS enabled and at least one SELECT policy visible in Supabase Dashboard > Database > Policies
   5. A WhatsApp webhook test (Twilio webhook simulator or ngrok) successfully updates an appointment status and the change persists in the database
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 01-01: Backup, audit, and apply migrations 004-011 to production
-- [ ] 01-02: Configure Realtime publication and verify RLS policies on all target tables
+- [ ] 01-01-PLAN.md — Extend migration runner (PITR checkpoint, migrations 004-011, Realtime publication) and apply to production
+- [ ] 01-02-PLAN.md — Create verification script (table/RLS/publication checks, RLS auto-fix for migration 010, data integrity) and run against production
 
 ### Phase 2: Core Realtime
 **Goal**: Appointment status changes from any source (WhatsApp, SMS, manual dashboard) appear on every staff browser within 2 seconds without a page refresh
