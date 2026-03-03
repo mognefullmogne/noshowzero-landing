@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import type { Appointment } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
@@ -10,6 +11,25 @@ import type {
   RealtimeStatus,
   UseRealtimeAppointmentsReturn,
 } from "@/lib/realtime/types";
+
+/**
+ * Fire a toast when an appointment transitions to 'confirmed'.
+ * Checks both old and new row status to avoid firing on initial loads
+ * or non-confirmation updates.
+ */
+function notifyIfConfirmed(event: RealtimeAppointmentEvent): void {
+  if (event.eventType !== "UPDATE") {
+    return;
+  }
+  const newRow = event.new;
+  const oldRow = event.old;
+  if (newRow.status === "confirmed" && oldRow.status !== "confirmed") {
+    toast.success("Appuntamento confermato", {
+      description: (newRow.service_name as string) ?? "Appuntamento",
+      duration: 4500,
+    });
+  }
+}
 
 /**
  * Subscribes to Supabase Realtime postgres_changes on the `appointments` table
@@ -79,6 +99,7 @@ export function useRealtimeAppointments(
           }
 
           setAppointments((prev) => applyDelta(prev, event));
+          notifyIfConfirmed(event);
         },
       )
       .subscribe((status) => {
@@ -117,6 +138,10 @@ export function useRealtimeAppointments(
               prev,
             ),
           );
+          // Fire toasts for any confirmations that arrived during initial fetch
+          for (const event of queued) {
+            notifyIfConfirmed(event);
+          }
         }
       } catch (err) {
         console.error(
