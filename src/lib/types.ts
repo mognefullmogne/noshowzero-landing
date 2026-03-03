@@ -465,9 +465,9 @@ export const VALID_TRANSITIONS: Record<AppointmentStatus, readonly AppointmentSt
   reminder_pending: ["reminder_sent", "cancelled"],
   reminder_sent: ["confirmed", "declined", "timeout", "cancelled"],
   confirmed: ["completed", "no_show", "cancelled"],
-  declined: ["cancelled"],
-  timeout: ["cancelled"],
+  declined: ["confirmed", "cancelled"],
+  timeout: ["confirmed", "cancelled"],
   completed: [],
   no_show: [],
-  cancelled: [],
+  cancelled: ["confirmed"],
 } as const;

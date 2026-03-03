@@ -237,6 +237,7 @@ async function loadPatientContext(
   // Look for the most recent relevant appointment:
   // 1. Future appointments (any actionable status)
   // 2. OR recent appointments (past 7 days) that the patient might be replying to
+  // 3. Includes cancelled/declined so patients can change their mind
   // This handles timezone mismatches and patients replying to today's appointment
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -245,7 +246,7 @@ async function loadPatientContext(
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("patient_id", patientId)
-    .in("status", ["scheduled", "reminder_sent", "reminder_pending", "confirmed"])
+    .in("status", ["scheduled", "reminder_sent", "reminder_pending", "confirmed", "cancelled", "declined"])
     .gte("scheduled_at", sevenDaysAgo)
     .order("scheduled_at", { ascending: false })
     .limit(1)

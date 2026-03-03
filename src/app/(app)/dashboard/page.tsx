@@ -107,6 +107,18 @@ export default function DashboardPage() {
     }
   }, [tenant, fetchKeys, fetchAnalytics, fetchRecentOffers]);
 
+  // Auto-poll analytics and offers every 30 seconds (silent, no spinner)
+  useEffect(() => {
+    if (!tenant) return;
+    const poll = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchAnalytics();
+        fetchRecentOffers();
+      }
+    }, 30_000);
+    return () => clearInterval(poll);
+  }, [tenant, fetchAnalytics, fetchRecentOffers]);
+
   async function generateKey() {
     setGeneratingKey(true);
     setKeyError(null);

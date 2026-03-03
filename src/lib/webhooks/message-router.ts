@@ -63,6 +63,7 @@ async function handleConfirm(
     return { reply: "Non riesco a trovare un appuntamento da confermare. Puoi contattare la segreteria per assistenza." };
   }
 
+  // Allow confirming from: scheduled, reminder states, AND re-confirming after cancel/decline
   const { data, error } = await supabase
     .from("appointments")
     .update({
@@ -71,8 +72,8 @@ async function handleConfirm(
     })
     .eq("id", input.appointmentId)
     .eq("tenant_id", input.tenantId)
-    .in("status", ["scheduled", "reminder_sent", "reminder_pending"])
-    .select("id");
+    .in("status", ["scheduled", "reminder_sent", "reminder_pending", "cancelled", "declined"])
+    .select("id, status");
 
   if (error) {
     console.error("[Router] Confirm failed:", error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AppointmentsTable } from "@/components/appointments/appointments-table";
 import { AppointmentDialog } from "@/components/appointments/appointment-dialog";
 import {
@@ -34,8 +34,11 @@ export default function AppointmentsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const fetchAppointments = useCallback(async () => {
-    setLoading(true);
+  // Track whether this is the first load (show spinner) vs background poll (silent)
+  const isFirstLoad = useRef(true);
+
+  const fetchAppointments = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: "20" });
       if (statusFilter !== "all") params.set("status", statusFilter);
@@ -49,11 +52,24 @@ export default function AppointmentsPage() {
         setTotal(data.total);
       }
     } catch { /* ignore */ }
-    setLoading(false);
+    if (!silent) setLoading(false);
+    isFirstLoad.current = false;
   }, [page, statusFilter, dateFrom]);
 
+  // Initial load + refetch on filter/page change
   useEffect(() => {
     fetchAppointments();
+  }, [fetchAppointments]);
+
+  // Auto-poll every 30 seconds (silent — no loading spinner)
+  // Pauses when tab is not visible to save resources
+  useEffect(() => {
+    const poll = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchAppointments(true);
+      }
+    }, 30_000);
+    return () => clearInterval(poll);
   }, [fetchAppointments]);
 
   return (

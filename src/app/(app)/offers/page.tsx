@@ -39,8 +39,8 @@ export default function OffersPage() {
   const [total, setTotal] = useState(0);
   const [overallStats, setOverallStats] = useState<OfferStats | null>(null);
 
-  const fetchOffers = useCallback(async () => {
-    setLoading(true);
+  const fetchOffers = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: "20" });
       if (statusFilter !== "all") params.set("status", statusFilter);
@@ -53,7 +53,7 @@ export default function OffersPage() {
         setTotal(data.total);
       }
     } catch { /* ignore */ }
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, [page, statusFilter]);
 
   const fetchStats = useCallback(async () => {
@@ -79,6 +79,17 @@ export default function OffersPage() {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // Auto-poll every 30 seconds (silent — no loading spinner)
+  useEffect(() => {
+    const poll = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchOffers(true);
+        fetchStats();
+      }
+    }, 30_000);
+    return () => clearInterval(poll);
+  }, [fetchOffers, fetchStats]);
 
   return (
     <div>
