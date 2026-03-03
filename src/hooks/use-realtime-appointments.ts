@@ -74,7 +74,13 @@ export function useRealtimeAppointments(
     useState<RealtimeStatus>("CONNECTING");
 
   // Push status updates into layout-level context for ConnectionStatus indicator
-  const setContextStatus = useRealtimeStatusSetter();
+  const { setStatus: setContextStatus, register: registerSubscriber } = useRealtimeStatusSetter();
+
+  // Register this hook as an active subscriber so the badge shows/hides correctly
+  useEffect(() => {
+    const unregister = registerSubscriber();
+    return unregister;
+  }, [registerSubscriber]);
 
   // Reconnection trigger: incrementing this counter forces useEffect re-run,
   // which tears down old channel via cleanup and creates a fresh subscription

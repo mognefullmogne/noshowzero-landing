@@ -1,16 +1,20 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useRef } from "react";
 import type { RealtimeStatus } from "@/lib/realtime/types";
 
 interface RealtimeStatusContextValue {
   readonly realtimeStatus: RealtimeStatus;
+  readonly hasActiveSubscription: boolean;
   readonly setRealtimeStatus: (status: RealtimeStatus) => void;
+  readonly registerSubscriber: () => () => void;
 }
 
 const RealtimeStatusContext = createContext<RealtimeStatusContextValue>({
   realtimeStatus: "CONNECTING",
+  hasActiveSubscription: false,
   setRealtimeStatus: () => {},
+  registerSubscriber: () => () => {},
 });
 
 export function RealtimeStatusProvider({
@@ -20,14 +24,33 @@ export function RealtimeStatusProvider({
 }) {
   const [realtimeStatus, setRealtimeStatusState] =
     useState<RealtimeStatus>("CONNECTING");
+  const [subscriberCount, setSubscriberCount] = useState(0);
+  const subscriberCountRef = useRef(0);
 
   const setRealtimeStatus = useCallback((status: RealtimeStatus) => {
-    setRealtimeStatusState(status);
+    // Ignore status updates when no subscribers are active (cleanup race)
+    if (subscriberCountRef.current > 0) {
+      setRealtimeStatusState(status);
+    }
+  }, []);
+
+  const registerSubscriber = useCallback(() => {
+    subscriberCountRef.current += 1;
+    setSubscriberCount(subscriberCountRef.current);
+    return () => {
+      subscriberCountRef.current -= 1;
+      setSubscriberCount(subscriberCountRef.current);
+    };
   }, []);
 
   const value = useMemo(
-    () => ({ realtimeStatus, setRealtimeStatus }),
-    [realtimeStatus, setRealtimeStatus],
+    () => ({
+      realtimeStatus,
+      hasActiveSubscription: subscriberCount > 0,
+      setRealtimeStatus,
+      registerSubscriber,
+    }),
+    [realtimeStatus, subscriberCount, setRealtimeStatus, registerSubscriber],
   );
 
   return (
@@ -38,11 +61,19 @@ export function RealtimeStatusProvider({
 }
 
 /** Read the current connection status (used by ConnectionStatus component in layout). */
-export function useRealtimeStatus(): RealtimeStatus {
-  return useContext(RealtimeStatusContext).realtimeStatus;
+export function useRealtimeStatus(): {
+  readonly status: RealtimeStatus;
+  readonly active: boolean;
+} {
+  const ctx = useContext(RealtimeStatusContext);
+  return { status: ctx.realtimeStatus, active: ctx.hasActiveSubscription };
 }
 
 /** Push status updates into the context (used by useRealtimeAppointments hook). */
-export function useRealtimeStatusSetter(): (status: RealtimeStatus) => void {
-  return useContext(RealtimeStatusContext).setRealtimeStatus;
+export function useRealtimeStatusSetter(): {
+  readonly setStatus: (status: RealtimeStatus) => void;
+  readonly register: () => () => void;
+} {
+  const ctx = useContext(RealtimeStatusContext);
+  return { setStatus: ctx.setRealtimeStatus, register: ctx.registerSubscriber };
 }
