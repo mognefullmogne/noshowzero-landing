@@ -29,6 +29,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/hooks/use-tenant";
 import { cn } from "@/lib/utils";
 import { ChatWidget } from "@/components/chat/chat-widget";
+import { RealtimeStatusProvider } from "@/contexts/realtime-status-context";
+import { ConnectionStatus } from "@/components/shared/connection-status";
 
 const sidebarLinks = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -131,6 +133,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <RealtimeStatusProvider>
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-black/[0.04] bg-white">
@@ -143,6 +146,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               Now<span className="text-blue-600">Show</span>
             </span>
           </Link>
+          <div className="ml-auto">
+            <ConnectionStatus />
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1 p-4">
@@ -185,5 +191,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <ChatWidget />
     </div>
+    </RealtimeStatusProvider>
   );
 }

@@ -15,6 +15,7 @@ import {
   RECONNECTABLE_STATUSES,
   MAX_RECONNECT_ATTEMPTS,
 } from "@/lib/realtime/types";
+import { useRealtimeStatusSetter } from "@/contexts/realtime-status-context";
 
 /**
  * Fire a toast when an appointment transitions to 'confirmed'.
@@ -71,6 +72,9 @@ export function useRealtimeAppointments(
   const [loading, setLoading] = useState(true);
   const [realtimeStatus, setRealtimeStatus] =
     useState<RealtimeStatus>("CONNECTING");
+
+  // Push status updates into layout-level context for ConnectionStatus indicator
+  const setContextStatus = useRealtimeStatusSetter();
 
   // Reconnection trigger: incrementing this counter forces useEffect re-run,
   // which tears down old channel via cleanup and creates a fresh subscription
@@ -144,6 +148,7 @@ export function useRealtimeAppointments(
       .subscribe((status) => {
         const mappedStatus = status as RealtimeStatus;
         setRealtimeStatus(mappedStatus);
+        setContextStatus(mappedStatus);
         currentStatusRef.current = mappedStatus;
 
         if (mappedStatus === "SUBSCRIBED") {
