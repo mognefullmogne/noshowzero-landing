@@ -108,10 +108,23 @@ export async function POST(request: NextRequest) {
     const supabase = await createServiceClient();
 
     // Find patient by phone — parameterized .eq() calls, no string interpolation
+    // Try multiple formats: +39333..., whatsapp:+39333..., 333... (without prefix)
     let patient = await findPatientByPhone(supabase, phoneNumber);
     if (!patient) {
-      // Try with whatsapp: prefix format
       patient = await findPatientByPhone(supabase, from);
+    }
+    if (!patient) {
+      // Try without leading + (some entries might be stored without it)
+      const withoutPlus = phoneNumber.replace(/^\+/, "");
+      patient = await findPatientByPhone(supabase, withoutPlus);
+    }
+    if (!patient) {
+      // Try with just the local number (strip country code for common prefixes)
+      // e.g. +39333... → 333...
+      const localNumber = phoneNumber.replace(/^\+\d{1,3}/, "");
+      if (localNumber.length >= 6) {
+        patient = await findPatientByPhone(supabase, localNumber);
+      }
     }
 
     if (!patient) {
@@ -120,6 +133,8 @@ export async function POST(request: NextRequest) {
         "Non siamo riusciti a identificarti. Contatta la segreteria per assistenza."
       );
     }
+
+    console.log(`[Webhook] Found patient=${patient.id.slice(0, 8)}... for phone ***${phoneNumber.slice(-4)}`);
 
     // 1. Classify intent via regex
     const classification = classifyIntent(body);
@@ -142,6 +157,8 @@ export async function POST(request: NextRequest) {
     // 3. Load patient context (next appointment, active offer)
     const now = new Date().toISOString();
     const context = await loadPatientContext(supabase, patient.tenant_id, patient.id, now);
+
+    console.log(`[Webhook] Context: appointmentId=${context.nextAppointmentId ?? "NONE"}, offerId=${context.activeOfferId ?? "NONE"}`);
 
     // Map generic confirm/cancel to offer-specific intents when offer is active
     if (context.activeOfferId && intent === "confirm") {
@@ -201,14 +218,20 @@ async function loadPatientContext(
   patientId: string,
   now: string
 ): Promise<{ nextAppointmentId?: string; activeOfferId?: string }> {
+  // Look for the most recent relevant appointment:
+  // 1. Future appointments (any actionable status)
+  // 2. OR recent appointments (past 7 days) that the patient might be replying to
+  // This handles timezone mismatches and patients replying to today's appointment
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
   const { data: nextAppt } = await supabase
     .from("appointments")
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("patient_id", patientId)
     .in("status", ["scheduled", "reminder_sent", "reminder_pending", "confirmed"])
-    .gte("scheduled_at", now)
-    .order("scheduled_at", { ascending: true })
+    .gte("scheduled_at", sevenDaysAgo)
+    .order("scheduled_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
