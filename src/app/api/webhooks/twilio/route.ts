@@ -276,13 +276,33 @@ async function findPatientByPhone(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
   phone: string
 ) {
-  const { data } = await supabase
+  // Fetch all patients with this phone — pick the one with the most relevant
+  // upcoming appointment so that confirm/cancel goes to the right person.
+  const { data: patients } = await supabase
     .from("patients")
     .select("id, tenant_id, first_name, last_name, phone")
     .eq("phone", phone)
-    .limit(1)
-    .maybeSingle();
-  return data;
+    .limit(10);
+
+  if (!patients || patients.length === 0) return null;
+  if (patients.length === 1) return patients[0];
+
+  // Multiple patients share this phone — prefer one with a pending appointment
+  const now = new Date().toISOString();
+  for (const p of patients) {
+    const { data: appt } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("patient_id", p.id)
+      .in("status", ["scheduled", "reminder_sent", "reminder_pending"])
+      .gte("scheduled_at", now)
+      .limit(1)
+      .maybeSingle();
+    if (appt) return p;
+  }
+
+  // No pending appointments — return the most recently created patient
+  return patients[0];
 }
 
 async function loadPatientContext(
