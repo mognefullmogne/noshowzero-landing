@@ -137,7 +137,7 @@ export async function POST(
           success: false,
           error: {
             code: "SEND_FAILED",
-            message: "Failed to send confirmation message",
+            message: `Send failed: ${result.errorMessage ?? "unknown error"} (provider: ${result.provider})`,
           },
         },
         { status: 502 }
@@ -159,9 +159,10 @@ export async function POST(
       },
     });
   } catch (err) {
-    console.error("Send-confirmation POST error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Send-confirmation POST error:", msg);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: "Internal server error" } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: `Error: ${msg}` } },
       { status: 500 }
     );
   }
