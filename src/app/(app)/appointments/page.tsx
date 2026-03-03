@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo } from "react";
 import { AppointmentsTable } from "@/components/appointments/appointments-table";
 import { AppointmentDialog } from "@/components/appointments/appointment-dialog";
 import {
@@ -13,7 +13,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { Appointment, AppointmentStatus } from "@/lib/types";
+import type { AppointmentStatus } from "@/lib/types";
+import { useTenant } from "@/hooks/use-tenant";
+import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "all", label: "All Statuses" },
@@ -25,52 +27,37 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
+const PAGE_SIZE = 20;
+
 export default function AppointmentsPage() {
-  const [appointments, setAppointments] = useState<readonly Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { tenant } = useTenant();
+  const { appointments: realtimeAppointments, loading: realtimeLoading } =
+    useRealtimeAppointments(tenant?.id);
+
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
 
-  // Track whether this is the first load (show spinner) vs background poll (silent)
-  const isFirstLoad = useRef(true);
+  // Client-side filtering against Realtime state
+  const filteredAppointments = useMemo(() => {
+    let result = realtimeAppointments;
+    if (statusFilter !== "all") {
+      result = result.filter((a) => a.status === (statusFilter as AppointmentStatus));
+    }
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      result = result.filter((a) => new Date(a.scheduled_at) >= fromDate);
+    }
+    return result;
+  }, [realtimeAppointments, statusFilter, dateFrom]);
 
-  const fetchAppointments = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const params = new URLSearchParams({ page: String(page), pageSize: "20" });
-      if (statusFilter !== "all") params.set("status", statusFilter);
-      if (dateFrom) params.set("from", new Date(dateFrom).toISOString());
-
-      const res = await fetch(`/api/appointments?${params}`);
-      const data = await res.json();
-      if (data.success) {
-        setAppointments(data.data);
-        setTotalPages(data.totalPages);
-        setTotal(data.total);
-      }
-    } catch { /* ignore */ }
-    if (!silent) setLoading(false);
-    isFirstLoad.current = false;
-  }, [page, statusFilter, dateFrom]);
-
-  // Initial load + refetch on filter/page change
-  useEffect(() => {
-    fetchAppointments();
-  }, [fetchAppointments]);
-
-  // Auto-poll every 30 seconds (silent — no loading spinner)
-  // Pauses when tab is not visible to save resources
-  useEffect(() => {
-    const poll = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        fetchAppointments(true);
-      }
-    }, 30_000);
-    return () => clearInterval(poll);
-  }, [fetchAppointments]);
+  // Client-side pagination
+  const totalFiltered = filteredAppointments.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+  const paginatedAppointments = filteredAppointments.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   return (
     <div>
@@ -78,10 +65,10 @@ export default function AppointmentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
           <p className="text-sm text-gray-500">
-            {total} appointment{total !== 1 ? "s" : ""} total
+            {totalFiltered} appointment{totalFiltered !== 1 ? "s" : ""} total
           </p>
         </div>
-        <AppointmentDialog onCreated={fetchAppointments} />
+        <AppointmentDialog onCreated={() => {}} />
       </div>
 
       {/* Filters */}
@@ -118,9 +105,9 @@ export default function AppointmentsPage() {
       {/* Table */}
       <div className="mt-4">
         <AppointmentsTable
-          appointments={appointments}
-          loading={loading}
-          onRefresh={fetchAppointments}
+          appointments={paginatedAppointments}
+          loading={realtimeLoading}
+          onRefresh={() => {}}
         />
       </div>
 
