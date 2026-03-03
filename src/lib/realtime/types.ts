@@ -29,3 +29,13 @@ export interface UseRealtimeAppointmentsReturn {
   readonly loading: boolean;
   readonly realtimeStatus: RealtimeStatus;
 }
+
+/** Channel statuses that indicate a terminal failure requiring channel-level reconnection. */
+export const RECONNECTABLE_STATUSES: readonly RealtimeStatus[] = [
+  "CLOSED",
+  "TIMED_OUT",
+  "CHANNEL_ERROR",
+] as const;
+
+/** Maximum number of channel-level reconnection attempts before giving up. */
+export const MAX_RECONNECT_ATTEMPTS = 5;
