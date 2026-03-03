@@ -57,6 +57,22 @@ function sanitizeForAI(text: string): string {
     .slice(0, MAX_AI_INPUT_CHARS);
 }
 
+/** Strip markdown code fences and BOM, then extract first JSON object. */
+function extractJsonText(text: string): string {
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^\uFEFF/, "");
+  cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?\s*```\s*$/, "");
+  cleaned = cleaned.trim();
+  if (!cleaned.startsWith("{")) {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      cleaned = cleaned.slice(start, end + 1);
+    }
+  }
+  return cleaned;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Parse Twilio form body
@@ -272,7 +288,8 @@ async function classifyWithAI(
   }
 
   try {
-    const parsed: unknown = JSON.parse(content.text);
+    const jsonStr = extractJsonText(content.text);
+    const parsed: unknown = JSON.parse(jsonStr);
     if (typeof parsed !== "object" || parsed === null) {
       return { intent: "unknown", confidence: 0.0 };
     }
