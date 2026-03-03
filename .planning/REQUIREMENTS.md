@@ -71,26 +71,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase ? | Pending |
-| INFRA-02 | Phase ? | Pending |
-| INFRA-03 | Phase ? | Pending |
-| INFRA-04 | Phase ? | Pending |
-| INFRA-05 | Phase ? | Pending |
-| RT-01 | Phase ? | Pending |
-| RT-02 | Phase ? | Pending |
-| RT-03 | Phase ? | Pending |
-| RT-04 | Phase ? | Pending |
-| RT-05 | Phase ? | Pending |
-| RT-06 | Phase ? | Pending |
-| RT-07 | Phase ? | Pending |
-| SEC-01 | Phase ? | Pending |
-| SEC-02 | Phase ? | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| RT-01 | Phase 2 | Pending |
+| RT-02 | Phase 2 | Pending |
+| RT-03 | Phase 2 | Pending |
+| RT-06 | Phase 2 | Pending |
+| RT-07 | Phase 2 | Pending |
+| SEC-01 | Phase 2 | Pending |
+| SEC-02 | Phase 2 | Pending |
+| RT-04 | Phase 3 | Pending |
+| RT-05 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation*
