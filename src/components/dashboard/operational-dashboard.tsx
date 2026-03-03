@@ -243,10 +243,6 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
             })}
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-3 py-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-          Aggiornamento live
-        </span>
       </div>
 
       {/* KPI cards */}
