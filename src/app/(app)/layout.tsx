@@ -32,13 +32,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { tenant, loading, error: tenantError } = useTenant();
 
   const isOnboarding = pathname === "/onboarding";
+  const isDocs = pathname === "/docs";
+  const skipTenantCheck = isOnboarding || isDocs;
 
-  // Redirect to onboarding if no tenant exists (except if already on onboarding or error)
+  // Redirect to onboarding if no tenant exists (except for pages that don't require it)
   useEffect(() => {
-    if (!loading && !tenant && !tenantError && !isOnboarding) {
+    if (!loading && !tenant && !tenantError && !skipTenantCheck) {
       router.replace("/onboarding");
     }
-  }, [loading, tenant, tenantError, isOnboarding, router]);
+  }, [loading, tenant, tenantError, skipTenantCheck, router]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -97,8 +99,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If no tenant, the useEffect will redirect — show nothing while redirecting
-  if (!tenant) {
+  // If no tenant and not on a page that bypasses the check, show spinner while redirecting
+  if (!tenant && !skipTenantCheck) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
