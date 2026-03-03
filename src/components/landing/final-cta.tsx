@@ -30,7 +30,7 @@ export function FinalCta() {
             <Button
               size="lg"
               asChild
-              className="h-13 rounded-xl bg-white px-8 text-base font-semibold text-gray-900 shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl"
+              className="h-12 rounded-xl bg-white px-8 text-base font-semibold text-gray-900 shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl"
             >
               <Link href="/signup">
                 Get Started Free
@@ -41,7 +41,7 @@ export function FinalCta() {
               size="lg"
               variant="outline"
               asChild
-              className="h-13 rounded-xl border-white/20 px-8 text-base font-semibold text-white hover:bg-white/10"
+              className="h-12 rounded-xl border-white/40 bg-white/10 px-8 text-base font-semibold text-white hover:bg-white/20"
             >
               <Link href="/pricing">View Pricing</Link>
             </Button>
