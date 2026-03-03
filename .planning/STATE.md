@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-03T21:20:48.604Z"
-last_activity: 2026-03-03 — Plan 02-03 complete (toast notifications + SEC-02)
+status: in-progress
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-03T21:42:01Z"
+last_activity: 2026-03-03 — Plan 03-01 complete (reconnection + stale data recovery)
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 80
+  total_plans: 7
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** When a patient confirms or cancels via WhatsApp, every staff member sees the change instantly — no refresh, no lag, no stale data.
-**Current focus:** Phase 2 — Core Realtime
+**Current focus:** Phase 3 — Resilience
 
 ## Current Position
 
-Phase: 2 of 3 (Core Realtime)
-Plan: 3 of 3 in current phase
-Status: Plan 02-03 complete, phase 02 complete
-Last activity: 2026-03-03 — Plan 02-03 complete (toast notifications + SEC-02)
+Phase: 3 of 3 (Resilience)
+Plan: 1 of 2 in current phase
+Status: Plan 03-01 complete
+Last activity: 2026-03-03 — Plan 03-01 complete (reconnection + stale data recovery)
 
-Progress: [████████░░] 80%
+Progress: [████████░░] 86%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [████████░░] 80%
 | Phase 02 P01 | 3 | 2 tasks | 3 files |
 | Phase 02 P02 | 3 | 2 tasks | 3 files |
 | Phase 02 P03 | 2 | 2 tasks | 4 files |
+| Phase 03 P01 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Dashboard uses Realtime-as-signal pattern for KPI re-fetch (not direct data replacement)
 - [Phase 02]: Calendar keeps REST fetch for date-range filtering, Realtime triggers re-fetch only
 - [Phase 02]: Extract notifyIfConfirmed as standalone function for DRY toast logic between live callback and pending drain
+- [Phase 03]: reconnectTrigger pattern: state counter forces useEffect re-run for clean channel teardown/recreation
+- [Phase 03]: Fire-and-forget auth.getSession() before subscription to handle overnight token expiry
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-03T21:16:48.855Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-03-03T21:42:01Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
