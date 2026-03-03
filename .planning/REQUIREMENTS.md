@@ -17,17 +17,17 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Real-Time
 
-- [ ] **RT-01**: Appointments list page updates within 1-2 seconds when any appointment status changes (no manual refresh)
+- [x] **RT-01**: Appointments list page updates within 1-2 seconds when any appointment status changes (no manual refresh)
 - [ ] **RT-02**: Operational dashboard KPI cards (today's appointments, pending confirmations, urgent deadlines) update in real-time
 - [ ] **RT-03**: Calendar view reflects appointment status changes in real-time
 - [ ] **RT-04**: Connection state indicator visible to staff (connected / reconnecting / offline)
 - [ ] **RT-05**: Automatic reconnection with stale data recovery when WebSocket disconnects and reconnects
 - [ ] **RT-06**: 30-second polling replaced by Supabase Realtime subscriptions (no duplicate data paths)
-- [ ] **RT-07**: Multi-channel sync — status changes from WhatsApp, SMS, email, cron, and manual dashboard actions all trigger the same real-time update
+- [x] **RT-07**: Multi-channel sync — status changes from WhatsApp, SMS, email, cron, and manual dashboard actions all trigger the same real-time update
 
 ### Security
 
-- [ ] **SEC-01**: Realtime subscriptions are tenant-scoped (no cross-tenant data leaks)
+- [x] **SEC-01**: Realtime subscriptions are tenant-scoped (no cross-tenant data leaks)
 - [ ] **SEC-02**: service_role key is never exposed in client-side code or NEXT_PUBLIC_ env vars
 
 ## v2 Requirements
@@ -76,12 +76,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-03 | Phase 1 | Pending |
 | INFRA-04 | Phase 1 | Pending |
 | INFRA-05 | Phase 1 | Pending |
-| RT-01 | Phase 2 | Pending |
+| RT-01 | Phase 2 | Complete |
 | RT-02 | Phase 2 | Pending |
 | RT-03 | Phase 2 | Pending |
 | RT-06 | Phase 2 | Pending |
-| RT-07 | Phase 2 | Pending |
-| SEC-01 | Phase 2 | Pending |
+| RT-07 | Phase 2 | Complete |
+| SEC-01 | Phase 2 | Complete |
 | SEC-02 | Phase 2 | Pending |
 | RT-04 | Phase 3 | Pending |
 | RT-05 | Phase 3 | Pending |
