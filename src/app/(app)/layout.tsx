@@ -12,6 +12,9 @@ import {
   Rocket,
   BookOpen,
   Loader2,
+  CalendarDays,
+  Users,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +24,9 @@ import { ChatWidget } from "@/components/chat/chat-widget";
 
 const sidebarLinks = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Appointments", href: "/appointments", icon: CalendarDays },
+  { label: "Waitlist", href: "/waitlist", icon: Users },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "API Docs", href: "/docs", icon: BookOpen },
   { label: "Billing", href: "/billing", icon: CreditCard },
   { label: "Settings", href: "/settings", icon: Settings },

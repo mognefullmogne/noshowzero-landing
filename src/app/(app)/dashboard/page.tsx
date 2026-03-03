@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Key,
@@ -42,6 +42,12 @@ export default function DashboardPage() {
   const [generatingKey, setGeneratingKey] = useState(false);
   const [keyError, setKeyError] = useState<string | null>(null);
   const apiKeySectionRef = useRef<HTMLDivElement>(null);
+  const [analytics, setAnalytics] = useState<{
+    totalAppointments: number;
+    noShowRate: number;
+    waitlistFills: number;
+    revenueSaved: number;
+  } | null>(null);
 
   const fetchKeys = useCallback(async () => {
     try {
@@ -55,11 +61,22 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      const res = await fetch("/api/analytics");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) setAnalytics(json.data);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     if (tenant) {
       fetchKeys();
+      fetchAnalytics();
     }
-  }, [tenant, fetchKeys]);
+  }, [tenant, fetchKeys, fetchAnalytics]);
 
   async function generateKey() {
     setGeneratingKey(true);
@@ -214,10 +231,30 @@ export default function DashboardPage() {
       {/* Stats cards */}
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Appointments", value: "0", icon: CalendarDays, change: "—" },
-          { label: "No-Show Rate", value: "0%", icon: TrendingUp, change: "—" },
-          { label: "Waitlist Fills", value: "0", icon: Users, change: "—" },
-          { label: "Revenue Saved", value: "$0", icon: Zap, change: "—" },
+          {
+            label: "Appointments",
+            value: analytics ? analytics.totalAppointments.toLocaleString() : "—",
+            icon: CalendarDays,
+            change: analytics?.totalAppointments ? "All time" : "No data yet",
+          },
+          {
+            label: "No-Show Rate",
+            value: analytics ? `${analytics.noShowRate}%` : "—",
+            icon: TrendingUp,
+            change: analytics && analytics.noShowRate > 0 ? "Track reduction over time" : "No no-shows yet",
+          },
+          {
+            label: "Waitlist Fills",
+            value: analytics ? analytics.waitlistFills.toLocaleString() : "—",
+            icon: Users,
+            change: analytics?.waitlistFills ? "Cancellations recovered" : "No fills yet",
+          },
+          {
+            label: "Revenue Saved",
+            value: analytics ? `$${analytics.revenueSaved.toLocaleString()}` : "—",
+            icon: Zap,
+            change: analytics?.revenueSaved ? "From recovered appointments" : "Start tracking",
+          },
         ].map((stat) => (
           <div
             key={stat.label}
