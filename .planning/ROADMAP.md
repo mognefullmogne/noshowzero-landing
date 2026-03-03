@@ -61,11 +61,11 @@ Plans:
   2. Simulating a network interruption (browser DevTools > offline for 10s then back online) results in the appointments list refreshing to current state without requiring a page reload
   3. After reconnection, any appointment status changes that occurred during the disconnection are reflected (stale data recovery via REST re-fetch, not event replay)
   4. The connection indicator never shows "Live" when the WebSocket channel is not actually SUBSCRIBED
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 03-01: Implement reconnection with exponential backoff and stale data recovery on reconnect
-- [ ] 03-02: Build persistent connection status indicator component
+- [ ] 03-01-PLAN.md — Add channel-level reconnection with exponential backoff, stale data recovery, and Web Worker heartbeat to useRealtimeAppointments
+- [ ] 03-02-PLAN.md — Build ConnectionStatus indicator component with React context bridge, wire into app layout, remove hardcoded badge
 
 ## Progress
 
@@ -75,5 +75,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 2/2 | Complete | 2026-03-03 |
-| 2. Core Realtime | 1/3 | In Progress | - |
+| 2. Core Realtime | 3/3 | Complete | 2026-03-03 |
 | 3. Resilience | 0/2 | Not started | - |
