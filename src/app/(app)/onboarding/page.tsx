@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -10,12 +10,15 @@ import {
   Copy,
   Loader2,
   Sparkles,
+  CreditCard,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PRICING_PLANS } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import { useTenant } from "@/hooks/use-tenant";
 import { cn } from "@/lib/utils";
 
 const INDUSTRIES = [
@@ -40,10 +43,12 @@ type Step = 1 | 2 | 3;
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { tenant } = useTenant();
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Step 1 state
   const [businessName, setBusinessName] = useState("");
@@ -54,9 +59,20 @@ export default function OnboardingPage() {
   const [selectedPlan, setSelectedPlan] = useState("growth");
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("monthly");
 
+  // If tenant already exists, pre-fill and start at step 2
+  useEffect(() => {
+    if (tenant) {
+      setBusinessName(tenant.name);
+      setIndustry(tenant.industry ?? "");
+      setSize(tenant.business_size ?? "");
+      setStep(2);
+    }
+  }, [tenant]);
+
   async function handleStep1() {
     if (!businessName.trim()) return;
     setLoading(true);
+    setError(null);
 
     const supabase = createClient();
     const {
@@ -64,18 +80,18 @@ export default function OnboardingPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
+      setLoading(false);
       router.push("/login");
       return;
     }
 
-    // Create tenant
     const slug = businessName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "")
       .slice(0, 63);
 
-    await supabase.from("tenants").upsert(
+    const { error: dbError } = await supabase.from("tenants").upsert(
       {
         auth_user_id: user.id,
         name: businessName,
@@ -88,6 +104,12 @@ export default function OnboardingPage() {
       { onConflict: "auth_user_id" },
     );
 
+    if (dbError) {
+      setError("Failed to save your business info. Please try again.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(false);
     setStep(2);
   }
@@ -99,6 +121,7 @@ export default function OnboardingPage() {
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch("/api/stripe/checkout", {
@@ -113,18 +136,18 @@ export default function OnboardingPage() {
         location.assign(data.url);
         return;
       }
+
+      // If Stripe returned an error or no URL, skip to step 3
+      await generateApiKeyAndGoToStep3();
     } catch {
       // If Stripe is not configured, skip to step 3
+      await generateApiKeyAndGoToStep3();
     }
-
-    setLoading(false);
-    setStep(3);
   }
 
-  async function handleSkipToStep3() {
-    setLoading(true);
+  async function generateApiKeyAndGoToStep3() {
+    setError(null);
 
-    // Generate API key
     try {
       const response = await fetch("/api/keys", {
         method: "POST",
@@ -136,11 +159,16 @@ export default function OnboardingPage() {
         setApiKey(data.key);
       }
     } catch {
-      // API key generation may fail if Supabase isn't configured
+      // Non-fatal — user can generate key later from dashboard
     }
 
     setLoading(false);
     setStep(3);
+  }
+
+  async function handleSkipToStep3() {
+    setLoading(true);
+    await generateApiKeyAndGoToStep3();
   }
 
   async function copyApiKey() {
@@ -150,26 +178,37 @@ export default function OnboardingPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const STEP_LABELS = [
+    "Business Info",
+    "Choose Plan",
+    "You're Ready!",
+  ];
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
       {/* Progress */}
-      <div className="mb-12 flex items-center justify-center gap-3">
+      <div className="mb-8 flex items-center justify-center gap-3">
         {[1, 2, 3].map((s) => (
           <div key={s} className="flex items-center gap-3">
-            <div
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all",
-                step >= s
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
-                  : "bg-gray-100 text-gray-400",
-              )}
-            >
-              {step > s ? <Check className="h-5 w-5" /> : s}
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all",
+                  step >= s
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
+                    : "bg-gray-100 text-gray-400",
+                )}
+              >
+                {step > s ? <Check className="h-5 w-5" /> : s}
+              </div>
+              <span className={cn("text-[10px] font-medium", step >= s ? "text-blue-600" : "text-gray-400")}>
+                {STEP_LABELS[s - 1]}
+              </span>
             </div>
             {s < 3 && (
               <div
                 className={cn(
-                  "h-0.5 w-16 transition-all",
+                  "h-0.5 w-12 mb-4 transition-all",
                   step > s ? "bg-blue-600" : "bg-gray-200",
                 )}
               />
@@ -177,6 +216,14 @@ export default function OnboardingPage() {
           </div>
         ))}
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
 
       {/* Step 1: Business Info */}
       {step === 1 && (
@@ -201,15 +248,21 @@ export default function OnboardingPage() {
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
               />
+              <p className="mt-1 text-xs text-gray-400">
+                This will be shown in your dashboard and reminders.
+              </p>
             </div>
 
             <div>
-              <Label>Industry</Label>
+              <Label>Industry <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Helps us tailor AI settings for your business type.
+              </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {INDUSTRIES.map((ind) => (
                   <button
                     key={ind}
-                    onClick={() => setIndustry(ind)}
+                    onClick={() => setIndustry(industry === ind ? "" : ind)}
                     className={cn(
                       "rounded-full border px-4 py-2 text-sm font-medium transition-all",
                       industry === ind
@@ -224,12 +277,15 @@ export default function OnboardingPage() {
             </div>
 
             <div>
-              <Label>Team size</Label>
+              <Label>Team size <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Helps us recommend the right plan.
+              </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {SIZES.map((s) => (
                   <button
                     key={s}
-                    onClick={() => setSize(s)}
+                    onClick={() => setSize(size === s ? "" : s)}
                     className={cn(
                       "rounded-full border px-4 py-2 text-sm font-medium transition-all",
                       size === s
@@ -261,10 +317,17 @@ export default function OnboardingPage() {
       {/* Step 2: Choose Plan */}
       {step === 2 && (
         <div className="rounded-2xl border border-black/[0.04] bg-white p-8 shadow-xl shadow-black/[0.03]">
-          <h1 className="text-2xl font-bold text-gray-900">Choose your plan</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            All plans include a 14-day free trial. You won&apos;t be charged today.
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50">
+              <CreditCard className="h-6 w-6 text-indigo-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Choose your plan</h1>
+              <p className="text-sm text-gray-500">
+                All plans include a 14-day free trial. You won&apos;t be charged today.
+              </p>
+            </div>
+          </div>
 
           {/* Billing toggle */}
           <div className="mt-6 flex items-center gap-3">
@@ -377,15 +440,15 @@ export default function OnboardingPage() {
           </div>
 
           <h1 className="mt-6 text-2xl font-bold text-gray-900">
-            Welcome to NowShow!
+            You&apos;re all set!
           </h1>
-          <p className="mt-2 text-sm text-gray-500">
-            Your account is ready. Here&apos;s your API key to get started with integrations.
+          <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
+            Your NowShow account is ready. {apiKey ? "Here's your API key to get started — or head to the dashboard where everything is waiting for you." : "Head to your dashboard to generate an API key and start integrating."}
           </p>
 
           {apiKey && (
             <div className="mx-auto mt-8 max-w-md">
-              <Label className="text-left block">Your API Key</Label>
+              <Label className="text-left block text-sm font-medium text-gray-700">Your API Key</Label>
               <div className="mt-2 flex items-center gap-2">
                 <code className="flex-1 rounded-xl border border-black/[0.06] bg-gray-50 px-4 py-3 text-left text-sm font-mono text-gray-700 break-all">
                   {apiKey}
@@ -403,13 +466,14 @@ export default function OnboardingPage() {
                   )}
                 </Button>
               </div>
-              <p className="mt-2 text-xs text-amber-600 text-left">
+              <p className="mt-2 text-xs text-amber-600 text-left flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
                 Save this key now — it won&apos;t be shown again.
               </p>
             </div>
           )}
 
-          <div className="mt-8">
+          <div className="mt-8 flex flex-col items-center gap-3">
             <Button
               onClick={() => router.push("/dashboard")}
               className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 text-white shadow-lg shadow-blue-600/25"
@@ -417,6 +481,12 @@ export default function OnboardingPage() {
               Go to Dashboard
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
+            <button
+              onClick={() => router.push("/docs")}
+              className="text-sm text-blue-600 hover:text-blue-700 underline"
+            >
+              Read the API documentation
+            </button>
           </div>
         </div>
       )}

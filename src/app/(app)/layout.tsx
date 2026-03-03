@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import {
   Zap,
   LayoutDashboard,
@@ -9,14 +10,18 @@ import {
   Settings,
   LogOut,
   Rocket,
+  BookOpen,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { useTenant } from "@/hooks/use-tenant";
 import { cn } from "@/lib/utils";
 import { ChatWidget } from "@/components/chat/chat-widget";
 
 const sidebarLinks = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "API Docs", href: "/docs", icon: BookOpen },
   { label: "Billing", href: "/billing", icon: CreditCard },
   { label: "Settings", href: "/settings", icon: Settings },
 ] as const;
@@ -24,9 +29,16 @@ const sidebarLinks = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { tenant, loading, error: tenantError } = useTenant();
 
-  // Don't show sidebar on onboarding
   const isOnboarding = pathname === "/onboarding";
+
+  // Redirect to onboarding if no tenant exists (except if already on onboarding or error)
+  useEffect(() => {
+    if (!loading && !tenant && !tenantError && !isOnboarding) {
+      router.replace("/onboarding");
+    }
+  }, [loading, tenant, tenantError, isOnboarding, router]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -45,7 +57,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Zap className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold tracking-tight">
-                NoShow<span className="text-blue-600">Zero</span>
+                Now<span className="text-blue-600">Show</span>
               </span>
             </Link>
             <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -55,6 +67,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         {children}
+      </div>
+    );
+  }
+
+  // Show loading spinner while checking tenant
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  // Show error state if tenant fetch failed
+  if (tenantError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center max-w-sm">
+          <p className="text-sm font-medium text-red-600">{tenantError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-3 text-sm text-blue-600 underline hover:text-blue-700"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If no tenant, the useEffect will redirect — show nothing while redirecting
+  if (!tenant) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -69,7 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Zap className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-bold tracking-tight">
-              NoShow<span className="text-blue-600">Zero</span>
+              Now<span className="text-blue-600">Show</span>
             </span>
           </Link>
         </div>

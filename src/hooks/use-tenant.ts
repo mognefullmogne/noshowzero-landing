@@ -19,6 +19,7 @@ interface Tenant {
 export function useTenant() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchTenant() {
@@ -32,11 +33,18 @@ export function useTenant() {
         return;
       }
 
-      const { data } = await supabase
+      const { data, error: dbError } = await supabase
         .from("tenants")
-        .select("*")
+        .select("id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id")
         .eq("auth_user_id", user.id)
         .maybeSingle();
+
+      if (dbError) {
+        console.error("useTenant: failed to fetch tenant", dbError);
+        setError("Failed to load account data. Please refresh the page.");
+        setLoading(false);
+        return;
+      }
 
       setTenant(data);
       setLoading(false);
@@ -45,5 +53,5 @@ export function useTenant() {
     fetchTenant();
   }, []);
 
-  return { tenant, loading };
+  return { tenant, loading, error };
 }

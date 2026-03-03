@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { randomBytes, createHash } from "crypto";
+import { z } from "zod";
+
+const KeyNameSchema = z.string().min(1).max(100).regex(/^[\w\s\-]+$/).optional();
 
 function generateApiKey(): { key: string; hash: string; prefix: string } {
   const raw = randomBytes(32).toString("hex");
-  const key = `nosz_${raw}`;
+  const key = `nows_${raw}`;
   const hash = createHash("sha256").update(key).digest("hex");
-  const prefix = `nosz_${raw.slice(0, 8)}...`;
+  const prefix = `nows_${raw.slice(0, 8)}...`;
   return { key, hash, prefix };
 }
 
@@ -56,7 +59,8 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const name = (body.name as string) || "Default";
+    const parsed = KeyNameSchema.safeParse(body.name);
+    const name = parsed.success && parsed.data ? parsed.data : "Default";
 
     const { data: tenant } = await supabase
       .from("tenants")

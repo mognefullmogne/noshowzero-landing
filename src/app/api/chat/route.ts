@@ -1,11 +1,25 @@
 import { NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-
-// NowShow AI Assistant — rule-based responses for common questions
-// Can be upgraded to use an LLM API (e.g., Anthropic) for more natural conversations
 
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_MESSAGES = 50;
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 60_000;
+
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  rateLimitMap.set(ip, { ...entry, count: entry.count + 1 });
+  return true;
+}
 
 const ChatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -16,54 +30,42 @@ const BodySchema = z.object({
   messages: z.array(ChatMessageSchema).max(MAX_MESSAGES),
 });
 
-// Smart rule-based responses for common questions
-function getSmartResponse(userMessage: string): string | null {
-  const lower = userMessage.toLowerCase();
+const SYSTEM_PROMPT = `You are the NowShow AI assistant — a friendly, knowledgeable chatbot on the NowShow website. NowShow is an AI-powered appointment management platform that helps businesses eliminate no-shows, fill empty slots, and boost revenue.
 
-  if (lower.includes("price") || lower.includes("cost") || lower.includes("how much")) {
-    return "Every plan includes our AI engine. **Growth** at $199/mo gives you AI-timed reminders, AI no-show risk scoring, and AI waitlist with auto-fill (1,000 appointments, 2 locations). **Professional** at $499/mo adds AI calendar optimization, proactive reschedule suggestions, and advanced waitlist ranking (10,000 appointments, 10 locations). **Enterprise** at $999/mo is unlimited with the full AI decision engine, custom models, FHIR, and SSO. All plans include a 14-day free trial. Annual billing saves you 15-20%.";
+KEY PRODUCT INFO:
+- NowShow works for ALL appointment-based businesses: healthcare, dental, salons, auto service, fitness, consulting, legal, etc.
+- Core features: AI-timed smart reminders (WhatsApp, SMS, email), AI no-show risk scoring, AI waitlist with auto-fill, calendar optimization, real-time analytics
+- Plans: Growth ($199/mo), Professional ($499/mo), Enterprise ($999/mo). All include 14-day free trial. Annual billing saves 15-20%.
+- Growth: 1,000 appts/mo, 2 locations, 5 users. AI reminders + risk scoring + waitlist + REST API.
+- Professional: 10,000 appts/mo, 10 locations, 25 users. Everything in Growth + AI calendar optimization + proactive reschedule + webhooks + advanced analytics.
+- Enterprise: Unlimited everything. Full AI decision engine + custom models + FHIR + SSO + dedicated support.
+- Setup takes under 15 minutes via REST API or built-in dashboard.
+- SOC 2 compliant, HIPAA guidelines followed, GDPR compliant, end-to-end encryption.
+
+BEHAVIOR RULES:
+- Be concise and helpful. Use 2-4 sentences for most answers.
+- Bold key terms using **markdown**.
+- When appropriate, suggest the user start a free trial or visit the pricing page.
+- If asked about competitors, focus on NowShow's strengths without disparaging others.
+- If asked about something unrelated to NowShow, gently redirect: "I specialize in NowShow's appointment management platform. How can I help you with reducing no-shows?"
+- Never make up features that don't exist.
+- Be warm and professional.`;
+
+let _client: Anthropic | null = null;
+
+function getClient(): Anthropic {
+  if (!_client) {
+    _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   }
-
-  if (lower.includes("waitlist") || lower.includes("wait list")) {
-    return "Our AI-powered waitlist is included in every plan. When a slot opens up, the AI scores waitlisted clients based on clinical urgency, reliability history, time preferences, distance, and provider match — then instantly offers the slot to the best candidate. Professional and Enterprise plans get advanced ranking with even more scoring factors and proactive reschedule suggestions.";
-  }
-
-  if (lower.includes("integration") || lower.includes("api") || lower.includes("connect")) {
-    return "NowShow offers a full REST API with webhooks for seamless integration with any scheduling or EHR system. Growth plans get REST API access, Professional adds webhooks and custom templates, and Enterprise includes FHIR + SSO support. We provide SDKs, documentation, and sample code — most integrations take under 15 minutes.";
-  }
-
-  if (lower.includes("setup") || lower.includes("start") || lower.includes("how fast") || lower.includes("get started")) {
-    return "Setup takes under 15 minutes! Just sign up, connect your calendar or scheduling system via our API (or use the built-in dashboard), and configure your reminder preferences. We'll start reducing your no-shows immediately. No credit card needed for the 14-day trial.";
-  }
-
-  if (lower.includes("reminder") || lower.includes("sms") || lower.includes("whatsapp") || lower.includes("notification")) {
-    return "We send AI-timed reminders through WhatsApp, SMS, and email. The timing is optimized based on analysis of your client behavior patterns — so reminders arrive when they're most effective. You can customize message templates and choose which channels to use per appointment type.";
-  }
-
-  if (lower.includes("trial") || lower.includes("free")) {
-    return "Yes! Every plan includes a 14-day free trial with full access to all features — no credit card required. If you love it, just add your payment details to continue. If not, your account simply pauses with no charges.";
-  }
-
-  if (lower.includes("hipaa") || lower.includes("security") || lower.includes("secure") || lower.includes("gdpr")) {
-    return "Security is our top priority. We use end-to-end encryption, SOC 2 compliant infrastructure, and follow HIPAA guidelines for healthcare data. We're also GDPR compliant. Your data never leaves our secure cloud environment.";
-  }
-
-  if (lower.includes("cancel") || lower.includes("switch plan") || lower.includes("upgrade") || lower.includes("downgrade")) {
-    return "You can upgrade or downgrade your plan at any time from the billing page. Changes take effect at the start of your next billing cycle. If you upgrade mid-cycle, we prorate the difference. You can cancel anytime with no cancellation fees.";
-  }
-
-  if (lower.includes("industry") || lower.includes("business") || lower.includes("who") || lower.includes("salon") || lower.includes("dental") || lower.includes("clinic") || lower.includes("gym") || lower.includes("fitness")) {
-    return "NowShow works for any appointment-based business: healthcare clinics, dental offices, salons & spas, auto service shops, fitness studios, consulting firms, legal practices, and more. If your business runs on appointments, we can help you eliminate no-shows.";
-  }
-
-  if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
-    return "Hello! Welcome to NowShow. I'm here to help you learn about our AI-powered appointment management platform. What would you like to know? I can tell you about pricing, features, integrations, or how to get started.";
-  }
-
-  return null;
+  return _client;
 }
 
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ message: "Too many requests. Please wait a moment." }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     const parsed = BodySchema.safeParse(body);
@@ -83,21 +85,56 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "I'm ready to help! Ask me anything about NowShow." });
     }
 
-    // Try smart response first (fast, no API needed)
-    const smartResponse = getSmartResponse(lastMessage.content);
-    if (smartResponse) {
-      return NextResponse.json({ message: smartResponse });
+    // If no API key configured, fall back to rule-based
+    if (!process.env.ANTHROPIC_API_KEY) {
+      const fallback = getFallbackResponse(lastMessage.content);
+      return NextResponse.json({ message: fallback });
     }
 
-    // Fallback: general helpful response
+    // Call Claude API
+    const client = getClient();
+
+    // Convert to Anthropic message format (keep last 10 messages for context)
+    const recentMessages = messages.slice(-10).map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }));
+
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 500,
+      system: SYSTEM_PROMPT,
+      messages: recentMessages,
+    });
+
+    const text =
+      response.content[0]?.type === "text"
+        ? response.content[0].text
+        : "I'm here to help! Ask me anything about NowShow.";
+
+    return NextResponse.json({ message: text });
+  } catch (error) {
+    console.error("Chat API error:", error);
+
+    // On any API error, return a helpful fallback
     return NextResponse.json({
       message:
-        "That's a great question! NowShow helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. For specific details, I'd recommend starting a free trial at nowshow.com/signup or reaching out to our team at sales@nowshow.com. Is there something specific about our features, pricing, or setup I can help with?",
+        "I'm having a brief technical moment. In the meantime: **NowShow** helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. All plans include a **14-day free trial**. What would you like to know?",
     });
-  } catch {
-    return NextResponse.json(
-      { message: "Sorry, I encountered an error. Please try again." },
-      { status: 500 },
-    );
   }
+}
+
+// Fallback for when no API key is configured
+function getFallbackResponse(userMessage: string): string {
+  const lower = userMessage.toLowerCase();
+
+  if (lower.includes("price") || lower.includes("cost") || lower.includes("how much")) {
+    return "Every plan includes our AI engine. **Growth** at $199/mo gives you AI-timed reminders, AI no-show risk scoring, and AI waitlist with auto-fill (1,000 appointments, 2 locations). **Professional** at $499/mo adds AI calendar optimization, proactive reschedule suggestions, and advanced waitlist ranking (10,000 appointments, 10 locations). **Enterprise** at $999/mo is unlimited with the full AI decision engine, custom models, FHIR, and SSO. All plans include a 14-day free trial. Annual billing saves you 15-20%.";
+  }
+
+  if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+    return "Hello! Welcome to NowShow. I'm here to help you learn about our AI-powered appointment management platform. What would you like to know? I can tell you about pricing, features, integrations, or how to get started.";
+  }
+
+  return "That's a great question! **NowShow** helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. For specific details, I'd recommend starting a **free trial** or reaching out to our team at sales@nowshow.com. Is there something specific about our features, pricing, or setup I can help with?";
 }
