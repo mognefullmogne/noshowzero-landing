@@ -15,6 +15,10 @@ import {
   Code,
   Zap,
   ArrowRight,
+  Monitor,
+  Repeat,
+  Settings,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +29,17 @@ interface CodeBlockProps {
   readonly language?: string;
 }
 
-function CodeBlock({ code, language = "bash" }: CodeBlockProps) {
+function CodeBlock({ code, language = "javascript" }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard permission denied — user can select manually
+    }
   }
 
   return (
@@ -54,19 +62,20 @@ function CodeBlock({ code, language = "bash" }: CodeBlockProps) {
 }
 
 const SECTIONS = [
-  { id: "overview", label: "Overview", icon: BookOpen },
-  { id: "quick-start", label: "Quick Start", icon: Zap },
+  { id: "how-it-works", label: "How It Works", icon: Zap },
+  { id: "no-code", label: "No Code Needed", icon: Monitor },
+  { id: "quick-start", label: "Developer Setup", icon: Code },
   { id: "authentication", label: "Authentication", icon: Key },
   { id: "appointments", label: "Appointments", icon: CalendarDays },
   { id: "reminders", label: "Reminders", icon: Bell },
   { id: "waitlist", label: "Waitlist", icon: ListChecks },
   { id: "contacts", label: "Contacts", icon: Users },
   { id: "webhooks", label: "Webhooks", icon: Send },
-  { id: "errors", label: "Error Handling", icon: Code },
+  { id: "errors", label: "Error Handling", icon: Settings },
 ] as const;
 
 export default function DocsPage() {
-  const [activeSection, setActiveSection] = useState("overview");
+  const [activeSection, setActiveSection] = useState("how-it-works");
 
   function scrollTo(id: string) {
     setActiveSection(id);
@@ -80,7 +89,7 @@ export default function DocsPage() {
       <nav className="hidden lg:block w-56 flex-shrink-0">
         <div className="sticky top-8 space-y-1">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            API Reference
+            Documentation
           </p>
           {SECTIONS.map((section) => (
             <button
@@ -102,114 +111,248 @@ export default function DocsPage() {
 
       {/* Content */}
       <div className="flex-1 min-w-0 space-y-12">
-        {/* Overview */}
-        <section id="overview">
-          <h1 className="text-2xl font-bold text-gray-900">NowShow API Documentation</h1>
+
+        {/* How It Works */}
+        <section id="how-it-works">
+          <h1 className="text-2xl font-bold text-gray-900">How NowShow Works</h1>
           <p className="mt-2 text-gray-600 leading-relaxed">
-            The NowShow API lets you integrate AI-powered appointment management into your
-            existing scheduling software. Reduce no-shows, fill cancellations automatically,
-            and send smart reminders — all through a simple REST API.
+            NowShow plugs into your existing scheduling software and <strong>runs entirely on autopilot</strong>.
+            There is nothing to run manually — once connected, the AI handles everything.
           </p>
 
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl border border-black/[0.04] bg-white p-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
-                <Zap className="h-4 w-4 text-blue-600" />
-              </div>
-              <p className="mt-3 text-sm font-semibold text-gray-900">REST API</p>
-              <p className="mt-1 text-xs text-gray-500">JSON over HTTPS with standard HTTP methods</p>
-            </div>
-            <div className="rounded-xl border border-black/[0.04] bg-white p-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
-                <Key className="h-4 w-4 text-indigo-600" />
-              </div>
-              <p className="mt-3 text-sm font-semibold text-gray-900">API Key Auth</p>
-              <p className="mt-1 text-xs text-gray-500">Simple header-based authentication</p>
-            </div>
-            <div className="rounded-xl border border-black/[0.04] bg-white p-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
-                <Send className="h-4 w-4 text-green-600" />
-              </div>
-              <p className="mt-3 text-sm font-semibold text-gray-900">Webhooks</p>
-              <p className="mt-1 text-xs text-gray-500">Real-time event notifications</p>
+          <div className="mt-8 space-y-0">
+            {/* Flow diagram */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-0">
+              {[
+                {
+                  step: "1",
+                  title: "Your software creates an appointment",
+                  desc: "A client books via your website, app, or front desk. Your system sends the appointment data to NowShow automatically.",
+                  color: "blue",
+                },
+                {
+                  step: "2",
+                  title: "NowShow AI takes over",
+                  desc: "We score the no-show risk, pick the best reminder channel & timing, and schedule everything. Zero human effort.",
+                  color: "indigo",
+                },
+                {
+                  step: "3",
+                  title: "Clients show up, slots stay filled",
+                  desc: "Reminders go out on WhatsApp, SMS, or email. If someone cancels, the waitlist AI fills the slot in minutes.",
+                  color: "green",
+                },
+              ].map((item) => (
+                <div key={item.step} className="relative p-5 rounded-xl border border-black/[0.04] bg-white">
+                  <div className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white",
+                    item.color === "blue" && "bg-blue-600",
+                    item.color === "indigo" && "bg-indigo-600",
+                    item.color === "green" && "bg-green-600",
+                  )}>
+                    {item.step}
+                  </div>
+                  <h3 className="mt-3 text-sm font-semibold text-gray-900">{item.title}</h3>
+                  <p className="mt-1 text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
-            <p className="text-sm text-blue-800">
-              <strong>Base URL:</strong>{" "}
-              <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-700 text-xs">{API_BASE}</code>
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              All API requests must be made over HTTPS. Requests made over HTTP will be rejected.
-            </p>
+          <div className="mt-6 rounded-xl border border-green-100 bg-green-50/50 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <Repeat className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-green-800">This is fully automatic</p>
+                <p className="text-xs text-green-600 mt-0.5">
+                  After the one-time setup, your scheduling software talks to NowShow in the background.
+                  Every new appointment is automatically analyzed, reminders are sent at the perfect time,
+                  and cancellations trigger instant waitlist matching. Nobody runs any commands — it just works.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Quick Start */}
-        <section id="quick-start">
-          <h2 className="text-xl font-bold text-gray-900">Quick Start</h2>
+        {/* No Code Option */}
+        <section id="no-code">
+          <h2 className="text-xl font-bold text-gray-900">Option A: No Code Needed</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Get up and running in 3 steps. You&apos;ll be sending your first AI-powered reminder in under 15 minutes.
+            If you don&apos;t have custom scheduling software and just want to use NowShow directly,
+            you don&apos;t need any code at all.
           </p>
 
-          <div className="mt-6 space-y-6">
+          <div className="mt-6 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm flex-shrink-0">
+                <Monitor className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Use the NowShow Dashboard</h3>
+                <p className="mt-1 text-sm text-gray-600 leading-relaxed">
+                  Log in to your NowShow account, add appointments through our web interface,
+                  manage your waitlist, and see analytics — all without writing a single line of code.
+                  The AI works the same way whether you use the dashboard or the API.
+                </p>
+                <p className="mt-3 text-sm text-gray-600">
+                  <strong>Perfect for:</strong> Solo practitioners, small salons, individual clinics, or anyone
+                  who manages appointments manually or with a basic calendar.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">When do you need the API?</p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  The API is for <strong>software companies</strong> or businesses with <strong>existing scheduling systems</strong> (like
+                  an EHR, a booking platform, or a custom app) that want to integrate NowShow automatically.
+                  If you book appointments using Google Calendar, a notebook, or our dashboard — you don&apos;t need it.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Developer Quick Start */}
+        <section id="quick-start">
+          <h2 className="text-xl font-bold text-gray-900">Option B: API Integration (for Developers)</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            If you have existing scheduling software, a developer connects it to NowShow <strong>once</strong>.
+            After that, everything is automatic — your software sends appointments to NowShow, and NowShow handles the rest.
+          </p>
+
+          <div className="mt-6 space-y-8">
+            {/* Step 1 */}
             <div className="flex gap-4">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">1</div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">Get your API key</h3>
+                <h3 className="font-semibold text-gray-900">Get your API key (one time)</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Go to your <a href="/dashboard" className="text-blue-600 underline">Dashboard</a> and
-                  click &quot;Generate New Key&quot;. Copy the key — you&apos;ll need it for all API requests.
+                  Go to your <a href="/dashboard" className="text-blue-600 underline">Dashboard</a> and click
+                  &quot;Generate New Key&quot;. Your developer adds this key to your software&apos;s configuration.
                 </p>
               </div>
             </div>
 
+            {/* Step 2 */}
             <div className="flex gap-4">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">2</div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">Create an appointment</h3>
+                <h3 className="font-semibold text-gray-900">Add a few lines to your booking code (one time)</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Register an upcoming appointment so NowShow can track it and send smart reminders.
+                  Wherever your software creates a new appointment, add a call to NowShow.
+                  Here&apos;s what that looks like — this code goes <strong>inside your existing software</strong> and runs automatically every time a client books:
                 </p>
-                <div className="mt-3">
-                  <CodeBlock language="bash" code={`curl -X POST ${API_BASE}/appointments \\
-  -H "X-API-Key: nows_your_key_here" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "patient_name": "John Smith",
-    "patient_phone": "+1234567890",
-    "patient_email": "john@example.com",
-    "provider_name": "Dr. Sarah Chen",
-    "scheduled_at": "2026-03-10T14:00:00Z",
-    "duration_minutes": 30,
-    "type": "checkup"
-  }'`} />
+
+                <div className="mt-3 space-y-3">
+                  <CodeBlock language="javascript" code={`// This goes inside YOUR booking software — runs automatically
+// whenever a new appointment is created
+
+async function onAppointmentCreated(appointment) {
+  // Send the appointment to NowShow — AI handles the rest
+  await fetch("${API_BASE}/appointments", {
+    method: "POST",
+    headers: {
+      "X-API-Key": process.env.NOWSHOW_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      patient_name: appointment.clientName,
+      patient_phone: appointment.clientPhone,
+      patient_email: appointment.clientEmail,
+      provider_name: appointment.staffName,
+      scheduled_at: appointment.dateTime,
+      duration_minutes: appointment.duration,
+      type: appointment.serviceType,
+    }),
+  });
+  // That's it! NowShow now:
+  // ✓ Scores the no-show risk
+  // ✓ Schedules smart reminders (WhatsApp, SMS, email)
+  // ✓ Monitors for cancellations
+  // ✓ Auto-fills from waitlist if cancelled
+}`} />
+
+                  <CodeBlock language="python" code={`# Python version — same idea, goes inside your booking system
+
+import requests, os
+
+def on_appointment_created(appointment):
+    """Called automatically when a client books."""
+    requests.post(
+        "${API_BASE}/appointments",
+        headers={
+            "X-API-Key": os.environ["NOWSHOW_API_KEY"],
+            "Content-Type": "application/json",
+        },
+        json={
+            "patient_name": appointment["client_name"],
+            "patient_phone": appointment["client_phone"],
+            "patient_email": appointment["client_email"],
+            "provider_name": appointment["staff_name"],
+            "scheduled_at": appointment["date_time"],
+            "duration_minutes": appointment["duration"],
+            "type": appointment["service_type"],
+        },
+    )
+    # Done! NowShow AI takes it from here.`} />
                 </div>
               </div>
             </div>
 
+            {/* Step 3 */}
             <div className="flex gap-4">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">3</div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">NowShow handles the rest</h3>
+                <h3 className="font-semibold text-gray-900">Optionally: handle cancellations too</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Our AI engine automatically:
+                  If a client cancels through your software, tell NowShow so the AI can instantly offer the slot to the next person on the waitlist:
                 </p>
-                <ul className="mt-2 space-y-1.5 text-sm text-gray-600">
-                  <li className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    Scores the no-show risk for each appointment
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    Sends reminders at the optimal time (WhatsApp, SMS, email)
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    Auto-fills cancelled slots from the waitlist
-                  </li>
-                </ul>
+
+                <div className="mt-3">
+                  <CodeBlock language="javascript" code={`// Also inside your software — runs when a client cancels
+
+async function onAppointmentCancelled(appointmentId, reason) {
+  const response = await fetch(
+    \`${API_BASE}/appointments/\${appointmentId}\`,
+    {
+      method: "PATCH",
+      headers: {
+        "X-API-Key": process.env.NOWSHOW_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status: "cancelled",
+        cancellation_reason: reason,
+      }),
+    }
+  );
+
+  const result = await response.json();
+  // result.waitlist_triggered = true
+  // result.slot_offered_to = "Jane Doe"
+  // → NowShow already texted Jane to offer her the slot!
+}`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="flex gap-4">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-bold text-green-700">
+                <Check className="h-4 w-4" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">That&apos;s the entire integration</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  From this point forward, everything is automatic. Your software creates appointments
+                  as usual, NowShow analyzes each one, sends perfectly timed reminders, and fills
+                  cancellations from the waitlist. No manual work, no commands to run, no monitoring needed.
+                </p>
               </div>
             </div>
           </div>
@@ -219,19 +362,28 @@ export default function DocsPage() {
         <section id="authentication">
           <h2 className="text-xl font-bold text-gray-900">Authentication</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Authenticate every request by including your API key in the <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 text-xs">X-API-Key</code> header.
+            Every API request includes your key in the <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 text-xs">X-API-Key</code> header.
+            This is set up once in your software&apos;s configuration.
           </p>
 
           <div className="mt-4">
-            <CodeBlock language="bash" code={`curl ${API_BASE}/appointments \\
-  -H "X-API-Key: nows_your_key_here"`} />
+            <CodeBlock language="javascript" code={`// Set your API key once in your app's config
+const NOWSHOW_API_KEY = process.env.NOWSHOW_API_KEY;
+
+// Every request to NowShow includes this header automatically
+const headers = {
+  "X-API-Key": NOWSHOW_API_KEY,
+  "Content-Type": "application/json",
+};`} />
           </div>
 
-          <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-            <p className="text-sm font-medium text-amber-800">Keep your API key secret</p>
-            <p className="text-xs text-amber-600 mt-1">
-              Never expose your API key in client-side code, public repositories, or browser
-              requests. Use server-side code to call the NowShow API.
+          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
+            <p className="text-sm text-blue-800">
+              <strong>Base URL:</strong>{" "}
+              <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-700 text-xs">{API_BASE}</code>
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              All requests use HTTPS. Store your API key in an environment variable — never in client-side code.
             </p>
           </div>
         </section>
@@ -240,15 +392,15 @@ export default function DocsPage() {
         <section id="appointments">
           <h2 className="text-xl font-bold text-gray-900">Appointments</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Create, update, and manage appointments. NowShow will automatically analyze each
-            appointment for no-show risk and schedule appropriate reminders.
+            When your software sends an appointment to NowShow, the AI automatically scores
+            the no-show risk and schedules the optimal reminders. No further action needed.
           </p>
 
-          <div className="mt-6 space-y-8">
+          <div className="mt-6 space-y-4">
             <EndpointBlock
               method="POST"
               path="/appointments"
-              description="Create a new appointment"
+              description="Send a new appointment to NowShow"
               requestBody={`{
   "patient_name": "John Smith",
   "patient_phone": "+1234567890",
@@ -269,13 +421,16 @@ export default function DocsPage() {
     { "channel": "sms", "send_at": "2026-03-10T08:00:00Z" }
   ],
   "created_at": "2026-03-03T12:00:00Z"
-}`}
+}
+
+→ NowShow immediately scheduled 2 reminders
+→ Risk score 0.23 = low risk, standard reminders`}
             />
 
             <EndpointBlock
               method="GET"
               path="/appointments"
-              description="List all appointments with optional filters"
+              description="List appointments (with filters)"
               requestBody={null}
               responseBody={`{
   "data": [...],
@@ -294,7 +449,7 @@ Query params:
             <EndpointBlock
               method="GET"
               path="/appointments/:id"
-              description="Get a single appointment with full details and AI analysis"
+              description="Get full details + AI analysis for one appointment"
               requestBody={null}
               responseBody={`{
   "id": "apt_7f3k9x2m",
@@ -316,7 +471,7 @@ Query params:
             <EndpointBlock
               method="PATCH"
               path="/appointments/:id"
-              description="Update an appointment (reschedule, cancel, mark as no-show)"
+              description="Cancel or reschedule (triggers waitlist)"
               requestBody={`{
   "status": "cancelled",
   "cancellation_reason": "patient_request"
@@ -326,7 +481,9 @@ Query params:
   "status": "cancelled",
   "waitlist_triggered": true,
   "slot_offered_to": "Jane Doe"
-}`}
+}
+
+→ Slot was instantly offered to the top waitlist match`}
             />
           </div>
         </section>
@@ -335,15 +492,16 @@ Query params:
         <section id="reminders">
           <h2 className="text-xl font-bold text-gray-900">Reminders</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Reminders are automatically scheduled when you create an appointment. The AI picks
-            the optimal channel (WhatsApp, SMS, email) and timing based on patient behavior patterns.
+            Reminders are <strong>100% automatic</strong>. When you send an appointment to NowShow,
+            the AI picks the best channel and timing. You can also check reminder status or manually
+            trigger extras if needed.
           </p>
 
-          <div className="mt-6 space-y-8">
+          <div className="mt-6 space-y-4">
             <EndpointBlock
               method="GET"
               path="/appointments/:id/reminders"
-              description="List all reminders for an appointment"
+              description="Check reminder status for an appointment"
               requestBody={null}
               responseBody={`{
   "data": [
@@ -368,10 +526,10 @@ Query params:
             <EndpointBlock
               method="POST"
               path="/appointments/:id/reminders"
-              description="Manually trigger an additional reminder"
+              description="Manually send an extra reminder (optional)"
               requestBody={`{
   "channel": "sms",
-  "message": "Reminder: Your appointment with Dr. Chen is tomorrow at 2 PM."
+  "message": "Reminder: Your appointment is tomorrow at 2 PM."
 }`}
               responseBody={`{
   "id": "rem_ghi789",
@@ -387,15 +545,15 @@ Query params:
         <section id="waitlist">
           <h2 className="text-xl font-bold text-gray-900">Waitlist</h2>
           <p className="mt-2 text-sm text-gray-600">
-            The AI waitlist automatically fills cancelled slots by scoring candidates on
-            clinical urgency, reliability, time preferences, and distance.
+            Add clients to the waitlist, and the AI automatically fills cancelled slots by scoring
+            candidates on urgency, reliability, time preferences, and distance — no manual matching needed.
           </p>
 
-          <div className="mt-6 space-y-8">
+          <div className="mt-6 space-y-4">
             <EndpointBlock
               method="POST"
               path="/waitlist"
-              description="Add a patient to the waitlist"
+              description="Add someone to the waitlist"
               requestBody={`{
   "patient_name": "Jane Doe",
   "patient_phone": "+1987654321",
@@ -411,13 +569,16 @@ Query params:
   "smart_score": 78,
   "position": 3,
   "created_at": "2026-03-03T12:00:00Z"
-}`}
+}
+
+→ AI scored this entry 78/100 (position #3)
+→ When a slot opens, higher scores get offered first`}
             />
 
             <EndpointBlock
               method="GET"
               path="/waitlist"
-              description="List all waitlist entries with AI scores"
+              description="See all waitlisted clients with AI scores"
               requestBody={null}
               responseBody={`{
   "data": [
@@ -439,15 +600,15 @@ Query params:
         <section id="contacts">
           <h2 className="text-xl font-bold text-gray-900">Contacts</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Manage your patient/client contacts. NowShow builds a reliability profile
-            for each contact over time to improve no-show predictions.
+            NowShow automatically builds a reliability profile for each client over time.
+            The more appointments they have, the better the AI predicts their no-show risk.
           </p>
 
-          <div className="mt-6 space-y-8">
+          <div className="mt-6">
             <EndpointBlock
               method="POST"
               path="/contacts"
-              description="Create or update a contact"
+              description="Create or update a client profile"
               requestBody={`{
   "name": "John Smith",
   "phone": "+1234567890",
@@ -461,7 +622,10 @@ Query params:
   "total_appointments": 12,
   "no_shows": 1,
   "created_at": "2026-01-15T10:00:00Z"
-}`}
+}
+
+→ 85% reliability (1 no-show out of 12 visits)
+→ AI uses this to calibrate reminder intensity`}
             />
           </div>
         </section>
@@ -470,22 +634,23 @@ Query params:
         <section id="webhooks">
           <h2 className="text-xl font-bold text-gray-900">Webhooks</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Receive real-time notifications when important events happen. Configure webhook
-            URLs in your dashboard settings.
+            NowShow can notify your software in real-time when things happen — like a reminder
+            being delivered, a slot being filled, or a high-risk appointment detected. Your software
+            receives these events automatically (no polling needed).
           </p>
 
           <div className="mt-4 rounded-xl border border-black/[0.06] bg-white p-4">
-            <p className="text-sm font-semibold text-gray-900 mb-3">Available Events</p>
+            <p className="text-sm font-semibold text-gray-900 mb-3">Events NowShow sends to you</p>
             <div className="space-y-2">
               {[
                 { event: "appointment.created", desc: "New appointment registered" },
                 { event: "appointment.cancelled", desc: "Appointment was cancelled" },
-                { event: "appointment.no_show", desc: "Patient didn't show up" },
-                { event: "reminder.sent", desc: "Reminder sent to patient" },
+                { event: "appointment.no_show", desc: "Client didn't show up" },
+                { event: "reminder.sent", desc: "Reminder sent to client" },
                 { event: "reminder.delivered", desc: "Reminder confirmed delivered" },
-                { event: "waitlist.slot_offered", desc: "Open slot offered to waitlist patient" },
-                { event: "waitlist.slot_filled", desc: "Waitlist patient confirmed the slot" },
-                { event: "risk.high_detected", desc: "High no-show risk detected for appointment" },
+                { event: "waitlist.slot_offered", desc: "Open slot offered to waitlist client" },
+                { event: "waitlist.slot_filled", desc: "Waitlist client confirmed the slot" },
+                { event: "risk.high_detected", desc: "High no-show risk detected" },
               ].map(({ event, desc }) => (
                 <div key={event} className="flex items-start gap-3">
                   <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono text-gray-700 flex-shrink-0">
@@ -498,7 +663,7 @@ Query params:
           </div>
 
           <div className="mt-4">
-            <p className="text-sm font-medium text-gray-900 mb-2">Webhook Payload Example</p>
+            <p className="text-sm font-medium text-gray-900 mb-2">Example: Your software receives this when a waitlist slot is filled</p>
             <CodeBlock language="json" code={`{
   "event": "waitlist.slot_filled",
   "timestamp": "2026-03-03T14:30:00Z",
@@ -518,7 +683,7 @@ Query params:
         <section id="errors">
           <h2 className="text-xl font-bold text-gray-900">Error Handling</h2>
           <p className="mt-2 text-sm text-gray-600">
-            The API uses standard HTTP status codes. Errors include a message explaining what went wrong.
+            Standard HTTP status codes. Your developer handles these once during setup.
           </p>
 
           <div className="mt-4 rounded-xl border border-black/[0.06] bg-white overflow-hidden">
@@ -532,12 +697,12 @@ Query params:
               <tbody className="divide-y divide-black/[0.04]">
                 {[
                   { code: "200", meaning: "Success" },
-                  { code: "201", meaning: "Resource created" },
-                  { code: "400", meaning: "Bad request — check your request body" },
-                  { code: "401", meaning: "Unauthorized — invalid or missing API key" },
-                  { code: "403", meaning: "Forbidden — insufficient plan tier" },
-                  { code: "404", meaning: "Resource not found" },
-                  { code: "429", meaning: "Rate limited — slow down requests" },
+                  { code: "201", meaning: "Created" },
+                  { code: "400", meaning: "Bad request — check the request body" },
+                  { code: "401", meaning: "Invalid or missing API key" },
+                  { code: "403", meaning: "Feature not available on your plan" },
+                  { code: "404", meaning: "Not found" },
+                  { code: "429", meaning: "Too many requests — slow down" },
                   { code: "500", meaning: "Server error — contact support" },
                 ].map(({ code, meaning }) => (
                   <tr key={code}>
@@ -551,30 +716,19 @@ Query params:
             </table>
           </div>
 
-          <div className="mt-4">
-            <p className="text-sm font-medium text-gray-900 mb-2">Error Response Format</p>
-            <CodeBlock language="json" code={`{
-  "error": {
-    "code": "INVALID_REQUEST",
-    "message": "The 'scheduled_at' field must be a future date.",
-    "field": "scheduled_at"
-  }
-}`} />
-          </div>
-
           <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
             <p className="text-sm font-medium text-blue-800">Rate Limits</p>
             <p className="text-xs text-blue-600 mt-1">
-              Growth: 100 requests/minute | Professional: 500 requests/minute | Enterprise: Unlimited
+              Growth: 100 req/min | Professional: 500 req/min | Enterprise: Unlimited
             </p>
           </div>
         </section>
 
         {/* Need help? */}
         <section className="rounded-2xl border border-black/[0.04] bg-gradient-to-br from-blue-50 to-indigo-50 p-8 text-center">
-          <h2 className="text-xl font-bold text-gray-900">Need Help?</h2>
+          <h2 className="text-xl font-bold text-gray-900">Need Help Integrating?</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Our team is here to help you integrate NowShow. We respond within 2 hours.
+            Our team helps your developer get set up. Most integrations take under 15 minutes.
           </p>
           <div className="mt-4 flex items-center justify-center gap-3">
             <a
