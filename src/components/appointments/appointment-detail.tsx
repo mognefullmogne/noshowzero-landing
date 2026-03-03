@@ -9,10 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { RiskBadge } from "./risk-badge";
 import { StatusBadge } from "./status-badge";
-import { Loader2, Brain, Bell, Clock, Gift, User, Bot, Send } from "lucide-react";
+import { Loader2, Brain, Bell, Clock, Gift, User, Bot, Send, Pencil, Check, X } from "lucide-react";
 import type { Appointment, Reminder, OfferStatus } from "@/lib/types";
 import { VALID_TRANSITIONS as transitions } from "@/lib/types";
 import { AppointmentAiChat } from "./appointment-ai-chat";
@@ -41,7 +42,65 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
   const [actionError, setActionError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"details" | "ai">("details");
 
+  // Patient edit state
+  const [editingPatient, setEditingPatient] = useState(false);
+  const [savingPatient, setSavingPatient] = useState(false);
+  const [editForm, setEditForm] = useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+    email: "",
+  });
+
   const allowed = transitions[appointment.status] ?? [];
+
+  function startEditPatient() {
+    const p = appointment.patient;
+    setEditForm({
+      first_name: p?.first_name ?? "",
+      last_name: p?.last_name ?? "",
+      phone: p?.phone ?? "",
+      email: p?.email ?? "",
+    });
+    setEditingPatient(true);
+    setActionError(null);
+  }
+
+  function cancelEditPatient() {
+    setEditingPatient(false);
+    setActionError(null);
+  }
+
+  async function savePatient() {
+    const p = appointment.patient;
+    if (!p) return;
+
+    setSavingPatient(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/patients/${p.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: editForm.first_name.trim(),
+          last_name: editForm.last_name.trim(),
+          phone: editForm.phone.trim() || null,
+          email: editForm.email.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setActionError(data?.error?.message ?? "Failed to update patient");
+        return;
+      }
+      setEditingPatient(false);
+      onUpdated();
+    } catch {
+      setActionError("Network error — please try again");
+    } finally {
+      setSavingPatient(false);
+    }
+  }
 
   async function handleAiScore() {
     setScoring(true);
@@ -174,13 +233,88 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
           )}
 
           {/* Patient info */}
-          {patient && (
+          {patient && !editingPatient && (
             <div>
-              <p className="text-sm font-medium text-gray-500">Patient</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-500">Patient</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={startEditPatient}
+                  className="h-6 px-2 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  <Pencil className="mr-1 h-3 w-3" />
+                  Edit
+                </Button>
+              </div>
               <p className="text-sm text-gray-900">
                 {patient.first_name} {patient.last_name}
-                {patient.email && <span className="text-gray-400 ml-2">({patient.email})</span>}
               </p>
+              {patient.phone && (
+                <p className="text-xs text-gray-500">Tel: {patient.phone}</p>
+              )}
+              {patient.email && (
+                <p className="text-xs text-gray-500">Email: {patient.email}</p>
+              )}
+              {!patient.phone && !patient.email && (
+                <p className="text-xs text-amber-500">No contact info — add phone or email to send confirmations</p>
+              )}
+            </div>
+          )}
+
+          {/* Patient edit mode */}
+          {patient && editingPatient && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-2">
+              <p className="text-xs font-semibold text-blue-700">Edit Patient</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  value={editForm.first_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, first_name: e.target.value }))}
+                  placeholder="First name"
+                  className="text-sm h-8"
+                />
+                <Input
+                  value={editForm.last_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, last_name: e.target.value }))}
+                  placeholder="Last name"
+                  className="text-sm h-8"
+                />
+              </div>
+              <Input
+                value={editForm.phone}
+                onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="Phone (e.g. +39 333 123 4567)"
+                type="tel"
+                className="text-sm h-8"
+              />
+              <Input
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="Email"
+                type="email"
+                className="text-sm h-8"
+              />
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  onClick={savePatient}
+                  disabled={savingPatient || !editForm.first_name.trim() || !editForm.last_name.trim()}
+                  className="h-7 text-xs"
+                >
+                  {savingPatient ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Check className="mr-1 h-3 w-3" />}
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelEditPatient}
+                  disabled={savingPatient}
+                  className="h-7 text-xs"
+                >
+                  <X className="mr-1 h-3 w-3" />
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
 

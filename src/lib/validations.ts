@@ -12,6 +12,14 @@ export const CreatePatientSchema = z.object({
   preferred_channel: z.enum(["whatsapp", "sms", "email"]).default("email"),
 });
 
+export const UpdatePatientSchema = z.object({
+  first_name: z.string().min(1).max(255).optional(),
+  last_name: z.string().min(1).max(255).optional(),
+  phone: z.string().max(50).optional().nullable(),
+  email: z.string().email().max(255).optional().nullable(),
+  preferred_channel: z.enum(["whatsapp", "sms", "email"]).optional(),
+});
+
 // --- Appointment ---
 
 export const CreateAppointmentSchema = z.object({

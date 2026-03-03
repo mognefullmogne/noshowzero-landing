@@ -29,6 +29,7 @@ type ContactChannel = "whatsapp" | "sms" | "email";
 
 interface ContactEntry {
   readonly channel: ContactChannel;
+  readonly prefix: string;
   readonly value: string;
 }
 
@@ -44,11 +45,24 @@ const CHANNEL_ICONS: Record<ContactChannel, typeof Phone> = {
   email: Mail,
 };
 
-const CHANNEL_PLACEHOLDERS: Record<ContactChannel, string> = {
-  whatsapp: "+39 333 123 4567",
-  sms: "+39 333 123 4567",
-  email: "patient@example.com",
-};
+const PHONE_PREFIXES = [
+  { code: "+39", country: "IT", flag: "🇮🇹" },
+  { code: "+1", country: "US", flag: "🇺🇸" },
+  { code: "+44", country: "UK", flag: "🇬🇧" },
+  { code: "+49", country: "DE", flag: "🇩🇪" },
+  { code: "+33", country: "FR", flag: "🇫🇷" },
+  { code: "+34", country: "ES", flag: "🇪🇸" },
+  { code: "+41", country: "CH", flag: "🇨🇭" },
+  { code: "+43", country: "AT", flag: "🇦🇹" },
+  { code: "+31", country: "NL", flag: "🇳🇱" },
+  { code: "+32", country: "BE", flag: "🇧🇪" },
+  { code: "+351", country: "PT", flag: "🇵🇹" },
+  { code: "+55", country: "BR", flag: "🇧🇷" },
+  { code: "+61", country: "AU", flag: "🇦🇺" },
+  { code: "+81", country: "JP", flag: "🇯🇵" },
+  { code: "+86", country: "CN", flag: "🇨🇳" },
+  { code: "+91", country: "IN", flag: "🇮🇳" },
+] as const;
 
 const INITIAL_FORM = {
   first_name: "",
@@ -67,7 +81,7 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const [contacts, setContacts] = useState<readonly ContactEntry[]>([
-    { channel: "whatsapp", value: "" },
+    { channel: "whatsapp", prefix: "+39", value: "" },
   ]);
 
   const updateField = useCallback(
@@ -80,7 +94,7 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
     const usedChannels = new Set(contacts.map((c) => c.channel));
     const next = (["whatsapp", "sms", "email"] as const).find((ch) => !usedChannels.has(ch));
     if (next) {
-      setContacts((prev) => [...prev, { channel: next, value: "" }]);
+      setContacts((prev) => [...prev, { channel: next, prefix: "+39", value: "" }]);
     }
   }, [contacts]);
 
@@ -89,13 +103,12 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
   }, []);
 
   const updateContact = useCallback(
-    (index: number, field: "channel" | "value", val: string) => {
+    (index: number, field: "channel" | "value" | "prefix", val: string) => {
       setContacts((prev) =>
         prev.map((c, i) => {
           if (i !== index) return c;
-          // When switching channel, clear stale value to prevent mismatched data
-          if (field === "channel") return { channel: val as ContactChannel, value: "" };
-          return { ...c, value: val };
+          if (field === "channel") return { channel: val as ContactChannel, prefix: c.prefix, value: "" };
+          return { ...c, [field]: val };
         })
       );
     },
@@ -120,7 +133,8 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
 
     // Build patient contact info from entries
     const filledContacts = contacts.filter((c) => c.value.trim().length > 0);
-    const phone = filledContacts.find((c) => c.channel === "whatsapp" || c.channel === "sms")?.value.trim();
+    const phoneContact = filledContacts.find((c) => c.channel === "whatsapp" || c.channel === "sms");
+    const phone = phoneContact ? `${phoneContact.prefix}${phoneContact.value.trim().replace(/^0+/, "")}` : undefined;
     const email = filledContacts.find((c) => c.channel === "email")?.value.trim();
     const preferredChannel = filledContacts[0]?.channel ?? "whatsapp";
 
@@ -150,11 +164,10 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
         setLoading(false);
         return;
       }
-      // Reset loading BEFORE closing dialog to avoid setState on unmounted component
       setLoading(false);
       setOpen(false);
       setForm(INITIAL_FORM);
-      setContacts([{ channel: "whatsapp", value: "" }]);
+      setContacts([{ channel: "whatsapp", prefix: "+39", value: "" }]);
       onCreated();
     } catch {
       setError("Network error — please try again");
@@ -214,6 +227,7 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
               <div className="mt-1.5 space-y-2">
                 {contacts.map((contact, idx) => {
                   const Icon = CHANNEL_ICONS[contact.channel];
+                  const isPhone = contact.channel !== "email";
                   return (
                     <div key={contact.channel} className="flex items-center gap-2">
                       <Select
@@ -234,13 +248,40 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Input
-                        value={contact.value}
-                        onChange={(e) => updateContact(idx, "value", e.target.value)}
-                        placeholder={CHANNEL_PLACEHOLDERS[contact.channel]}
-                        type={contact.channel === "email" ? "email" : "tel"}
-                        className="flex-1"
-                      />
+                      {isPhone ? (
+                        <div className="flex flex-1 gap-1.5">
+                          <Select
+                            value={contact.prefix}
+                            onValueChange={(v) => updateContact(idx, "prefix", v)}
+                          >
+                            <SelectTrigger className="w-24 shrink-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PHONE_PREFIXES.map((p) => (
+                                <SelectItem key={p.code} value={p.code}>
+                                  {p.flag} {p.code}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            value={contact.value}
+                            onChange={(e) => updateContact(idx, "value", e.target.value)}
+                            placeholder="333 123 4567"
+                            type="tel"
+                            className="flex-1"
+                          />
+                        </div>
+                      ) : (
+                        <Input
+                          value={contact.value}
+                          onChange={(e) => updateContact(idx, "value", e.target.value)}
+                          placeholder="patient@example.com"
+                          type="email"
+                          className="flex-1"
+                        />
+                      )}
                       {contacts.length > 1 && (
                         <Button
                           type="button"
