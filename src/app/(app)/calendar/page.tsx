@@ -240,7 +240,7 @@ export default function CalendarPage() {
   const apptGrid = useMemo(() => {
     const grid: Record<string, CalendarAppointment[]> = {};
     for (const appt of appointments) {
-      if (appt.status === "cancelled") continue;
+      if (appt.status === "cancelled" || appt.status === "declined") continue;
       const d = new Date(appt.scheduled_at);
       const dayIdx = (d.getDay() + 6) % 7;
       const hour = d.getHours();
