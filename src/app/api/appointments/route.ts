@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
-import { CreateAppointmentSchema, AppointmentFiltersSchema } from "@/lib/validations";
+import {
+  CreateAppointmentSchema,
+  InlineCreateAppointmentSchema,
+  AppointmentFiltersSchema,
+} from "@/lib/validations";
 import { computeRiskScore } from "@/lib/scoring/risk-score";
 import { generateContactSchedule, scheduleToReminders } from "@/lib/scoring/contact-timing";
-import type { Patient } from "@/lib/types";
+import { createConfirmationWorkflow } from "@/lib/confirmation/workflow";
+import type { Patient, MessageChannel } from "@/lib/types";
 
 export async function GET(request: Request) {
   try {
@@ -68,47 +73,139 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
 
     const body = await request.json();
-    const parsed = CreateAppointmentSchema.safeParse(body);
-    if (!parsed.success) {
+    const supabase = await createClient();
+
+    // Try inline schema first (dashboard form), fall back to legacy schema (API/programmatic)
+    const inlineParsed = InlineCreateAppointmentSchema.safeParse(body);
+    const legacyParsed = CreateAppointmentSchema.safeParse(body);
+
+    let patientId: string;
+    let preferredChannel: MessageChannel = "email";
+    let appointmentData: {
+      service_name: string;
+      provider_name?: string;
+      location_name?: string;
+      scheduled_at: string;
+      duration_min: number;
+      notes?: string;
+      service_code?: string;
+      payment_category?: string;
+      external_id?: string;
+    };
+
+    if (inlineParsed.success) {
+      // --- Inline flow: create or find patient, then create appointment ---
+      const { patient: patientInfo, ...apptInfo } = inlineParsed.data;
+
+      // Try to find existing patient by name + contact
+      let matchQuery = supabase
+        .from("patients")
+        .select("id, preferred_channel")
+        .eq("tenant_id", auth.data.tenantId)
+        .eq("is_active", true)
+        .ilike("first_name", patientInfo.first_name.trim())
+        .ilike("last_name", patientInfo.last_name.trim());
+
+      if (patientInfo.phone) {
+        matchQuery = matchQuery.eq("phone", patientInfo.phone.trim());
+      } else if (patientInfo.email) {
+        matchQuery = matchQuery.eq("email", patientInfo.email.trim());
+      }
+
+      const { data: existingPatient } = await matchQuery.maybeSingle();
+
+      if (existingPatient) {
+        patientId = existingPatient.id;
+        preferredChannel = (existingPatient.preferred_channel ?? patientInfo.preferred_channel) as MessageChannel;
+      } else {
+        // Create new patient
+        const { data: newPatient, error: patientError } = await supabase
+          .from("patients")
+          .insert({
+            tenant_id: auth.data.tenantId,
+            first_name: patientInfo.first_name.trim(),
+            last_name: patientInfo.last_name.trim(),
+            phone: patientInfo.phone?.trim() || null,
+            email: patientInfo.email?.trim() || null,
+            preferred_channel: patientInfo.preferred_channel,
+          })
+          .select("id, preferred_channel")
+          .single();
+
+        if (patientError || !newPatient) {
+          console.error("Patient insert error:", patientError);
+          return NextResponse.json(
+            { success: false, error: { code: "DB_ERROR", message: "Failed to create patient" } },
+            { status: 500 }
+          );
+        }
+        patientId = newPatient.id;
+        preferredChannel = (newPatient.preferred_channel ?? patientInfo.preferred_channel) as MessageChannel;
+      }
+
+      // Parse scheduled_at — the form sends datetime-local format (no timezone)
+      const scheduledDate = new Date(apptInfo.scheduled_at);
+      appointmentData = {
+        service_name: apptInfo.service_name,
+        provider_name: apptInfo.provider_name,
+        location_name: apptInfo.location_name,
+        scheduled_at: scheduledDate.toISOString(),
+        duration_min: apptInfo.duration_min,
+        notes: apptInfo.notes,
+      };
+    } else if (legacyParsed.success) {
+      // --- Legacy flow: patient_id provided directly ---
+      const { data: patient } = await supabase
+        .from("patients")
+        .select("id, preferred_channel")
+        .eq("id", legacyParsed.data.patient_id)
+        .eq("tenant_id", auth.data.tenantId)
+        .maybeSingle();
+
+      if (!patient) {
+        return NextResponse.json(
+          { success: false, error: { code: "NOT_FOUND", message: "Patient not found" } },
+          { status: 404 }
+        );
+      }
+      patientId = patient.id;
+      preferredChannel = ((patient as Patient).preferred_channel ?? "email") as MessageChannel;
+      appointmentData = {
+        service_name: legacyParsed.data.service_name,
+        provider_name: legacyParsed.data.provider_name,
+        location_name: legacyParsed.data.location_name,
+        scheduled_at: legacyParsed.data.scheduled_at,
+        duration_min: legacyParsed.data.duration_min,
+        notes: legacyParsed.data.notes,
+        service_code: legacyParsed.data.service_code,
+        payment_category: legacyParsed.data.payment_category,
+        external_id: legacyParsed.data.external_id,
+      };
+    } else {
+      // Neither schema matched — return generic message, log details server-side
+      console.error("Validation error (inline):", inlineParsed.error.message, "legacy:", legacyParsed.error.message);
       return NextResponse.json(
-        { success: false, error: { code: "VALIDATION_ERROR", message: parsed.error.message } },
+        { success: false, error: { code: "VALIDATION_ERROR", message: "Invalid request body. Please check all required fields." } },
         { status: 400 }
       );
     }
 
-    const supabase = await createClient();
-
-    // Fetch patient history for risk scoring
-    const { data: patient } = await supabase
-      .from("patients")
-      .select("id, preferred_channel")
-      .eq("id", parsed.data.patient_id)
-      .eq("tenant_id", auth.data.tenantId)
-      .maybeSingle();
-
-    if (!patient) {
-      return NextResponse.json(
-        { success: false, error: { code: "NOT_FOUND", message: "Patient not found" } },
-        { status: 404 }
-      );
-    }
-
-    // Count historical appointments for risk score
+    // Count history for risk scoring
     const { count: totalAppts } = await supabase
       .from("appointments")
       .select("id", { count: "exact", head: true })
-      .eq("patient_id", parsed.data.patient_id)
+      .eq("patient_id", patientId)
       .eq("tenant_id", auth.data.tenantId);
 
     const { count: noShows } = await supabase
       .from("appointments")
       .select("id", { count: "exact", head: true })
-      .eq("patient_id", parsed.data.patient_id)
+      .eq("patient_id", patientId)
       .eq("tenant_id", auth.data.tenantId)
       .eq("status", "no_show");
 
     const now = new Date();
-    const scheduledAt = new Date(parsed.data.scheduled_at);
+    const scheduledAt = new Date(appointmentData.scheduled_at);
 
     const riskResult = computeRiskScore({
       totalAppointments: totalAppts ?? 0,
@@ -122,7 +219,8 @@ export async function POST(request: Request) {
       .from("appointments")
       .insert({
         tenant_id: auth.data.tenantId,
-        ...parsed.data,
+        patient_id: patientId,
+        ...appointmentData,
         risk_score: riskResult.score,
         risk_reasoning: riskResult.reasoning,
         risk_scored_at: now.toISOString(),
@@ -138,11 +236,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Schedule reminders based on risk score
-    const schedule = generateContactSchedule(
-      riskResult.score,
-      (patient as Patient).preferred_channel ?? "email"
-    );
+    // Schedule reminders
+    const schedule = generateContactSchedule(riskResult.score, preferredChannel);
     const reminderTimes = scheduleToReminders(scheduledAt, schedule);
 
     if (reminderTimes.length > 0) {
@@ -154,8 +249,22 @@ export async function POST(request: Request) {
         scheduled_at: r.scheduledAt.toISOString(),
         status: "pending",
       }));
-      await supabase.from("reminders").insert(reminderRows);
+      const { error: reminderError } = await supabase.from("reminders").insert(reminderRows);
+      if (reminderError) {
+        console.error("[Appointments] Failed to insert reminders:", reminderError, {
+          appointmentId: appointment.id,
+          count: reminderRows.length,
+        });
+      }
     }
+
+    // Create confirmation workflow (non-blocking)
+    createConfirmationWorkflow(
+      supabase,
+      auth.data.tenantId,
+      appointment.id,
+      scheduledAt
+    ).catch((err) => console.error("[Appointments] Confirmation workflow error:", err));
 
     return NextResponse.json({ success: true, data: appointment }, { status: 201 });
   } catch (err) {

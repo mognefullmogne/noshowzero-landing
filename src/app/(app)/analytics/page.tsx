@@ -15,6 +15,9 @@ import {
   XCircle,
   Target,
   Loader2,
+  Gift,
+  Clock,
+  ArrowUpRight,
 } from "lucide-react";
 import type { AnalyticsData } from "@/lib/types";
 
@@ -130,6 +133,70 @@ export default function AnalyticsPage() {
           trend="neutral"
         />
       </div>
+
+      {/* Backfill Engine Performance */}
+      <div className="mt-8">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Backfill Engine</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard
+            label="Offers Sent"
+            value={data.offersSent.toLocaleString()}
+            icon={Gift}
+          />
+          <KpiCard
+            label="Accepted"
+            value={data.offersAccepted.toLocaleString()}
+            change={data.offersSent > 0 ? `${data.offerFillRate}% fill rate` : undefined}
+            trend="up"
+            icon={CheckCircle}
+          />
+          <KpiCard
+            label="Declined"
+            value={data.offersDeclined.toLocaleString()}
+            icon={XCircle}
+            trend="neutral"
+          />
+          <KpiCard
+            label="Avg Response Time"
+            value={
+              data.avgResponseMinutes != null
+                ? data.avgResponseMinutes < 60
+                  ? `${data.avgResponseMinutes}m`
+                  : `${Math.floor(data.avgResponseMinutes / 60)}h ${data.avgResponseMinutes % 60}m`
+                : "—"
+            }
+            icon={Clock}
+          />
+        </div>
+      </div>
+
+      {/* Fill rate visualization */}
+      {data.offersSent > 0 && (
+        <div className="mt-6 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">Offer Fill Rate</h3>
+          <div className="mt-2 flex items-center gap-4">
+            <p className="text-3xl font-bold text-indigo-700">{data.offerFillRate}%</p>
+            <div className="flex-1">
+              <div className="h-3 rounded-full bg-gray-100">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-green-500 transition-all"
+                  style={{ width: `${data.offerFillRate}%` }}
+                />
+              </div>
+              <div className="mt-1 flex justify-between text-[10px] text-gray-400">
+                <span>0%</span>
+                <span>100% filled</span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+            <span>{data.offersAccepted} accepted</span>
+            <span>{data.offersDeclined} declined</span>
+            <span>{data.offersExpired} expired</span>
+            <span>{data.offersPending} pending</span>
+          </div>
+        </div>
+      )}
 
       {/* Average risk score */}
       <div className="mt-6 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">

@@ -22,12 +22,12 @@ export async function ensureRemindersScheduled(
   supabase: SupabaseClient,
   input: ScheduleInput
 ): Promise<number> {
-  // Check existing reminders
+  // Check if any reminders already exist (pending, sent, or cancelled)
+  // to avoid re-creating reminders that were already processed
   const { count } = await supabase
     .from("reminders")
     .select("id", { count: "exact", head: true })
-    .eq("appointment_id", input.appointmentId)
-    .eq("status", "pending");
+    .eq("appointment_id", input.appointmentId);
 
   if ((count ?? 0) > 0) return 0;
 

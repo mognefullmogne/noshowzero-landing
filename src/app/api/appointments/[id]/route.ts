@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { UpdateAppointmentSchema } from "@/lib/validations";
 import { VALID_TRANSITIONS, type AppointmentStatus } from "@/lib/types";
+import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function GET(
   _request: Request,
@@ -13,21 +16,41 @@ export async function GET(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!UUID_RE.test(id)) {
+      return NextResponse.json(
+        { success: false, error: { code: "VALIDATION_ERROR", message: "Invalid appointment ID" } },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("*, patient:patients(*), reminders(*)")
-      .eq("id", id)
-      .eq("tenant_id", auth.data.tenantId)
-      .maybeSingle();
+    const [appointmentRes, offersRes] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("*, patient:patients(*), reminders(*)")
+        .eq("id", id)
+        .eq("tenant_id", auth.data.tenantId)
+        .maybeSingle(),
+      supabase
+        .from("waitlist_offers")
+        .select("id, status, smart_score, offered_at, responded_at, patient:patients(first_name, last_name)")
+        .eq("original_appointment_id", id)
+        .eq("tenant_id", auth.data.tenantId)
+        .order("offered_at", { ascending: false }),
+    ]);
 
-    if (error || !data) {
+    if (appointmentRes.error || !appointmentRes.data) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "Appointment not found" } },
         { status: 404 }
       );
     }
+
+    const data = {
+      ...appointmentRes.data,
+      offers: offersRes.data ?? [],
+    };
 
     return NextResponse.json({ success: true, data });
   } catch (err) {
@@ -48,6 +71,13 @@ export async function PATCH(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!UUID_RE.test(id)) {
+      return NextResponse.json(
+        { success: false, error: { code: "VALIDATION_ERROR", message: "Invalid appointment ID" } },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const parsed = UpdateAppointmentSchema.safeParse(body);
     if (!parsed.success) {
@@ -111,6 +141,13 @@ export async function PATCH(
         { success: false, error: { code: "DB_ERROR", message: "Failed to update appointment" } },
         { status: 500 }
       );
+    }
+
+    // Trigger waitlist backfill on cancellation or no-show (non-blocking)
+    if (newStatus === "cancelled" || newStatus === "no_show") {
+      createServiceClient()
+        .then((serviceClient) => triggerBackfill(serviceClient, id, auth.data.tenantId))
+        .catch((err) => console.error("[Backfill] Trigger failed:", err));
     }
 
     return NextResponse.json({ success: true, data: updated });

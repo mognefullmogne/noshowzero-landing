@@ -12,7 +12,13 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const filters = AnalyticsFiltersSchema.safeParse(Object.fromEntries(url.searchParams));
-    const { from, to } = filters.success ? filters.data : { from: undefined, to: undefined };
+    if (!filters.success) {
+      return NextResponse.json(
+        { success: false, error: { code: "VALIDATION_ERROR", message: filters.error.message } },
+        { status: 400 }
+      );
+    }
+    const { from, to } = filters.data;
 
     const supabase = await createClient();
     const tenantId = auth.data.tenantId;
@@ -29,27 +35,57 @@ export async function GET(request: Request) {
       return q;
     };
 
+    // Build offer count query helper
+    const buildOfferQuery = (status?: string) => {
+      let q = supabase
+        .from("waitlist_offers")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId);
+      if (status) q = q.eq("status", status);
+      return q;
+    };
+
     // Run all counts in parallel
-    const [totalRes, noShowRes, completedRes, cancelledRes, confirmedRes, scheduledRes, waitlistRes, riskRes] =
-      await Promise.all([
-        buildQuery(),
-        buildQuery("no_show"),
-        buildQuery("completed"),
-        buildQuery("cancelled"),
-        buildQuery("confirmed"),
-        buildQuery("scheduled"),
-        supabase
-          .from("waitlist_entries")
-          .select("id", { count: "exact", head: true })
+    const [
+      totalRes, noShowRes, completedRes, cancelledRes, confirmedRes, scheduledRes,
+      waitlistRes, riskRes,
+      offersAllRes, offersAcceptedRes, offersDeclinedRes, offersExpiredRes, offersPendingRes,
+      offersResponseTimeRes,
+    ] = await Promise.all([
+      buildQuery(),
+      buildQuery("no_show"),
+      buildQuery("completed"),
+      buildQuery("cancelled"),
+      buildQuery("confirmed"),
+      buildQuery("scheduled"),
+      supabase
+        .from("waitlist_entries")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("status", "fulfilled"),
+      supabase
+        .from("appointments")
+        .select("risk_score")
+        .eq("tenant_id", tenantId)
+        .not("risk_score", "is", null)
+        .limit(1000),
+      buildOfferQuery(),
+      buildOfferQuery("accepted"),
+      buildOfferQuery("declined"),
+      buildOfferQuery("expired"),
+      buildOfferQuery("pending"),
+      (() => {
+        let q = supabase
+          .from("waitlist_offers")
+          .select("offered_at, responded_at")
           .eq("tenant_id", tenantId)
-          .eq("status", "fulfilled"),
-        supabase
-          .from("appointments")
-          .select("risk_score")
-          .eq("tenant_id", tenantId)
-          .not("risk_score", "is", null)
-          .limit(1000),
-      ]);
+          .not("responded_at", "is", null)
+          .limit(500);
+        if (from) q = q.gte("offered_at", from);
+        if (to) q = q.lte("offered_at", to);
+        return q;
+      })(),
+    ]);
 
     const total = totalRes.count ?? 0;
     const noShowCount = noShowRes.count ?? 0;
@@ -58,6 +94,26 @@ export async function GET(request: Request) {
     const confirmedCount = confirmedRes.count ?? 0;
     const scheduledCount = scheduledRes.count ?? 0;
     const waitlistFills = waitlistRes.count ?? 0;
+
+    const offersSent = offersAllRes.count ?? 0;
+    const offersAccepted = offersAcceptedRes.count ?? 0;
+    const offersDeclined = offersDeclinedRes.count ?? 0;
+    const offersExpired = offersExpiredRes.count ?? 0;
+    const offersPending = offersPendingRes.count ?? 0;
+    const offerFillRate = offersSent > 0 ? Math.round((offersAccepted / offersSent) * 100) : 0;
+
+    // Calculate average response time in minutes
+    const responseTimes = (offersResponseTimeRes.data ?? [])
+      .map((r) => {
+        const offered = new Date(r.offered_at).getTime();
+        const responded = new Date(r.responded_at as string).getTime();
+        return Math.round((responded - offered) / 60000);
+      })
+      .filter((m) => m >= 0 && m < 14400); // exclude outliers (>10 days)
+    const avgResponseMinutes =
+      responseTimes.length > 0
+        ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+        : null;
 
     const noShowRate = total > 0 ? Math.round((noShowCount / total) * 100) : 0;
 
@@ -81,6 +137,13 @@ export async function GET(request: Request) {
         waitlistFills,
         avgRiskScore,
         revenueSaved,
+        offersSent,
+        offersAccepted,
+        offersDeclined,
+        offersExpired,
+        offersPending,
+        offerFillRate,
+        avgResponseMinutes,
       },
     });
   } catch (err) {

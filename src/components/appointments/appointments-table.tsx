@@ -13,7 +13,7 @@ import { RiskBadge } from "./risk-badge";
 import { StatusBadge } from "./status-badge";
 import { AppointmentDetail } from "./appointment-detail";
 import type { Appointment, Reminder } from "@/lib/types";
-import { CalendarDays, User, Loader2 } from "lucide-react";
+import { CalendarDays, User, Loader2, Zap } from "lucide-react";
 
 interface AppointmentsTableProps {
   readonly appointments: readonly Appointment[];
@@ -65,6 +65,7 @@ export function AppointmentsTable({ appointments, loading, onRefresh }: Appointm
               <TableHead className="font-semibold">Service</TableHead>
               <TableHead className="font-semibold">Scheduled</TableHead>
               <TableHead className="font-semibold">Status</TableHead>
+              <TableHead className="font-semibold">Backfill</TableHead>
               <TableHead className="font-semibold">Risk</TableHead>
             </TableRow>
           </TableHeader>
@@ -107,6 +108,16 @@ export function AppointmentsTable({ appointments, loading, onRefresh }: Appointm
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={appt.status} />
+                </TableCell>
+                <TableCell>
+                  {(appt.status === "cancelled" || appt.status === "no_show") ? (
+                    <div className="flex items-center gap-1">
+                      <Zap className="h-3.5 w-3.5 text-purple-500" />
+                      <span className="text-xs text-purple-600 font-medium">Active</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <RiskBadge score={appt.risk_score} />

@@ -15,6 +15,13 @@ import {
   CalendarDays,
   Users,
   BarChart3,
+  Gift,
+  CalendarRange,
+  MessageSquare,
+  Bot,
+  Sparkles,
+  Settings2,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -25,7 +32,14 @@ import { ChatWidget } from "@/components/chat/chat-widget";
 const sidebarLinks = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Appointments", href: "/appointments", icon: CalendarDays },
+  { label: "Calendar", href: "/calendar", icon: CalendarRange },
   { label: "Waitlist", href: "/waitlist", icon: Users },
+  { label: "Offers", href: "/offers", icon: Gift },
+  { label: "Messages", href: "/messages", icon: MessageSquare },
+  { label: "AI Chat", href: "/ai-chat", icon: Bot },
+  { label: "Optimization", href: "/optimization", icon: Sparkles },
+  { label: "Rules", href: "/rules", icon: Settings2 },
+  { label: "Audit", href: "/audit", icon: ScrollText },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "API Docs", href: "/docs", icon: BookOpen },
   { label: "Billing", href: "/billing", icon: CreditCard },

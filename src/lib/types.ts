@@ -125,6 +125,32 @@ export interface SmartScoreBreakdown {
   readonly paymentMatch: number;
 }
 
+// --- Waitlist Offer types ---
+
+export type OfferStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
+
+export interface WaitlistOffer {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly original_appointment_id: string;
+  readonly waitlist_entry_id: string;
+  readonly patient_id: string;
+  readonly new_appointment_id: string | null;
+  readonly status: OfferStatus;
+  readonly smart_score: number | null;
+  readonly smart_score_breakdown: SmartScoreBreakdown | null;
+  readonly token_hash: string;
+  readonly offered_at: string;
+  readonly expires_at: string;
+  readonly responded_at: string | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+  // Joined
+  readonly patient?: Patient;
+  readonly waitlist_entry?: WaitlistEntry;
+  readonly original_appointment?: Appointment;
+}
+
 export interface ContactScheduleEntry {
   readonly hoursBefore: number;
   readonly channel: MessageChannel;
@@ -166,6 +192,271 @@ export interface AnalyticsData {
   readonly waitlistFills: number;
   readonly avgRiskScore: number;
   readonly revenueSaved: number;
+  // Offer metrics
+  readonly offersSent: number;
+  readonly offersAccepted: number;
+  readonly offersDeclined: number;
+  readonly offersExpired: number;
+  readonly offersPending: number;
+  readonly offerFillRate: number;
+  readonly avgResponseMinutes: number | null;
+}
+
+// --- New enums for ported features ---
+
+export type MessageDirection = "inbound" | "outbound";
+export type IntentSource = "regex" | "ai" | "manual";
+export type DeliveryStatusEnum = "queued" | "sent" | "delivered" | "read" | "failed" | "undelivered";
+export type SlotStatus = "available" | "booked" | "blocked" | "cancelled";
+export type OptimizationType = "gap_fill" | "proactive_reschedule" | "slot_swap" | "load_balance";
+export type DecisionStatus = "proposed" | "approved" | "rejected" | "executed" | "expired";
+export type ActorType = "user" | "system" | "ai" | "cron" | "webhook";
+export type ConfirmationState = "pending_send" | "message_sent" | "confirmed" | "declined" | "timed_out" | "cancelled";
+
+export type MessageIntent =
+  | "confirm"
+  | "cancel"
+  | "accept_offer"
+  | "decline_offer"
+  | "slot_select"
+  | "question"
+  | "unknown";
+
+// --- Message thread & events ---
+
+export interface MessageThread {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly patient_id: string;
+  readonly channel: MessageChannel;
+  readonly external_thread_id: string | null;
+  readonly last_message_at: string | null;
+  readonly is_resolved: boolean;
+  readonly created_at: string;
+  readonly updated_at: string;
+  // Joined
+  readonly patient?: Patient;
+  readonly latest_message?: MessageEvent;
+}
+
+export interface MessageEvent {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly thread_id: string;
+  readonly direction: MessageDirection;
+  readonly channel: MessageChannel;
+  readonly body: string;
+  readonly from_number: string | null;
+  readonly to_number: string | null;
+  readonly external_sid: string | null;
+  readonly intent: MessageIntent | null;
+  readonly intent_confidence: number | null;
+  readonly intent_source: IntentSource | null;
+  readonly context_appointment_id: string | null;
+  readonly context_offer_id: string | null;
+  readonly created_at: string;
+}
+
+export interface DeliveryStatus {
+  readonly id: string;
+  readonly message_event_id: string;
+  readonly status: DeliveryStatusEnum;
+  readonly error_code: string | null;
+  readonly error_message: string | null;
+  readonly raw_payload: unknown;
+  readonly created_at: string;
+}
+
+// --- Appointment slots ---
+
+export interface AppointmentSlot {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly provider_name: string;
+  readonly location_name: string | null;
+  readonly service_code: string | null;
+  readonly start_at: string;
+  readonly end_at: string;
+  readonly status: SlotStatus;
+  readonly appointment_id: string | null;
+  readonly block_reason: string | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+// --- Optimization ---
+
+export interface OptimizationDecision {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly type: OptimizationType;
+  readonly status: DecisionStatus;
+  readonly description: string;
+  readonly reasoning: string | null;
+  readonly score: number;
+  readonly source_appointment_id: string | null;
+  readonly target_slot_id: string | null;
+  readonly target_waitlist_entry_id: string | null;
+  readonly proposed_changes: Record<string, unknown>;
+  readonly approved_by: string | null;
+  readonly approved_at: string | null;
+  readonly executed_at: string | null;
+  readonly expires_at: string | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+// --- Rules engine ---
+
+export interface Ruleset {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly entity_type: string;
+  readonly is_active: boolean;
+  readonly created_at: string;
+  readonly updated_at: string;
+  // Joined
+  readonly active_version?: RuleVersion;
+  readonly versions?: readonly RuleVersion[];
+}
+
+export interface RuleVersion {
+  readonly id: string;
+  readonly ruleset_id: string;
+  readonly tenant_id: string;
+  readonly version: number;
+  readonly conditions: readonly RuleCondition[];
+  readonly actions: readonly RuleAction[];
+  readonly is_active: boolean;
+  readonly created_by: string | null;
+  readonly notes: string | null;
+  readonly created_at: string;
+}
+
+export interface RuleCondition {
+  readonly field: string;
+  readonly operator: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in" | "not_in" | "contains";
+  readonly value: unknown;
+}
+
+export interface RuleAction {
+  readonly type: string;
+  readonly params: Record<string, unknown>;
+}
+
+// --- Audit ---
+
+export interface AuditEvent {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly actor_type: ActorType;
+  readonly actor_id: string | null;
+  readonly entity_type: string;
+  readonly entity_id: string | null;
+  readonly action: string;
+  readonly metadata: Record<string, unknown>;
+  readonly ip_address: string | null;
+  readonly created_at: string;
+}
+
+// --- Workflows ---
+
+export interface ConfirmationWorkflow {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly appointment_id: string;
+  readonly state: ConfirmationState;
+  readonly message_event_id: string | null;
+  readonly deadline_at: string;
+  readonly attempts: number;
+  readonly last_error: string | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+  // Joined
+  readonly appointment?: Appointment;
+}
+
+export interface SlotProposal {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly appointment_id: string;
+  readonly patient_id: string;
+  readonly thread_id: string | null;
+  readonly proposed_slots: readonly ProposedSlotOption[];
+  readonly selected_index: number | null;
+  readonly selected_slot_id: string | null;
+  readonly status: "pending" | "selected" | "expired" | "cancelled";
+  readonly expires_at: string;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+export interface ProposedSlotOption {
+  readonly index: number;
+  readonly slot_id: string;
+  readonly start_at: string;
+  readonly end_at: string;
+  readonly provider_name: string;
+}
+
+export interface KpiSnapshot {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly snapshot_date: string;
+  readonly period: "daily" | "weekly" | "monthly";
+  readonly metrics: KpiMetrics;
+  readonly created_at: string;
+}
+
+export interface KpiMetrics {
+  readonly total_appointments: number;
+  readonly no_shows: number;
+  readonly cancellations: number;
+  readonly completions: number;
+  readonly confirmation_rate: number;
+  readonly avg_risk_score: number;
+  readonly offers_sent: number;
+  readonly offers_accepted: number;
+  readonly backfill_rate: number;
+  readonly avg_response_minutes: number | null;
+  readonly revenue_saved: number;
+  readonly optimization_actions: number;
+}
+
+export interface FailedJob {
+  readonly id: string;
+  readonly tenant_id: string | null;
+  readonly job_type: string;
+  readonly job_payload: Record<string, unknown>;
+  readonly error_message: string;
+  readonly error_stack: string | null;
+  readonly retry_count: number;
+  readonly max_retries: number;
+  readonly next_retry_at: string | null;
+  readonly resolved_at: string | null;
+  readonly created_at: string;
+}
+
+// --- AI Chat types ---
+
+export interface ChatMessage {
+  readonly role: "user" | "assistant";
+  readonly content: string;
+  readonly tool_calls?: readonly ChatToolCall[];
+}
+
+export interface ChatToolCall {
+  readonly tool_name: string;
+  readonly input: Record<string, unknown>;
+  readonly result: unknown;
+}
+
+export interface ChatResult {
+  readonly response: string;
+  readonly tool_calls: readonly ChatToolCall[];
+  readonly tokens_used: number;
 }
 
 // Appointment status transition map

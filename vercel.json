@@ -2,7 +2,31 @@
   "crons": [
     {
       "path": "/api/cron/process-reminders",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/expire-offers",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/send-confirmations",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/check-timeouts",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/run-optimization",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-proposals",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/kpi-snapshot",
+      "schedule": "15 0 * * *"
     }
   ]
 }
