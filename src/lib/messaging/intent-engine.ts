@@ -37,6 +37,11 @@ const PATTERNS: readonly { intent: MessageIntent; exact: RegExp; partial: RegExp
     exact: /^[123]$/,
     partial: /\b(opzione\s*[123]|scelt[oa]\s*[123]|prefer\w*\s*[123])\b/i,
   },
+  {
+    intent: "book_appointment",
+    exact: /^(prenotare|prenota|prenotazione|appuntamento)$/i,
+    partial: /\b(prenot[aeio]|appuntamento|fissare|vorrei\s+(un\s+)?appuntamento|prenotare\s+una?\s+visita|nuov[oa]\s+visita)\b/i,
+  },
 ];
 
 export function classifyIntent(text: string): IntentResult {

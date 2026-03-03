@@ -1,33 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Key,
   Copy,
   Check,
   BookOpen,
-  Zap,
-  TrendingUp,
-  Users,
-  CalendarDays,
   AlertCircle,
   Loader2,
   ArrowRight,
-  Building2,
   Plug,
   Bell,
   Info,
   AlertTriangle,
-  Gift,
-  CheckCircle,
-  Clock,
-  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTenant } from "@/hooks/use-tenant";
 import { cn } from "@/lib/utils";
+import { OperationalDashboard } from "@/components/dashboard/operational-dashboard";
 
 interface ApiKeyData {
   readonly id: string;
@@ -46,26 +38,6 @@ export default function DashboardPage() {
   const [generatingKey, setGeneratingKey] = useState(false);
   const [keyError, setKeyError] = useState<string | null>(null);
   const apiKeySectionRef = useRef<HTMLDivElement>(null);
-  const [analytics, setAnalytics] = useState<{
-    totalAppointments: number;
-    noShowRate: number;
-    waitlistFills: number;
-    revenueSaved: number;
-    offersSent: number;
-    offersAccepted: number;
-    offersPending: number;
-    offerFillRate: number;
-    avgResponseMinutes: number | null;
-  } | null>(null);
-  const [recentOffers, setRecentOffers] = useState<readonly {
-    id: string;
-    status: string;
-    smart_score: number | null;
-    offered_at: string;
-    responded_at: string | null;
-    patient?: { first_name: string; last_name: string } | null;
-    original_appointment?: { service_name: string; scheduled_at: string } | null;
-  }[]>([]);
 
   const fetchKeys = useCallback(async () => {
     try {
@@ -79,45 +51,11 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const fetchAnalytics = useCallback(async () => {
-    try {
-      const res = await fetch("/api/analytics");
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) setAnalytics(json.data);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  const fetchRecentOffers = useCallback(async () => {
-    try {
-      const res = await fetch("/api/offers?pageSize=5");
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) setRecentOffers(json.data ?? []);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
   useEffect(() => {
     if (tenant) {
       fetchKeys();
-      fetchAnalytics();
-      fetchRecentOffers();
     }
-  }, [tenant, fetchKeys, fetchAnalytics, fetchRecentOffers]);
-
-  // Auto-poll analytics and offers every 30 seconds (silent, no spinner)
-  useEffect(() => {
-    if (!tenant) return;
-    const poll = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        fetchAnalytics();
-        fetchRecentOffers();
-      }
-    }, 30_000);
-    return () => clearInterval(poll);
-  }, [tenant, fetchAnalytics, fetchRecentOffers]);
+  }, [tenant, fetchKeys]);
 
   async function generateKey() {
     setGeneratingKey(true);
@@ -171,6 +109,13 @@ export default function DashboardPage() {
     );
   }
 
+  const hasBusinessSetup = !!tenant?.name;
+
+  // Show operational dashboard when business is set up
+  if (hasBusinessSetup) {
+    return <OperationalDashboard tenantName={tenant?.name ?? "NowShow"} />;
+  }
+
   const planStatus = tenant?.plan_status ?? "trialing";
   const trialEnds = tenant?.trial_ends_at
     ? new Date(tenant.trial_ends_at).toLocaleDateString("en-US", {
@@ -180,7 +125,6 @@ export default function DashboardPage() {
       })
     : null;
 
-  const hasBusinessSetup = !!tenant?.name;
   const hasApiKey = apiKeys.length > 0;
 
   const checklist = [
@@ -268,172 +212,6 @@ export default function DashboardPage() {
           </Button>
         </div>
       )}
-
-      {/* Stats cards */}
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: "Appointments",
-            value: analytics ? analytics.totalAppointments.toLocaleString() : "—",
-            icon: CalendarDays,
-            change: analytics?.totalAppointments ? "All time" : "No data yet",
-          },
-          {
-            label: "No-Show Rate",
-            value: analytics ? `${analytics.noShowRate}%` : "—",
-            icon: TrendingUp,
-            change: analytics && analytics.noShowRate > 0 ? "Track reduction over time" : "No no-shows yet",
-          },
-          {
-            label: "Waitlist Fills",
-            value: analytics ? analytics.waitlistFills.toLocaleString() : "—",
-            icon: Users,
-            change: analytics?.waitlistFills ? "Cancellations recovered" : "No fills yet",
-          },
-          {
-            label: "Revenue Saved",
-            value: analytics ? `$${analytics.revenueSaved.toLocaleString()}` : "—",
-            icon: Zap,
-            change: analytics?.revenueSaved ? "From recovered appointments" : "Start tracking",
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-500">{stat.label}</p>
-              <stat.icon className="h-5 w-5 text-gray-300" />
-            </div>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{stat.value}</p>
-            <p className="mt-1 text-xs text-gray-400">{stat.change}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Backfill Engine */}
-      <div className="mt-8 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Backfill Engine</h2>
-              <p className="text-sm text-gray-500">Automatic waitlist slot recovery</p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => router.push("/offers")}
-          >
-            View All Offers
-            <ArrowRight className="ml-1 h-3 w-3" />
-          </Button>
-        </div>
-
-        {/* Engine stats */}
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-xl bg-gray-50 p-3">
-            <div className="flex items-center gap-1.5">
-              <Gift className="h-3.5 w-3.5 text-blue-500" />
-              <span className="text-xs font-medium text-gray-500">Offers Sent</span>
-            </div>
-            <p className="mt-1 text-xl font-bold text-gray-900">{analytics?.offersSent ?? 0}</p>
-          </div>
-          <div className="rounded-xl bg-gray-50 p-3">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-              <span className="text-xs font-medium text-gray-500">Accepted</span>
-            </div>
-            <p className="mt-1 text-xl font-bold text-green-700">{analytics?.offersAccepted ?? 0}</p>
-          </div>
-          <div className="rounded-xl bg-gray-50 p-3">
-            <div className="flex items-center gap-1.5">
-              <Target className="h-3.5 w-3.5 text-indigo-500" />
-              <span className="text-xs font-medium text-gray-500">Fill Rate</span>
-            </div>
-            <p className="mt-1 text-xl font-bold text-indigo-700">{analytics?.offerFillRate ?? 0}%</p>
-          </div>
-          <div className="rounded-xl bg-gray-50 p-3">
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-amber-500" />
-              <span className="text-xs font-medium text-gray-500">Avg Response</span>
-            </div>
-            <p className="mt-1 text-xl font-bold text-gray-900">
-              {analytics?.avgResponseMinutes != null
-                ? analytics.avgResponseMinutes < 60
-                  ? `${analytics.avgResponseMinutes}m`
-                  : `${Math.round(analytics.avgResponseMinutes / 60)}h`
-                : "—"}
-            </p>
-          </div>
-        </div>
-
-        {/* Recent offers */}
-        {recentOffers.length > 0 && (
-          <div className="mt-4">
-            <p className="text-xs font-medium text-gray-500 mb-2">Recent Offers</p>
-            <div className="space-y-2">
-              {recentOffers.map((offer) => (
-                <div
-                  key={offer.id}
-                  className="flex items-center gap-3 rounded-xl border border-black/[0.04] px-3 py-2"
-                >
-                  <div className={cn(
-                    "h-2 w-2 rounded-full flex-shrink-0",
-                    offer.status === "pending" && "bg-amber-400",
-                    offer.status === "accepted" && "bg-green-400",
-                    offer.status === "declined" && "bg-orange-400",
-                    offer.status === "expired" && "bg-gray-300",
-                    offer.status === "cancelled" && "bg-red-400",
-                  )} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {offer.patient
-                        ? `${offer.patient.first_name} ${offer.patient.last_name}`
-                        : "Patient"}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {offer.original_appointment?.service_name ?? "Service"}{" "}
-                      {offer.original_appointment?.scheduled_at
-                        ? `· ${new Date(offer.original_appointment.scheduled_at).toLocaleDateString()}`
-                        : ""}
-                    </p>
-                  </div>
-                  <Badge
-                    className={cn(
-                      "text-[10px] font-medium rounded-full capitalize flex-shrink-0",
-                      offer.status === "pending" && "bg-amber-50 text-amber-700",
-                      offer.status === "accepted" && "bg-green-50 text-green-700",
-                      offer.status === "declined" && "bg-orange-50 text-orange-700",
-                      offer.status === "expired" && "bg-gray-100 text-gray-500",
-                      offer.status === "cancelled" && "bg-red-50 text-red-600",
-                    )}
-                  >
-                    {offer.status}
-                  </Badge>
-                  {offer.smart_score != null && (
-                    <span className="text-xs font-semibold text-gray-400 flex-shrink-0">
-                      {offer.smart_score}/100
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {recentOffers.length === 0 && (
-          <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-6 text-center">
-            <Gift className="mx-auto h-6 w-6 text-gray-300" />
-            <p className="mt-2 text-sm text-gray-500">No offers yet</p>
-            <p className="text-xs text-gray-400">When appointments are cancelled, the engine automatically finds waitlist matches.</p>
-          </div>
-        )}
-      </div>
 
       {/* Getting Started Checklist */}
       <div className="mt-8 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">

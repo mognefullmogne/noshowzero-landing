@@ -22,6 +22,7 @@ import {
   Sparkles,
   Settings2,
   ScrollText,
+  Plug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -36,6 +37,7 @@ const sidebarLinks = [
   { label: "Waitlist", href: "/waitlist", icon: Users },
   { label: "Offers", href: "/offers", icon: Gift },
   { label: "Messages", href: "/messages", icon: MessageSquare },
+  { label: "Integrazioni", href: "/integrations", icon: Plug },
   { label: "AI Chat", href: "/ai-chat", icon: Bot },
   { label: "Optimization", href: "/optimization", icon: Sparkles },
   { label: "Rules", href: "/rules", icon: Settings2 },

@@ -46,6 +46,11 @@ export async function routeIntent(
       return handleDeclineOffer(supabase, input);
     case "slot_select":
       return handleSlotSelect(supabase, input);
+    case "book_appointment":
+      return {
+        reply: "Per prenotare, scrivi: vorrei prenotare un appuntamento",
+        action: "book_redirect",
+      };
     case "question":
       return handleQuestionWithAI(supabase, input);
     default:

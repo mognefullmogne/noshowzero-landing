@@ -219,6 +219,7 @@ export type MessageIntent =
   | "accept_offer"
   | "decline_offer"
   | "slot_select"
+  | "book_appointment"
   | "question"
   | "unknown";
 
