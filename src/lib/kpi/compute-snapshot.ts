@@ -5,10 +5,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { KpiMetrics } from "@/lib/types";
 
+const DEFAULT_APPOINTMENT_VALUE = 80; // EUR fallback
+
 export async function computeDailySnapshot(
   supabase: SupabaseClient,
   tenantId: string,
-  date: string // YYYY-MM-DD
+  date: string, // YYYY-MM-DD
+  avgAppointmentValue?: number
 ): Promise<KpiMetrics> {
   const dayStart = `${date}T00:00:00.000Z`;
   const dayEnd = `${date}T23:59:59.999Z`;
@@ -22,17 +25,20 @@ export async function computeDailySnapshot(
     countAppointments(supabase, tenantId, dayStart, dayEnd, "confirmed"),
   ]);
 
-  // Offer metrics
+  // Offer metrics -- select status, responded_at, offered_at, and new_appointment_id
+  // so we can compute honest recovery (only accepted with new_appointment_id)
   const { data: offers } = await supabase
     .from("waitlist_offers")
-    .select("status, responded_at, offered_at")
+    .select("status, responded_at, offered_at, new_appointment_id")
     .eq("tenant_id", tenantId)
     .gte("offered_at", dayStart)
     .lte("offered_at", dayEnd);
 
   const offerList = offers ?? [];
   const offersSent = offerList.length;
-  const offersAccepted = offerList.filter((o) => o.status === "accepted").length;
+  const offersAccepted = offerList.filter(
+    (o) => o.status === "accepted" && o.new_appointment_id !== null
+  ).length;
 
   // Average response time
   let avgResponseMinutes: number | null = null;
@@ -71,9 +77,9 @@ export async function computeDailySnapshot(
   const confirmationRate = total > 0 ? Math.round(((confirmed + completions) / total) * 100) : 0;
   const backfillRate = offersSent > 0 ? Math.round((offersAccepted / offersSent) * 100) : 0;
 
-  // Revenue saved estimate (avg appointment value * filled slots)
-  const AVG_APPOINTMENT_VALUE = 80; // EUR
-  const revenueSaved = offersAccepted * AVG_APPOINTMENT_VALUE;
+  // Honest revenue: only accepted offers with new_appointment_id
+  const appointmentValue = avgAppointmentValue ?? DEFAULT_APPOINTMENT_VALUE;
+  const revenueSaved = offersAccepted * appointmentValue;
 
   return {
     total_appointments: total,

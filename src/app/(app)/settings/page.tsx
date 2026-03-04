@@ -5,36 +5,47 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Check, User, Lock } from "lucide-react";
+import { Loader2, Check, User, Lock, Euro } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
 const profileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+  name: z.string().min(2, "Il nome deve contenere almeno 2 caratteri"),
   email: z.string().email(),
 });
 
 const passwordSchema = z
   .object({
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z.string().min(8, "La password deve contenere almeno 8 caratteri"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Le password non corrispondono",
     path: ["confirmPassword"],
   });
 
+const clinicSchema = z.object({
+  avg_appointment_value: z
+    .number()
+    .positive("Il valore deve essere positivo")
+    .max(10000, "Valore massimo: 10.000"),
+});
+
 type ProfileValues = z.infer<typeof profileSchema>;
 type PasswordValues = z.infer<typeof passwordSchema>;
+type ClinicValues = z.infer<typeof clinicSchema>;
 
 export default function SettingsPage() {
   const router = useRouter();
   const [profileSaved, setProfileSaved] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
+  const [clinicSaved, setClinicSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [clinicError, setClinicError] = useState<string | null>(null);
+  const [clinicLoading, setClinicLoading] = useState(true);
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -43,6 +54,11 @@ export default function SettingsPage() {
 
   const passwordForm = useForm<PasswordValues>({
     resolver: zodResolver(passwordSchema),
+  });
+
+  const clinicForm = useForm<ClinicValues>({
+    resolver: zodResolver(clinicSchema),
+    defaultValues: { avg_appointment_value: 80 },
   });
 
   useEffect(() => {
@@ -58,7 +74,26 @@ export default function SettingsPage() {
         });
       }
     }
+
+    async function loadClinicSettings() {
+      try {
+        const res = await fetch("/api/settings/tenant");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            clinicForm.reset({
+              avg_appointment_value: data.data.avg_appointment_value,
+            });
+          }
+        }
+      } catch {
+        /* non-blocking */
+      }
+      setClinicLoading(false);
+    }
+
     loadUser();
+    loadClinicSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -99,6 +134,25 @@ export default function SettingsPage() {
     setTimeout(() => setPasswordSaved(false), 3000);
   }
 
+  async function onClinicSubmit(values: ClinicValues) {
+    setClinicError(null);
+    setClinicSaved(false);
+    const res = await fetch("/api/settings/tenant", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        avg_appointment_value: values.avg_appointment_value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      setClinicError(data.error?.message ?? "Errore nel salvataggio");
+      return;
+    }
+    setClinicSaved(true);
+    setTimeout(() => setClinicSaved(false), 3000);
+  }
+
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -108,8 +162,8 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-      <p className="mt-1 text-sm text-gray-500">Manage your account and preferences.</p>
+      <h1 className="text-2xl font-bold text-gray-900">Impostazioni</h1>
+      <p className="mt-1 text-sm text-gray-500">Gestisci il tuo account e le tue preferenze.</p>
 
       {/* Profile */}
       <div className="mt-8 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
@@ -118,14 +172,14 @@ export default function SettingsPage() {
             <User className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Profile</h2>
-            <p className="text-sm text-gray-500">Update your personal information.</p>
+            <h2 className="text-lg font-bold text-gray-900">Profilo</h2>
+            <p className="text-sm text-gray-500">Aggiorna le tue informazioni personali.</p>
           </div>
         </div>
 
         <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="mt-6 space-y-4">
           <div>
-            <Label htmlFor="name">Full name</Label>
+            <Label htmlFor="name">Nome e cognome</Label>
             <Input
               id="name"
               className="mt-1 rounded-xl"
@@ -147,7 +201,7 @@ export default function SettingsPage() {
               {...profileForm.register("email")}
             />
             <p className="mt-1 text-xs text-gray-400">
-              Email cannot be changed from here.
+              L&apos;email non può essere modificata da qui.
             </p>
           </div>
 
@@ -167,9 +221,83 @@ export default function SettingsPage() {
             ) : profileSaved ? (
               <Check className="mr-2 h-4 w-4" />
             ) : null}
-            {profileSaved ? "Saved" : "Save Changes"}
+            {profileSaved ? "Salvato" : "Salva modifiche"}
           </Button>
         </form>
+      </div>
+
+      {/* Clinic Settings */}
+      <div className="mt-6 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50">
+            <Euro className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">
+              Impostazioni Clinica
+            </h2>
+            <p className="text-sm text-gray-500">
+              Configura il valore medio degli appuntamenti per il calcolo del
+              ricavo recuperato.
+            </p>
+          </div>
+        </div>
+
+        {clinicLoading ? (
+          <div className="mt-6 flex items-center gap-2 text-sm text-gray-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Caricamento...
+          </div>
+        ) : (
+          <form
+            onSubmit={clinicForm.handleSubmit(onClinicSubmit)}
+            className="mt-6 space-y-4"
+          >
+            <div>
+              <Label htmlFor="avg_appointment_value">
+                Valore medio appuntamento (EUR)
+              </Label>
+              <Input
+                id="avg_appointment_value"
+                type="number"
+                step="0.01"
+                min="1"
+                max="10000"
+                placeholder="80.00"
+                className="mt-1 rounded-xl"
+                {...clinicForm.register("avg_appointment_value", { valueAsNumber: true })}
+              />
+              {clinicForm.formState.errors.avg_appointment_value && (
+                <p className="mt-1 text-xs text-red-500">
+                  {clinicForm.formState.errors.avg_appointment_value.message}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-400">
+                Questo valore viene usato per calcolare il ricavo recuperato
+                quando uno slot cancellato viene riempito.
+              </p>
+            </div>
+
+            {clinicError && (
+              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                {clinicError}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={clinicForm.formState.isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+            >
+              {clinicForm.formState.isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : clinicSaved ? (
+                <Check className="mr-2 h-4 w-4" />
+              ) : null}
+              {clinicSaved ? "Salvato" : "Salva"}
+            </Button>
+          </form>
+        )}
       </div>
 
       {/* Password */}
@@ -180,18 +308,18 @@ export default function SettingsPage() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-gray-900">Password</h2>
-            <p className="text-sm text-gray-500">Update your password.</p>
+            <p className="text-sm text-gray-500">Aggiorna la tua password.</p>
           </div>
         </div>
 
         <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="mt-6 space-y-4">
           <div>
-            <Label htmlFor="password">New password</Label>
+            <Label htmlFor="password">Nuova password</Label>
             <Input
               id="password"
               type="password"
               className="mt-1 rounded-xl"
-              placeholder="Min. 8 characters"
+              placeholder="Min. 8 caratteri"
               {...passwordForm.register("password")}
             />
             {passwordForm.formState.errors.password && (
@@ -202,12 +330,12 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <Label htmlFor="confirmPassword">Confirm new password</Label>
+            <Label htmlFor="confirmPassword">Conferma nuova password</Label>
             <Input
               id="confirmPassword"
               type="password"
               className="mt-1 rounded-xl"
-              placeholder="Repeat password"
+              placeholder="Ripeti la password"
               {...passwordForm.register("confirmPassword")}
             />
             {passwordForm.formState.errors.confirmPassword && (
@@ -233,23 +361,23 @@ export default function SettingsPage() {
             ) : passwordSaved ? (
               <Check className="mr-2 h-4 w-4" />
             ) : null}
-            {passwordSaved ? "Password Updated" : "Update Password"}
+            {passwordSaved ? "Password aggiornata" : "Aggiorna password"}
           </Button>
         </form>
       </div>
 
       {/* Danger zone */}
       <div className="mt-6 rounded-2xl border border-red-200 bg-red-50/50 p-6">
-        <h2 className="text-lg font-bold text-red-900">Danger Zone</h2>
+        <h2 className="text-lg font-bold text-red-900">Zona pericolosa</h2>
         <p className="mt-1 text-sm text-red-600">
-          Sign out of your account. This won&apos;t delete your data.
+          Esci dal tuo account. I tuoi dati non verranno eliminati.
         </p>
         <Button
           variant="outline"
           className="mt-4 rounded-xl border-red-300 text-red-600 hover:bg-red-50"
           onClick={handleSignOut}
         >
-          Sign Out
+          Esci
         </Button>
       </div>
     </div>

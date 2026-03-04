@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
   // Show operational dashboard when business is set up
   if (hasBusinessSetup) {
-    return <OperationalDashboard tenantName={tenant?.name ?? "NowShow"} />;
+    return <OperationalDashboard tenantName={tenant?.name ?? "NoShowZero"} />;
   }
 
   const planStatus = tenant?.plan_status ?? "trialing";
@@ -151,7 +151,7 @@ export default function DashboardPage() {
     },
     {
       title: "Read the API docs",
-      description: "Learn how to integrate NowShow with your software",
+      description: "Learn how to integrate NoShowZero with your software",
       done: false,
       action: () => router.push("/docs"),
       actionLabel: "View docs",
@@ -175,7 +175,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500">
-            Welcome to {tenant?.name ?? "NowShow"}
+            Welcome to {tenant?.name ?? "NoShowZero"}
           </p>
         </div>
         <Badge
@@ -200,7 +200,7 @@ export default function DashboardPage() {
               Your free trial ends on {trialEnds}
             </p>
             <p className="text-xs text-blue-600">
-              Add your payment details to continue using NowShow after the trial.
+              Add your payment details to continue using NoShowZero after the trial.
             </p>
           </div>
           <Button
@@ -293,7 +293,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-lg font-bold text-gray-900">API Keys</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Use your API key to authenticate requests to the NowShow API.
+              Use your API key to authenticate requests to the NoShowZero API.
             </p>
           </div>
           <Button
@@ -437,7 +437,7 @@ export default function DashboardPage() {
           <ArrowRight className="h-4 w-4 text-gray-300" />
         </button>
         <a
-          href="mailto:support@nowshow.com"
+          href="mailto:support@noshowzero.com"
           className="flex items-center gap-4 rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-blue-200"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50">

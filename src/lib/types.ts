@@ -125,6 +125,14 @@ export interface SmartScoreBreakdown {
   readonly paymentMatch: number;
 }
 
+export interface CandidateScoreBreakdown {
+  readonly total: number;               // 0-130 (sum of all factors)
+  readonly appointmentDistance: number;  // 0-60 (primary factor)
+  readonly reliability: number;          // 0-40 (secondary/tiebreaker)
+  readonly urgencyBonus: number;         // 0-20 (time pressure on open slot)
+  readonly responsiveness: number;       // 0-10 (patient's historical response speed)
+}
+
 // --- Waitlist Offer types ---
 
 export type OfferStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
@@ -133,7 +141,8 @@ export interface WaitlistOffer {
   readonly id: string;
   readonly tenant_id: string;
   readonly original_appointment_id: string;
-  readonly waitlist_entry_id: string;
+  readonly waitlist_entry_id: string | null;
+  readonly candidate_appointment_id: string | null;
   readonly patient_id: string;
   readonly new_appointment_id: string | null;
   readonly status: OfferStatus;
@@ -155,6 +164,17 @@ export interface ContactScheduleEntry {
   readonly hoursBefore: number;
   readonly channel: MessageChannel;
   readonly messageTone: "standard" | "urgent" | "friendly";
+}
+
+// --- Recovery metric types ---
+
+export interface RecoveryMetrics {
+  readonly slotsRecovered: number;        // accepted offers with new_appointment_id
+  readonly slotsLost: number;             // cancelled + no-show slots that were NOT filled
+  readonly totalCancelledOrNoShow: number; // denominator for fill rate
+  readonly fillRatePercent: number;       // METR-04 formula
+  readonly revenueRecovered: number;      // slotsRecovered * tenant's avg_appointment_value
+  readonly activeOffers: number;          // pending offers count
 }
 
 // --- API response types ---
@@ -211,7 +231,7 @@ export type SlotStatus = "available" | "booked" | "blocked" | "cancelled";
 export type OptimizationType = "gap_fill" | "proactive_reschedule" | "slot_swap" | "load_balance";
 export type DecisionStatus = "proposed" | "approved" | "rejected" | "executed" | "expired";
 export type ActorType = "user" | "system" | "ai" | "cron" | "webhook";
-export type ConfirmationState = "pending_send" | "message_sent" | "confirmed" | "declined" | "timed_out" | "cancelled";
+export type ConfirmationState = "pending_send" | "message_sent" | "reminder_sent" | "final_warning_sent" | "confirmed" | "declined" | "timed_out" | "cancelled";
 
 export type MessageIntent =
   | "confirm"

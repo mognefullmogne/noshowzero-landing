@@ -14,6 +14,7 @@ interface Tenant {
   readonly trial_ends_at: string | null;
   readonly stripe_customer_id: string | null;
   readonly stripe_subscription_id: string | null;
+  readonly avg_appointment_value: number;
 }
 
 export function useTenant() {
@@ -33,17 +34,39 @@ export function useTenant() {
         return;
       }
 
-      const { data, error: dbError } = await supabase
+      // Try with avg_appointment_value first; fall back without it if column doesn't exist yet (migration 013)
+      let data: Tenant | null = null;
+      const fullSelect = "id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, avg_appointment_value";
+      const fallbackSelect = "id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id";
+
+      const { data: fullData, error: fullError } = await supabase
         .from("tenants")
-        .select("id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id")
+        .select(fullSelect)
         .eq("auth_user_id", user.id)
         .maybeSingle();
 
-      if (dbError) {
-        console.error("useTenant: failed to fetch tenant", dbError);
+      if (fullError && fullError.code === "42703") {
+        // Column doesn't exist yet — use fallback without avg_appointment_value
+        const { data: fallbackData, error: fbError } = await supabase
+          .from("tenants")
+          .select(fallbackSelect)
+          .eq("auth_user_id", user.id)
+          .maybeSingle();
+
+        if (fbError) {
+          console.error("useTenant: failed to fetch tenant", fbError);
+          setError("Failed to load account data. Please refresh the page.");
+          setLoading(false);
+          return;
+        }
+        data = fallbackData ? { ...fallbackData, avg_appointment_value: 80 } as Tenant : null;
+      } else if (fullError) {
+        console.error("useTenant: failed to fetch tenant", fullError);
         setError("Failed to load account data. Please refresh the page.");
         setLoading(false);
         return;
+      } else {
+        data = fullData;
       }
 
       setTenant(data);

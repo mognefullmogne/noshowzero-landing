@@ -18,7 +18,7 @@ export async function rescheduleAppointment(
 
   if (!current) return { error: "Appuntamento non trovato" };
   if (current.status === "cancelled" || current.status === "completed" || current.status === "no_show") {
-    return { error: `Non e' possibile riprogrammare un appuntamento con stato: ${current.status}` };
+    return { error: `Non è possibile riprogrammare un appuntamento con stato: ${current.status}` };
   }
 
   // Cancel old appointment

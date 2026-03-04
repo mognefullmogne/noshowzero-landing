@@ -1,69 +1,63 @@
-# Requirements: NoShowZero — Real-Time Fix & Dashboard Polish
+# Requirements: NoShowZero — v1.1 Slot Recovery Engine
 
-**Defined:** 2026-03-03
-**Core Value:** When a patient confirms or cancels via WhatsApp, every staff member sees the change instantly — no refresh, no lag, no stale data.
+**Defined:** 2026-03-04
+**Core Value:** When a patient cancels, the system automatically fills that slot by contacting the best-fit patient via WhatsApp — no staff intervention, no empty chairs, no lost revenue.
 
-## v1 Requirements
+## v1.1 Requirements
 
 Requirements for this milestone. Each maps to roadmap phases.
 
-### Infrastructure
+### Slot Recovery
 
-- [ ] **INFRA-01**: Production database is backed up before any migration runs (PITR or manual pg_dump)
-- [ ] **INFRA-02**: All pending migrations (004-011) are applied to production Supabase without data loss
-- [ ] **INFRA-03**: Appointments table is added to the `supabase_realtime` publication
-- [ ] **INFRA-04**: All new tables from migrations 004-011 have RLS enabled with correct SELECT policies
-- [ ] **INFRA-05**: Webhook flow (Twilio → appointment status update) works reliably with all tables present
+- [x] **SLOT-01**: When a patient cancels or no-shows, the system automatically identifies candidate patients from all future scheduled appointments
+- [x] **SLOT-02**: Candidates are ranked by AI priority score (clinical urgency, wait time, proximity to cancelled slot, reliability history)
+- [x] **SLOT-03**: The system sends a WhatsApp offer to the top-ranked candidate with accept/decline options
+- [x] **SLOT-04**: If a candidate declines or doesn't respond within 1 hour, the system automatically offers to the next candidate
+- [x] **SLOT-05**: When a candidate accepts, a new appointment is created in the cancelled slot and the candidate's original appointment is freed
+- [x] **SLOT-06**: The cascade stops when the slot is filled or all viable candidates have been contacted
 
-### Real-Time
+### Metrics & Revenue
 
-- [x] **RT-01**: Appointments list page updates within 1-2 seconds when any appointment status changes (no manual refresh)
-- [x] **RT-02**: Operational dashboard KPI cards (today's appointments, pending confirmations, urgent deadlines) update in real-time
-- [x] **RT-03**: Calendar view reflects appointment status changes in real-time
-- [x] **RT-04**: Connection state indicator visible to staff (connected / reconnecting / offline)
-- [x] **RT-05**: Automatic reconnection with stale data recovery when WebSocket disconnects and reconnects
-- [x] **RT-06**: 30-second polling replaced by Supabase Realtime subscriptions (no duplicate data paths)
-- [x] **RT-07**: Multi-channel sync — status changes from WhatsApp, SMS, email, cron, and manual dashboard actions all trigger the same real-time update
+- [x] **METR-01**: Revenue recovered counts only actually filled cancelled slots and saved no-shows (not regular confirmations)
+- [x] **METR-02**: Dashboard shows real-time KPIs: slots recovered today, revenue recovered, fill rate %, active offers
+- [x] **METR-03**: Each tenant can configure their average appointment value in settings
+- [x] **METR-04**: Fill rate is calculated as (slots filled / slots cancelled or no-showed) × 100
 
-### Security
+### Dashboard
 
-- [x] **SEC-01**: Realtime subscriptions are tenant-scoped (no cross-tenant data leaks)
-- [x] **SEC-02**: service_role key is never exposed in client-side code or NEXT_PUBLIC_ env vars
+- [ ] **DASH-01**: Active offers section shows all pending cascade offers with countdown timer
+- [ ] **DASH-02**: Slot recovery activity feed shows recent offer sent → accepted/declined/expired events
+- [ ] **DASH-03**: KPI cards update in real-time when a slot is recovered or an offer expires
 
-## v2 Requirements
+## Future Requirements
 
-Deferred to future milestone. Tracked but not in current roadmap.
+Deferred to a later milestone. Tracked but not in current roadmap.
 
-### Notifications
+### Extended Channels
 
-- **NOTF-01**: Toast notification when an appointment confirmation arrives
-- **NOTF-02**: Optional sound alert on confirmation events
-- **NOTF-03**: Badge count showing number of unseen status changes
-- **NOTF-04**: Browser push notifications via Service Worker
+- **CHAN-01**: SMS fallback if WhatsApp offer gets no response
+- **CHAN-02**: Email notification as tertiary channel
 
-### Dashboard Polish
+### Past Patient Recovery
 
-- **PLSH-01**: Animated status transitions when appointment status changes
-- **PLSH-02**: Consistent status badge styling across all views
-- **PLSH-03**: Activity feed with live-updating recent changes
-- **PLSH-04**: Optimistic UI for staff-initiated status changes (useOptimistic)
+- **PAST-01**: Offer cancelled slots to past patients without a current appointment (e.g., overdue for checkup)
+- **PAST-02**: AI identifies patients who are overdue based on visit history
 
-### Extended Real-Time
+### Advanced Analytics
 
-- **ERT-01**: Realtime subscription for waitlist_entries table
-- **ERT-02**: Realtime subscription for confirmation_workflows table
-- **ERT-03**: Presence indicators showing which staff are currently online
+- **ANAL-01**: Weekly/monthly trend charts for slot recovery performance
+- **ANAL-02**: Per-provider recovery metrics
+- **ANAL-03**: Comparison of AI prediction accuracy vs actual outcomes
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Custom WebSocket server | Impossible on Vercel serverless; Supabase Realtime handles it |
-| Offline mutation queuing | Risky for medical data — require online connection for changes |
-| Collaborative locking (pessimistic) | Overkill for 2-5 person team; last-write-wins is sufficient |
-| Browser push notifications (v1) | Service Worker complexity for minimal gain this milestone |
-| Local dev dashboard (localhost:3010) | User explicitly scoped to Vercel deployment only |
-| TanStack Query integration | Existing useState + useEffect pattern sufficient; avoid adding dependencies |
+| Manual waitlist entry | System auto-detects candidates from scheduled patients — no manual list needed |
+| SMS/email for offers | WhatsApp only for this milestone — patients already use it for confirmations |
+| Past patients without appointments | Adds complexity; start with known-scheduled patients only |
+| Calendar optimization / gap filling | Separate concern from slot recovery; defer to future milestone |
+| Staff-mediated offers | System handles cascade automatically; no staff approval step needed |
 
 ## Traceability
 
@@ -71,26 +65,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
-| INFRA-04 | Phase 1 | Pending |
-| INFRA-05 | Phase 1 | Pending |
-| RT-01 | Phase 2 | Complete |
-| RT-02 | Phase 2 | Complete |
-| RT-03 | Phase 2 | Complete |
-| RT-06 | Phase 2 | Complete |
-| RT-07 | Phase 2 | Complete |
-| SEC-01 | Phase 2 | Complete |
-| SEC-02 | Phase 2 | Complete |
-| RT-04 | Phase 3 | Complete |
-| RT-05 | Phase 3 | Complete |
+| SLOT-01 | Phase 4 | Complete |
+| SLOT-02 | Phase 4 | Complete |
+| SLOT-03 | Phase 5 | Complete |
+| SLOT-04 | Phase 5 | Complete |
+| SLOT-05 | Phase 5 | Complete |
+| SLOT-06 | Phase 5 | Complete |
+| METR-01 | Phase 6 | Complete |
+| METR-02 | Phase 6 | Complete |
+| METR-03 | Phase 6 | Complete |
+| METR-04 | Phase 6 | Complete |
+| DASH-01 | Phase 7 | Pending |
+| DASH-02 | Phase 7 | Pending |
+| DASH-03 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 14 total
-- Mapped to phases: 14
-- Unmapped: 0 ✓
+- v1.1 requirements: 13 total
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after roadmap creation*
+*Requirements defined: 2026-03-04*
+*Last updated: 2026-03-04 after roadmap creation*

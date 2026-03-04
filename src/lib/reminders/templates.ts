@@ -19,23 +19,23 @@ export function renderReminderWhatsApp(vars: ReminderVars): string {
 
   if (vars.tone === "urgent") {
     return [
-      `Gentile ${vars.patientName},`,
+      `Ciao ${vars.patientName}!`,
       "",
-      `le ricordiamo il suo appuntamento imminente:`,
+      `Ti ricordiamo il tuo appuntamento imminente:`,
       `📋 ${vars.serviceName}${provider}`,
       `📅 ${vars.date} alle ${vars.time}${location}`,
       "",
-      `La preghiamo di confermare la sua presenza rispondendo *SI*`,
-      `Se non può venire, rispondi *NO* per permetterci di offrire il posto ad un altro paziente.`,
+      `Conferma la tua presenza rispondendo *SI*`,
+      `Se non puoi venire, rispondi *NO* e offriamo il posto a chi ne ha bisogno.`,
       "",
       `Grazie!`,
     ].join("\n");
   }
 
   return [
-    `Gentile ${vars.patientName},`,
+    `Ciao ${vars.patientName}!`,
     "",
-    `le ricordiamo il suo prossimo appuntamento:`,
+    `Ti ricordiamo il tuo prossimo appuntamento:`,
     `📋 ${vars.serviceName}${provider}`,
     `📅 ${vars.date} alle ${vars.time}${location}`,
     "",

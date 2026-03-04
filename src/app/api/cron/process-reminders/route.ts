@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { ensureRemindersScheduled } from "@/lib/reminders/schedule-reminders";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { renderReminderWhatsApp, renderReminderSms } from "@/lib/reminders/templates";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import type { MessageChannel } from "@/lib/types";
 
 /**
@@ -13,15 +14,8 @@ import type { MessageChannel } from "@/lib/types";
  * Protected by CRON_SECRET env var.
  */
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    console.error("CRON_SECRET is not set — refusing to run cron endpoint");
-    return NextResponse.json({ error: "Service misconfigured" }, { status: 500 });
-  }
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronSecret(request);
+  if (authError) return authError;
 
   try {
     const supabase = await createServiceClient();

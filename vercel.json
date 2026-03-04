@@ -6,11 +6,15 @@
     },
     {
       "path": "/api/cron/expire-offers",
-      "schedule": "0 9 * * *"
+      "schedule": "0 12 * * *"
     },
     {
       "path": "/api/cron/send-confirmations",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/escalate-confirmations",
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/check-timeouts",
@@ -27,6 +31,10 @@
     {
       "path": "/api/cron/kpi-snapshot",
       "schedule": "15 0 * * *"
+    },
+    {
+      "path": "/api/cron/detect-no-shows",
+      "schedule": "0 11 * * *"
     }
   ]
 }

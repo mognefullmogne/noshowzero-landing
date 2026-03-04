@@ -16,11 +16,12 @@ export function Faq() {
       <div className="mx-auto max-w-3xl">
         <div className="text-center">
           <ScrollReveal>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">FAQ</p>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
               Frequently Asked Questions
             </h2>
-            <p className="mt-4 text-lg text-gray-600">
-              Everything you need to know about NowShow.
+            <p className="mt-4 text-lg text-slate-500">
+              Everything you need to know about NoShowZero.
             </p>
           </ScrollReveal>
         </div>
@@ -29,10 +30,10 @@ export function Faq() {
           <Accordion type="single" collapsible className="mt-12">
             {FAQ_ITEMS.map((item, index) => (
               <AccordionItem key={index} value={`item-${index}`}>
-                <AccordionTrigger className="text-left text-base font-semibold text-gray-900 hover:no-underline">
+                <AccordionTrigger className="text-left text-base font-semibold text-slate-900 hover:no-underline">
                   {item.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-sm text-gray-600 leading-relaxed">
+                <AccordionContent className="text-sm text-slate-500 leading-relaxed">
                   {item.answer}
                 </AccordionContent>
               </AccordionItem>

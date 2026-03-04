@@ -22,6 +22,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ActiveOffersSection, type ActiveOffer } from "./active-offers-section";
+import { ActivityFeedSection, type ActivityEvent } from "./activity-feed-section";
+import { MorningBriefing } from "./morning-briefing";
+import { NoShowInsights } from "./no-show-insights";
+import { StrategyLogSection } from "./strategy-log-section";
 
 // --- Types ---
 
@@ -69,6 +74,11 @@ interface AnalyticsData {
   readonly offersPending: number;
   readonly offerFillRate: number;
   readonly avgResponseMinutes: number | null;
+  // New explicit fields from 06-01 (honest recovery metrics):
+  readonly slotsRecovered?: number;
+  readonly fillRatePercent?: number;
+  readonly revenueRecovered?: number;
+  readonly activeOffers?: number;
 }
 
 interface OfferPreview {
@@ -106,31 +116,39 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [recentOffers, setRecentOffers] = useState<readonly OfferPreview[]>([]);
+  const [activeOffers, setActiveOffers] = useState<readonly ActiveOffer[]>([]);
+  const [activityEvents, setActivityEvents] = useState<readonly ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [dashRes, analyticsRes, offersRes] = await Promise.all([
+      const [dashRes, analyticsRes, offersRes, activeRes, activityRes] = await Promise.all([
         fetch("/api/dashboard"),
         fetch("/api/analytics"),
         fetch("/api/offers?pageSize=5"),
+        fetch("/api/offers?status=pending&pageSize=50"),
+        fetch("/api/offers?pageSize=20"),
       ]);
 
       if (!dashRes.ok || !analyticsRes.ok) {
         throw new Error("Errore nel caricamento dei dati");
       }
 
-      const [dashData, analyticsData, offersData] = await Promise.all([
+      const [dashData, analyticsData, offersData, activeData, activityData] = await Promise.all([
         dashRes.json(),
         analyticsRes.json(),
         offersRes.ok ? offersRes.json() : { success: false },
+        activeRes.ok ? activeRes.json() : { success: false },
+        activityRes.ok ? activityRes.json() : { success: false },
       ]);
 
       if (dashData.success) setDashboard(dashData.data);
       if (analyticsData.success) setAnalytics(analyticsData.data);
       if (offersData.success) setRecentOffers(offersData.data ?? []);
+      if (activeData.success) setActiveOffers(activeData.data ?? []);
+      if (activityData.success) setActivityEvents(activityData.data ?? []);
       setError(null);
     } catch {
       if (!silent) setError("Impossibile caricare i dati. Riprova tra qualche secondo.");
@@ -172,7 +190,6 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
   }, [realtimeAppointments]);
 
   const today = new Date();
-  const isMorning = today.getHours() < 13;
 
   if (loading) {
     return (
@@ -196,39 +213,8 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
 
   return (
     <div>
-      {/* Morning briefing banner — visible until 1pm */}
-      {isMorning && dashboard && (
-        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 px-6 py-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 mb-3">
-            Briefing del mattino —{" "}
-            {today.toLocaleDateString("it-IT", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            })}
-          </p>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div>
-              <span className="text-2xl font-bold text-blue-800">{dashboard.todayCount}</span>
-              <span className="ml-1.5 text-xs text-blue-600">appuntamenti oggi</span>
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-amber-700">{dashboard.pendingCount}</span>
-              <span className="ml-1.5 text-xs text-blue-600">in attesa conferma</span>
-            </div>
-            <div>
-              <span className={cn("text-2xl font-bold", dashboard.urgentCount > 0 ? "text-red-600" : "text-blue-800")}>
-                {dashboard.urgentCount}
-              </span>
-              <span className="ml-1.5 text-xs text-blue-600">scadenza entro 2h</span>
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-blue-800">{dashboard.weekCount}</span>
-              <span className="ml-1.5 text-xs text-blue-600">questa settimana</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* AI Morning briefing — visible until 1pm, replaces the static banner */}
+      <MorningBriefing />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -279,6 +265,16 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
           iconColor={dashboard?.urgentCount ? "text-red-600" : "text-gray-400"}
           iconBg={dashboard?.urgentCount ? "bg-red-50" : "bg-gray-50"}
         />
+      </div>
+
+      {/* Active Offers -- DASH-01 */}
+      <div className="mb-6">
+        <ActiveOffersSection offers={activeOffers} />
+      </div>
+
+      {/* Recovery Activity Feed -- DASH-02 */}
+      <div className="mb-6">
+        <ActivityFeedSection events={activityEvents} />
       </div>
 
       {/* Two-column: Recent Activity + Urgent Deadlines */}
@@ -368,31 +364,35 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
         </div>
       </div>
 
-      {/* Overall Stats */}
+      {/* Overall Stats — Recovery-focused KPIs (METR-02) */}
       <div className="grid grid-cols-2 gap-4 mb-6 sm:grid-cols-4">
         <MiniStat
-          icon={CalendarDays}
-          label="Totale appuntamenti"
-          value={analytics?.totalAppointments ?? 0}
-          color="text-blue-600"
-        />
-        <MiniStat
-          icon={TrendingUp}
-          label="Tasso no-show"
-          value={`${analytics?.noShowRate ?? 0}%`}
-          color={analytics?.noShowRate && analytics.noShowRate > 10 ? "text-red-600" : "text-green-600"}
-        />
-        <MiniStat
-          icon={Users}
-          label="Slot recuperati"
-          value={analytics?.waitlistFills ?? 0}
+          icon={CheckCircle}
+          label="Slot recuperati oggi"
+          value={analytics?.slotsRecovered ?? analytics?.waitlistFills ?? 0}
           color="text-green-600"
         />
         <MiniStat
-          icon={Zap}
+          icon={TrendingUp}
           label="Ricavo recuperato"
-          value={analytics ? `€${analytics.revenueSaved.toLocaleString()}` : "—"}
+          value={
+            analytics
+              ? `€${(analytics.revenueRecovered ?? analytics.revenueSaved ?? 0).toLocaleString()}`
+              : "—"
+          }
           color="text-indigo-600"
+        />
+        <MiniStat
+          icon={Target}
+          label="Tasso riempimento"
+          value={`${analytics?.fillRatePercent ?? analytics?.offerFillRate ?? 0}%`}
+          color="text-blue-600"
+        />
+        <MiniStat
+          icon={Zap}
+          label="Offerte attive"
+          value={analytics?.activeOffers ?? analytics?.offersPending ?? 0}
+          color="text-amber-600"
         />
       </div>
 
@@ -422,7 +422,7 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <EngineStatCard icon={Gift} label="Offerte inviate" value={analytics?.offersSent ?? 0} color="text-blue-500" />
           <EngineStatCard icon={CheckCircle} label="Accettate" value={analytics?.offersAccepted ?? 0} color="text-green-500" />
-          <EngineStatCard icon={Target} label="Tasso riempimento" value={`${analytics?.offerFillRate ?? 0}%`} color="text-indigo-500" />
+          <EngineStatCard icon={Target} label="Tasso riempimento" value={`${analytics?.fillRatePercent ?? analytics?.offerFillRate ?? 0}%`} color="text-indigo-500" />
           <EngineStatCard
             icon={Clock}
             label="Tempo medio risposta"
@@ -480,6 +480,16 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
             </div>
           </div>
         )}
+      </div>
+
+      {/* No-Show Insights — AI root cause analysis */}
+      <div className="mb-6">
+        <NoShowInsights />
+      </div>
+
+      {/* AI Strategy Log — recent decisions */}
+      <div className="mb-6">
+        <StrategyLogSection />
       </div>
 
       {/* Quick navigation */}

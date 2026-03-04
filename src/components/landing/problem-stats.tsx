@@ -10,30 +10,30 @@ export function ProblemStats() {
     <SectionWrapper id="problem">
       <div className="text-center">
         <ScrollReveal>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
             The No-Show Problem Is{" "}
-            <span className="text-red-500">Massive</span>
+            <span className="text-rose-500">Massive</span>
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
             Every missed appointment costs you money, wastes your team&apos;s time, and blocks
             other clients from getting care.
           </p>
         </ScrollReveal>
       </div>
 
-      <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-3">
+      <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-3">
         {STATS.map((stat, index) => (
           <ScrollReveal key={stat.label} delay={index * 0.15}>
-            <div className="group relative overflow-hidden rounded-2xl border border-black/[0.04] bg-white p-8 text-center shadow-xl shadow-black/[0.03] transition-all hover:shadow-2xl hover:shadow-black/[0.06]">
-              <div className="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+            <div className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-lg shadow-slate-900/[0.03] transition-all hover:shadow-xl card-glow">
+              <div className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl">
                 <AnimatedCounter
                   value={stat.value}
                   prefix={stat.prefix}
                   suffix={stat.suffix}
                 />
               </div>
-              <p className="mt-3 text-sm text-gray-500 leading-relaxed">{stat.label}</p>
-              <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-red-500 to-orange-500 opacity-0 transition-opacity group-hover:opacity-100" />
+              <p className="mt-3 text-sm text-slate-500 leading-relaxed">{stat.label}</p>
+              <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-rose-500 to-orange-400 opacity-0 transition-opacity group-hover:opacity-100" />
             </div>
           </ScrollReveal>
         ))}

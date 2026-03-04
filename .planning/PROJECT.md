@@ -1,71 +1,89 @@
-# NoShowZero — Real-Time Fix & Dashboard Polish
+# NoShowZero
 
 ## What This Is
 
-A SaaS appointment management platform that reduces no-shows through automated WhatsApp/SMS confirmations, smart waitlist matching, and AI risk scoring. Used by small medical clinics (2-5 staff) to manage patient appointments, send reminders, and fill cancelled slots from a waitlist. Deployed on Vercel with Supabase as the backend.
+A SaaS appointment management platform that reduces no-shows through automated WhatsApp confirmations, AI-driven slot recovery, and smart patient prioritization. When a patient cancels, the system automatically finds the best replacement from all scheduled patients and offers them the slot via WhatsApp — one by one, ranked by AI priority. Used by appointment-based businesses (clinics, salons, dental practices) to recover lost revenue. Deployed on Vercel with Supabase as the backend.
 
 ## Core Value
 
-When a patient confirms or cancels an appointment via WhatsApp, every staff member sees the change instantly on their dashboard — no refresh, no lag, no stale data.
+When a patient cancels or no-shows, the system automatically fills that slot by contacting the best-fit patient via WhatsApp — no staff intervention, no empty chairs, no lost revenue.
+
+## Current Milestone: v1.1 Slot Recovery Engine
+
+**Goal:** Make the core business logic actually work end-to-end — when a patient cancels, the AI automatically finds and contacts replacement candidates one-by-one until the slot is filled.
+
+**Target features:**
+- Auto-candidate detection from all scheduled patients when a slot opens
+- AI priority scoring (clinical urgency, wait time, proximity, reliability)
+- One-by-one WhatsApp cascade with 1-hour timeout per offer
+- Real revenue metrics (only count actually recovered slots + saved no-shows)
+- Configurable average appointment value per tenant
+- Dashboard KPIs: slots recovered, revenue recovered, fill rate %, active offers
 
 ## Requirements
 
 ### Validated
 
-- ✓ WhatsApp/SMS webhook ingestion (Twilio) — existing
-- ✓ Appointment CRUD with status management — existing
-- ✓ Multi-tenant architecture with RLS — existing
-- ✓ Calendar integrations (Google, Outlook, iCal, CSV) — existing
-- ✓ Smart waitlist scoring & offer system — existing
-- ✓ AI risk scoring (Claude) — existing
-- ✓ Stripe billing with multi-tier plans — existing
-- ✓ Conversational WhatsApp booking flow — existing
-- ✓ Cron-based reminders and confirmations (7 jobs) — existing
-- ✓ API key authentication for external integrations — existing
+- ✓ WhatsApp/SMS webhook ingestion (Twilio) — v1.0
+- ✓ Appointment CRUD with status management — v1.0
+- ✓ Multi-tenant architecture with RLS — v1.0
+- ✓ Calendar integrations (Google, Outlook, iCal, CSV) — v1.0
+- ✓ AI risk scoring (Claude) — v1.0
+- ✓ Stripe billing with multi-tier plans — v1.0
+- ✓ Conversational WhatsApp booking flow — v1.0
+- ✓ Cron-based reminders and confirmations — v1.0
+- ✓ API key authentication for external integrations — v1.0
+- ✓ Supabase Realtime WebSocket subscriptions — v1.0
+- ✓ Live dashboard/calendar updates within 2 seconds — v1.0
+- ✓ Connection status indicator with auto-reconnect — v1.0
+- ✓ Tenant-scoped real-time security — v1.0
 
 ### Active
 
-- [ ] Production database has all 11 migrations applied (004-011 missing)
-- [ ] WhatsApp webhook confirmations persist reliably (no silent failures)
-- [ ] Dashboard updates in 1-2 seconds when appointment status changes (Supabase Realtime)
-- [ ] Calendar view reflects appointment status changes in real-time
-- [ ] Toast/sound notifications when confirmations arrive on dashboard
-- [ ] Multi-channel sync — WhatsApp, SMS, and email all trigger the same real-time update flow
-- [ ] General dashboard UI polish (styling, layout, responsiveness)
+- [ ] Auto-candidate detection when a slot opens (cancellation/no-show)
+- [ ] AI priority ranking: clinical urgency, wait time, proximity, reliability
+- [ ] One-by-one WhatsApp cascade offers with 1-hour timeout
+- [ ] Real revenue metrics: filled slots + saved no-shows only
+- [ ] Configurable average appointment value per tenant
+- [ ] Dashboard KPIs: slots recovered, revenue recovered, fill rate %, active offers
 
 ### Out of Scope
 
-- Mobile native app — web-first, responsive design sufficient for now
-- New feature development (e.g., new booking channels, video appointments) — fix and polish first
-- Local development dashboard (localhost:3010) — this project targets the Vercel deployment only
-- Migration to a different hosting provider — staying on Vercel + Supabase
+- Manual waitlist entry by staff — system should auto-detect candidates
+- SMS/email channel for offers — WhatsApp only for this milestone
+- Past patients without scheduled appointments — only consider currently scheduled patients
+- Mobile native app — web-first, responsive design sufficient
+- Local development dashboard — targets Vercel deployment only
 
 ## Context
 
 - **Live URL:** https://noshowzero-landing.vercel.app/
-- **Tech stack:** Next.js 16 (App Router) + Supabase (PostgreSQL 16) + Twilio + Stripe + Claude AI
-- **Current real-time:** 30-second client-side polling (no WebSockets/SSE)
-- **Target real-time:** Supabase Realtime (built-in Postgres change notifications over WebSockets)
-- **Database issue:** Migrations 004-011 never ran in production. Missing tables: message_threads, message_events, appointment_slots, rulesets, optimization_decisions, audit_events, confirmation_workflows, kpi_snapshots, booking_sessions, calendar_integrations, import_logs. The previous session hit a DB password issue with the Supabase pooler — user will provide the correct connection string from Supabase Dashboard.
-- **Codebase size:** ~26,700 lines TypeScript/TSX across 80+ files
-- **Users:** Small team of 2-5 clinic staff
-- **Production data:** 1 patient (stefano rossi), 1 appointment (esame prostata, 06/03/2026)
+- **Tech stack:** Next.js 15 (App Router) + Supabase (PostgreSQL 16) + Twilio (WhatsApp sandbox) + Stripe + Claude AI
+- **Codebase:** ~26,700 lines TypeScript/TSX across 80+ files
+- **Backend code exists but isn't connected:** The codebase has waitlist scoring (`waitlist-score.ts`), backfill logic (`trigger-backfill.ts`, `find-candidates.ts`, `send-offer.ts`, `process-response.ts`), and AI risk scoring (`ai-risk-score.ts`). However, the waitlist is empty (no auto-population), revenue metrics are inflated (counting all confirmations, not just recoveries), and the cascade trigger isn't firing on cancellations.
+- **Demo tenant ID:** `e1d14300-10cb-42d0-9e9d-eb8fee866570`
+- **Test phone:** `+393516761840` (all 19 test patients use this)
+- **Twilio:** WhatsApp sandbox mode (`whatsapp:+14155238886`)
 
 ## Constraints
 
-- **Hosting:** Vercel (serverless functions, no persistent WebSocket server) — Supabase Realtime handles the WS connection client-side
-- **Database:** Supabase (must use their connection pooler for serverless; Realtime is built-in)
-- **Budget:** Supabase free/pro tier — Realtime included at no extra cost
-- **Backwards compatibility:** Must not break existing WhatsApp webhook flow, cron jobs, or Stripe billing
-- **Multi-tenant:** All real-time subscriptions must be scoped to the authenticated tenant
+- **Hosting:** Vercel serverless — no long-running processes, cron jobs via Vercel Cron
+- **Database:** Supabase with connection pooler for serverless
+- **WhatsApp sandbox:** Limited to pre-joined numbers; production Twilio requires business verification
+- **Single test phone:** All 19 patients share one phone number — cascade testing requires awareness of this
+- **Backwards compatibility:** Must not break existing webhook flow, cron jobs, or Stripe billing
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Supabase Realtime over Pusher/Ably/custom WS | Already on Supabase, zero additional infrastructure, free tier includes Realtime | — Pending |
-| Fix production DB before adding real-time | Can't subscribe to tables that don't exist; also fixes the data inconsistency root cause | — Pending |
-| Target online deployment only | User explicitly wants fixes on Vercel, not the local dev server | — Pending |
+| Supabase Realtime over Pusher/Ably | Already on Supabase, zero additional infra | ✓ Good |
+| Auto-detect candidates vs manual waitlist | Staff shouldn't have to maintain a separate list; AI should find best fit from existing patients | — Pending |
+| WhatsApp only for offers | Same channel patients already use for confirmations; simplest flow | — Pending |
+| 1-hour offer timeout | Balanced — gives patient time to respond but keeps cascade moving | — Pending |
+| Only scheduled patients as candidates | Past patients without appointments adds complexity; start with known-scheduled patients | — Pending |
+| Configurable appointment value per tenant | Different businesses have different price points; can't hardcode €150 | — Pending |
+| Revenue = filled slots + saved no-shows | Honest metric; don't inflate with regular confirmations | — Pending |
 
 ---
-*Last updated: 2026-03-03 after initialization*
+*Last updated: 2026-03-04 after milestone v1.1 initialization*

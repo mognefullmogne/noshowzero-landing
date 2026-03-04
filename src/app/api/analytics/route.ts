@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { AnalyticsFiltersSchema } from "@/lib/validations";
-
-const AVG_APPOINTMENT_VALUE = 150; // conservative estimate per recovered appointment
+import { computeRecoveryMetrics } from "@/lib/metrics/recovery-metrics";
+import { maybeProcessPending } from "@/lib/engine/process-pending";
 
 export async function GET(request: Request) {
   try {
@@ -23,7 +23,10 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const tenantId = auth.data.tenantId;
 
-    // Build base query with optional date range
+    // Fire-and-forget: viewing analytics is a strong signal staff are active.
+    maybeProcessPending(supabase, tenantId);
+
+    // Build base appointment query with optional date range
     const buildQuery = (status?: string) => {
       let q = supabase
         .from("appointments")
@@ -42,15 +45,32 @@ export async function GET(request: Request) {
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenantId);
       if (status) q = q.eq("status", status);
+      if (from) q = q.gte("offered_at", from);
+      if (to) q = q.lte("offered_at", to);
+      return q;
+    };
+
+    // Build recovery query: accepted offers with new_appointment_id (honest metric)
+    const buildRecoveryQuery = () => {
+      let q = supabase
+        .from("waitlist_offers")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("status", "accepted")
+        .not("new_appointment_id", "is", null);
+      if (from) q = q.gte("offered_at", from);
+      if (to) q = q.lte("offered_at", to);
       return q;
     };
 
     // Run all counts in parallel
     const [
       totalRes, noShowRes, completedRes, cancelledRes, confirmedRes, scheduledRes,
-      waitlistRes, riskRes,
+      riskRes,
       offersAllRes, offersAcceptedRes, offersDeclinedRes, offersExpiredRes, offersPendingRes,
       offersResponseTimeRes,
+      recoveryRes,
+      tenantDataRes,
     ] = await Promise.all([
       buildQuery(),
       buildQuery("no_show"),
@@ -58,11 +78,6 @@ export async function GET(request: Request) {
       buildQuery("cancelled"),
       buildQuery("confirmed"),
       buildQuery("scheduled"),
-      supabase
-        .from("waitlist_entries")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId)
-        .eq("status", "fulfilled"),
       supabase
         .from("appointments")
         .select("risk_score")
@@ -85,22 +100,29 @@ export async function GET(request: Request) {
         if (to) q = q.lte("offered_at", to);
         return q;
       })(),
+      buildRecoveryQuery(),
+      supabase
+        .from("tenants")
+        .select("avg_appointment_value")
+        .eq("id", tenantId)
+        .single(),
     ]);
 
     const total = totalRes.count ?? 0;
     const noShowCount = noShowRes.count ?? 0;
-    const completedCount = completedRes.count ?? 0;
     const cancelledCount = cancelledRes.count ?? 0;
     const confirmedCount = confirmedRes.count ?? 0;
     const scheduledCount = scheduledRes.count ?? 0;
-    const waitlistFills = waitlistRes.count ?? 0;
+    const completedCount = completedRes.count ?? 0;
 
     const offersSent = offersAllRes.count ?? 0;
     const offersAccepted = offersAcceptedRes.count ?? 0;
     const offersDeclined = offersDeclinedRes.count ?? 0;
     const offersExpired = offersExpiredRes.count ?? 0;
     const offersPending = offersPendingRes.count ?? 0;
-    const offerFillRate = offersSent > 0 ? Math.round((offersAccepted / offersSent) * 100) : 0;
+
+    const slotsRecoveredCount = recoveryRes.count ?? 0;
+    const avgAppointmentValue = tenantDataRes.data?.avg_appointment_value ?? 80;
 
     // Calculate average response time in minutes
     const responseTimes = (offersResponseTimeRes.data ?? [])
@@ -121,8 +143,17 @@ export async function GET(request: Request) {
     const avgRiskScore =
       riskScores.length > 0 ? Math.round(riskScores.reduce((a, b) => a + b, 0) / riskScores.length) : 0;
 
-    // Revenue saved = confirmed appointments that had high risk scores (would have been no-shows)
-    const revenueSaved = (confirmedCount + completedCount + waitlistFills) * AVG_APPOINTMENT_VALUE;
+    // Honest recovery metrics (METR-01, METR-04)
+    const recovery = computeRecoveryMetrics({
+      cancelledCount,
+      noShowCount,
+      acceptedOffersWithNewAppt: slotsRecoveredCount,
+      pendingOffersCount: offersPending,
+      avgAppointmentValue,
+    });
+
+    // offerFillRate now uses METR-04 formula: slotsRecovered / (cancelled + noShow)
+    const offerFillRate = recovery.fillRatePercent;
 
     return NextResponse.json({
       success: true,
@@ -134,9 +165,11 @@ export async function GET(request: Request) {
         cancelledCount,
         confirmedCount,
         scheduledCount,
-        waitlistFills,
+        // Backward-compatible fields (populated with honest values)
+        waitlistFills: recovery.slotsRecovered,
+        revenueSaved: recovery.revenueRecovered,
         avgRiskScore,
-        revenueSaved,
+        // Offer metrics
         offersSent,
         offersAccepted,
         offersDeclined,
@@ -144,6 +177,11 @@ export async function GET(request: Request) {
         offersPending,
         offerFillRate,
         avgResponseMinutes,
+        // New honest recovery fields for Phase 7 dashboard
+        slotsRecovered: recovery.slotsRecovered,
+        fillRatePercent: recovery.fillRatePercent,
+        revenueRecovered: recovery.revenueRecovered,
+        activeOffers: recovery.activeOffers,
       },
     });
   } catch (err) {

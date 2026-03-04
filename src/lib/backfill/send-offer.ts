@@ -1,6 +1,10 @@
 /**
  * Create an offer record, generate HMAC tokens, send notification via Twilio,
  * and update the waitlist entry status to offer_pending.
+ *
+ * Supports:
+ *   - Variable expiry durations (time-aware cascade speed)
+ *   - Urgency prefix for critical-time slots
  */
 
 import { randomUUID } from "crypto";
@@ -8,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RankedCandidate } from "./find-candidates";
 import { generateOfferToken } from "./offer-tokens";
 import { sendNotification } from "@/lib/twilio/send-notification";
+import { getOptimalContactTime } from "@/lib/intelligence/response-patterns";
 import {
   renderOfferWhatsApp,
   renderOfferSms,
@@ -25,6 +30,10 @@ interface SendOfferInput {
   readonly providerName: string | null;
   readonly locationName: string | null;
   readonly scheduledAt: Date;
+  /** Custom expiry in minutes. Defaults to 60 (standard). */
+  readonly expiryMinutes?: number;
+  /** Prefix prepended to message body for urgent slots (e.g., "URGENTE"). */
+  readonly urgencyPrefix?: string | null;
 }
 
 export interface SendOfferResult {
@@ -39,21 +48,24 @@ export async function sendOffer(
 ): Promise<SendOfferResult> {
   // Pre-generate UUID so we can create tokens before the insert
   const offerId = randomUUID();
-  const acceptToken = generateOfferToken(offerId, "accept");
-  const declineToken = generateOfferToken(offerId, "decline");
+  const effectiveExpiry = input.expiryMinutes ?? 60;
+  const acceptToken = generateOfferToken(offerId, "accept", effectiveExpiry);
+  const declineToken = generateOfferToken(offerId, "decline", effectiveExpiry);
 
   // Single atomic insert with the real token hash
+  // waitlist_entry_id is nullable (migration 012) — appointment-based candidates don't have one
   const { error: insertError } = await supabase
     .from("waitlist_offers")
     .insert({
       id: offerId,
       tenant_id: input.tenantId,
       original_appointment_id: input.originalAppointmentId,
-      waitlist_entry_id: input.candidate.waitlistEntryId,
+      waitlist_entry_id: null,
+      candidate_appointment_id: input.candidate.candidateAppointmentId,
       patient_id: input.candidate.patientId,
       status: "pending",
-      smart_score: input.candidate.smartScore.total,
-      smart_score_breakdown: input.candidate.smartScore,
+      smart_score: input.candidate.candidateScore.total,
+      smart_score_breakdown: input.candidate.candidateScore,
       token_hash: acceptToken.tokenHash,
       expires_at: acceptToken.expiresAt.toISOString(),
     });
@@ -68,7 +80,7 @@ export async function sendOffer(
   const declineUrl = `${APP_URL}/api/offers/${offerId}/decline?token=${encodeURIComponent(declineToken.token)}`;
   const statusUrl = `${APP_URL}/api/offers/${offerId}?token=${encodeURIComponent(acceptToken.token)}`;
 
-  // Format date/time
+  // Format offered slot date/time
   const dateStr = input.scheduledAt.toLocaleDateString("it-IT", {
     weekday: "long",
     day: "numeric",
@@ -84,6 +96,23 @@ export async function sendOffer(
     minute: "2-digit",
   });
 
+  // Format candidate's current appointment date/time for comparison
+  const currentApptDate = input.candidate.currentAppointmentAt.toLocaleDateString("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const currentApptTime = input.candidate.currentAppointmentAt.toLocaleTimeString("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // Format expiry description for messages
+  const expiryDesc = effectiveExpiry >= 60
+    ? `${Math.round(effectiveExpiry / 60)} ora`
+    : `${effectiveExpiry} minuti`;
+
   const templateVars = {
     patient_name: input.candidate.patientName,
     service_name: input.serviceName,
@@ -95,10 +124,16 @@ export async function sendOffer(
     decline_url: declineUrl,
     status_url: statusUrl,
     expires_at: expiresStr,
+    current_appointment_date: currentApptDate,
+    current_appointment_time: currentApptTime,
+    expiry_description: expiryDesc,
   };
 
-  // Determine channel, message content, and recipient
-  const channel = input.candidate.preferredChannel;
+  // Determine channel using learned response patterns, falling back to patient preference
+  const optimalTiming = await getOptimalContactTime(supabase, input.candidate.patientId);
+  const channel = optimalTiming.dataPoints >= 3
+    ? optimalTiming.channel
+    : input.candidate.preferredChannel;
   let body: string;
   let subject: string | undefined;
   let to: string;
@@ -117,6 +152,11 @@ export async function sendOffer(
     subject = renderOfferEmailSubject(templateVars);
   }
 
+  // Add urgency prefix for critical-time slots
+  if (input.urgencyPrefix) {
+    body = `🚨 ${input.urgencyPrefix}: ${body}`;
+  }
+
   if (!to) {
     console.error("[Backfill] No contact info for patient");
     await supabase
@@ -128,7 +168,7 @@ export async function sendOffer(
 
   // Send notification (uses SMS template for email-preferred patients until SendGrid is set up)
   const effectiveChannel = channel === "email" ? "sms" : channel;
-  const sendResult = await sendNotification({ to, body, channel: effectiveChannel, subject });
+  const sendResult = await sendNotification({ to, body, channel: effectiveChannel, subject, tenantId: input.tenantId });
 
   if (sendResult.status === "failed") {
     console.error("[Backfill] Failed to send notification:", sendResult.errorMessage);
@@ -180,26 +220,6 @@ export async function sendOffer(
       .from("message_threads")
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", offerThreadId);
-  }
-
-  // Atomic increment of offers_sent using RPC-style pattern
-  // Supabase doesn't support raw SQL expressions in .update(), so we use a select + update
-  // with the value computed at query time to minimize race window
-  const { data: entry } = await supabase
-    .from("waitlist_entries")
-    .select("offers_sent")
-    .eq("id", input.candidate.waitlistEntryId)
-    .single();
-
-  const newCount = (entry?.offers_sent ?? 0) + 1;
-  const { error: updateError } = await supabase
-    .from("waitlist_entries")
-    .update({ status: "offer_pending", offers_sent: newCount })
-    .eq("id", input.candidate.waitlistEntryId)
-    .eq("offers_sent", entry?.offers_sent ?? 0); // CAS guard: only update if count hasn't changed
-
-  if (updateError) {
-    console.error("[Backfill] Failed to update waitlist entry:", updateError);
   }
 
   return { offerId, status: "sent" };

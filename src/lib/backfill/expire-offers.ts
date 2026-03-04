@@ -1,6 +1,6 @@
 /**
  * Find expired pending offers and cascade to next candidate.
- * Called by the cron endpoint every 30 minutes.
+ * Called by the cron endpoint every 15 minutes.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -17,7 +17,7 @@ export async function expirePendingOffers(supabase: SupabaseClient): Promise<Exp
   // Find all expired pending offers
   const { data: expiredOffers, error } = await supabase
     .from("waitlist_offers")
-    .select("id, waitlist_entry_id, original_appointment_id, tenant_id")
+    .select("id, original_appointment_id, tenant_id")
     .eq("status", "pending")
     .lte("expires_at", now)
     .limit(50);
@@ -44,26 +44,7 @@ export async function expirePendingOffers(supabase: SupabaseClient): Promise<Exp
     }
     expired++;
 
-    // Reset waitlist entry if offers remain
-    const { data: entry } = await supabase
-      .from("waitlist_entries")
-      .select("offers_sent, max_offers")
-      .eq("id", offer.waitlist_entry_id)
-      .single();
-
-    if (entry && entry.offers_sent < entry.max_offers) {
-      await supabase
-        .from("waitlist_entries")
-        .update({ status: "waiting" })
-        .eq("id", offer.waitlist_entry_id);
-    } else if (entry) {
-      await supabase
-        .from("waitlist_entries")
-        .update({ status: "offer_timeout" })
-        .eq("id", offer.waitlist_entry_id);
-    }
-
-    // Cascade: try next candidate
+    // Cascade: try next candidate for this slot
     const offerId = await triggerBackfill(
       supabase,
       offer.original_appointment_id,

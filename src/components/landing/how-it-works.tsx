@@ -13,13 +13,14 @@ const iconMap = {
 
 export function HowItWorks() {
   return (
-    <SectionWrapper id="how-it-works" className="bg-gray-50/50">
+    <SectionWrapper id="how-it-works" className="bg-slate-50/60">
       <div className="text-center">
         <ScrollReveal>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Simple setup</p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
             How It Works
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
             Get up and running in three simple steps. No complex setup required.
           </p>
         </ScrollReveal>
@@ -31,19 +32,19 @@ export function HowItWorks() {
           return (
             <ScrollReveal key={item.step} delay={index * 0.15}>
               <div className="relative flex flex-col items-center text-center">
-                {/* Step number */}
-                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25">
+                {/* Step icon */}
+                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-500 text-white shadow-lg shadow-teal-600/25">
                   <Icon className="h-7 w-7" />
                 </div>
 
                 {/* Connector line */}
                 {index < HOW_IT_WORKS.length - 1 && (
-                  <div className="absolute left-[calc(50%+3rem)] top-8 hidden h-0.5 w-[calc(100%-6rem)] bg-gradient-to-r from-blue-200 to-indigo-200 md:block" />
+                  <div className="absolute left-[calc(50%+3rem)] top-8 hidden h-0.5 w-[calc(100%-6rem)] bg-gradient-to-r from-teal-200 to-cyan-200 md:block" />
                 )}
 
-                <span className="text-sm font-bold text-blue-600">Step {item.step}</span>
-                <h3 className="mt-2 text-xl font-bold text-gray-900">{item.title}</h3>
-                <p className="mt-3 text-sm text-gray-500 leading-relaxed">{item.description}</p>
+                <span className="text-sm font-bold text-teal-600">Step {item.step}</span>
+                <h3 className="mt-2 text-xl font-bold text-slate-900">{item.title}</h3>
+                <p className="mt-3 text-sm text-slate-500 leading-relaxed">{item.description}</p>
               </div>
             </ScrollReveal>
           );

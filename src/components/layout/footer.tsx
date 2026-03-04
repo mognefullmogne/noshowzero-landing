@@ -24,20 +24,20 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="border-t border-black/[0.04] bg-white">
+    <footer className="border-t border-slate-100 bg-white">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-cyan-500">
                 <Zap className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold tracking-tight">
-                Now<span className="text-blue-600">Show</span>
+              <span className="text-xl font-bold tracking-tight text-slate-900">
+                Now<span className="text-teal-600">Show</span>
               </span>
             </Link>
-            <p className="mt-4 text-sm text-gray-500 leading-relaxed">
+            <p className="mt-4 text-sm text-slate-500 leading-relaxed">
               AI-powered appointment management that eliminates no-shows and fills empty slots
               automatically.
             </p>
@@ -46,13 +46,13 @@ export function Footer() {
           {/* Links */}
           {Object.entries(footerLinks).map(([title, links]) => (
             <div key={title}>
-              <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+              <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
               <ul className="mt-4 space-y-3">
                 {links.map((link) => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-sm text-gray-500 transition-colors hover:text-gray-900"
+                      className="text-sm text-slate-400 transition-colors hover:text-teal-600"
                     >
                       {link.label}
                     </Link>
@@ -63,9 +63,9 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 border-t border-black/[0.04] pt-8">
-          <p className="text-center text-sm text-gray-400">
-            &copy; {new Date().getFullYear()} NowShow. All rights reserved.
+        <div className="mt-12 border-t border-slate-100 pt-8">
+          <p className="text-center text-sm text-slate-400">
+            &copy; {new Date().getFullYear()} NoShowZero. All rights reserved.
           </p>
         </div>
       </div>

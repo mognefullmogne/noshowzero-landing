@@ -9,6 +9,11 @@ import {
 import { computeRiskScore } from "@/lib/scoring/risk-score";
 import { generateContactSchedule, scheduleToReminders } from "@/lib/scoring/contact-timing";
 import { createConfirmationWorkflow } from "@/lib/confirmation/workflow";
+import { calculateConfirmationDeadline } from "@/lib/confirmation/timing";
+import { sendMessage } from "@/lib/messaging/send-message";
+import { markMessageSent } from "@/lib/confirmation/workflow";
+import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
+import { maybeProcessPending } from "@/lib/engine/process-pending";
 import type { Patient, MessageChannel } from "@/lib/types";
 
 export async function GET(request: Request) {
@@ -48,6 +53,9 @@ export async function GET(request: Request) {
         { status: 500 }
       );
     }
+
+    // Fire-and-forget: opportunistic engine keeps confirmations/escalations current.
+    maybeProcessPending(supabase, auth.data.tenantId);
 
     const total = count ?? 0;
     return NextResponse.json({
@@ -258,12 +266,20 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create confirmation workflow (non-blocking)
-    createConfirmationWorkflow(
+    // Create confirmation workflow and, if the send window is already open, send immediately.
+    createAndMaybeSendConfirmation(
       supabase,
       auth.data.tenantId,
       appointment.id,
-      scheduledAt
+      scheduledAt,
+      riskResult.score,
+      patientId,
+      preferredChannel,
+      {
+        service_name: appointmentData.service_name,
+        provider_name: appointmentData.provider_name ?? null,
+        location_name: appointmentData.location_name ?? null,
+      }
     ).catch((err) => console.error("[Appointments] Confirmation workflow error:", err));
 
     return NextResponse.json({ success: true, data: appointment }, { status: 201 });
@@ -273,5 +289,101 @@ export async function POST(request: Request) {
       { success: false, error: { code: "INTERNAL_ERROR", message: "Internal server error" } },
       { status: 500 }
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helper: create confirmation workflow and send immediately if window is open
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a confirmation workflow for a new appointment.
+ * If the send deadline is already in the past (i.e., the appointment is close enough
+ * that we should confirm right now), send the message immediately rather than waiting
+ * for the cron or opportunistic engine to pick it up.
+ */
+async function createAndMaybeSendConfirmation(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  tenantId: string,
+  appointmentId: string,
+  scheduledAt: Date,
+  riskScore: number,
+  patientId: string,
+  preferredChannel: MessageChannel,
+  apptMeta: {
+    service_name: string;
+    provider_name: string | null;
+    location_name: string | null;
+  }
+): Promise<void> {
+  // Calculate when we should send (based on risk score)
+  const sendDeadline = calculateConfirmationDeadline(scheduledAt, riskScore);
+  const now = new Date();
+
+  // Create the workflow record
+  const workflowId = await createConfirmationWorkflow(
+    supabase,
+    tenantId,
+    appointmentId,
+    scheduledAt,
+    riskScore
+  );
+
+  // If the send deadline is already passed (appointment is soon enough), send now
+  if (workflowId && sendDeadline <= now) {
+    const { data: patient } = await supabase
+      .from("patients")
+      .select("id, first_name, last_name, phone, preferred_channel")
+      .eq("id", patientId)
+      .maybeSingle();
+
+    if (!patient?.phone) return;
+
+    const dateStr = scheduledAt.toLocaleDateString("it-IT", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    const timeStr = scheduledAt.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const vars = {
+      patientName: `${patient.first_name} ${patient.last_name}`,
+      serviceName: apptMeta.service_name,
+      date: dateStr,
+      time: timeStr,
+      providerName: apptMeta.provider_name ?? undefined,
+      locationName: apptMeta.location_name ?? undefined,
+    };
+
+    const channel = preferredChannel;
+    const body =
+      channel === "whatsapp"
+        ? renderConfirmationWhatsApp(vars)
+        : renderConfirmationSms(vars);
+
+    const result = await sendMessage(supabase, {
+      tenantId,
+      patientId: patient.id,
+      patientPhone: patient.phone,
+      channel,
+      body,
+      contextAppointmentId: appointmentId,
+    });
+
+    if (result.success && result.message) {
+      await markMessageSent(supabase, workflowId, result.message.id);
+      console.info(
+        `[Appointments] Conferma inviata immediatamente per appuntamento ${appointmentId}`
+      );
+    } else {
+      console.error(
+        "[Appointments] Invio conferma immediata fallito:",
+        appointmentId,
+        result.error
+      );
+    }
   }
 }

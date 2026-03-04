@@ -23,6 +23,7 @@ import {
   Settings2,
   ScrollText,
   Plug,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -33,21 +34,22 @@ import { RealtimeStatusProvider } from "@/contexts/realtime-status-context";
 import { ConnectionStatus } from "@/components/shared/connection-status";
 
 const sidebarLinks = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Appointments", href: "/appointments", icon: CalendarDays },
-  { label: "Calendar", href: "/calendar", icon: CalendarRange },
-  { label: "Waitlist", href: "/waitlist", icon: Users },
-  { label: "Offers", href: "/offers", icon: Gift },
-  { label: "Messages", href: "/messages", icon: MessageSquare },
+  { label: "Bacheca", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Appuntamenti", href: "/appointments", icon: CalendarDays },
+  { label: "Calendario", href: "/calendar", icon: CalendarRange },
+  { label: "Lista d'attesa", href: "/waitlist", icon: Users },
+  { label: "Offerte", href: "/offers", icon: Gift },
+  { label: "Messaggi", href: "/messages", icon: MessageSquare },
   { label: "Integrazioni", href: "/integrations", icon: Plug },
-  { label: "AI Chat", href: "/ai-chat", icon: Bot },
-  { label: "Optimization", href: "/optimization", icon: Sparkles },
-  { label: "Rules", href: "/rules", icon: Settings2 },
+  { label: "Chat AI", href: "/ai-chat", icon: Bot },
+  { label: "Ottimizzazione", href: "/optimization", icon: Sparkles },
+  { label: "Regole", href: "/rules", icon: Settings2 },
+  { label: "Strategia AI", href: "/strategy-log", icon: Brain },
   { label: "Audit", href: "/audit", icon: ScrollText },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "API Docs", href: "/docs", icon: BookOpen },
-  { label: "Billing", href: "/billing", icon: CreditCard },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Statistiche", href: "/analytics", icon: BarChart3 },
+  { label: "Documentazione API", href: "/docs", icon: BookOpen },
+  { label: "Fatturazione", href: "/billing", icon: CreditCard },
+  { label: "Impostazioni", href: "/settings", icon: Settings },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -83,12 +85,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Zap className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold tracking-tight">
-                Now<span className="text-blue-600">Show</span>
+                NoShow<span className="text-blue-600">Zero</span>
               </span>
             </Link>
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <Rocket className="h-4 w-4" />
-              Setup Wizard
+              Configurazione Iniziale
             </div>
           </div>
         </header>
@@ -116,7 +118,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onClick={() => window.location.reload()}
             className="mt-3 text-sm text-blue-600 underline hover:text-blue-700"
           >
-            Try again
+            Riprova
           </button>
         </div>
       </div>
@@ -143,7 +145,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Zap className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-bold tracking-tight">
-              Now<span className="text-blue-600">Show</span>
+              NoShow<span className="text-blue-600">Zero</span>
             </span>
           </Link>
           <div className="ml-auto">
@@ -179,7 +181,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onClick={handleSignOut}
           >
             <LogOut className="h-4 w-4" />
-            Sign Out
+            Esci
           </Button>
         </div>
       </aside>

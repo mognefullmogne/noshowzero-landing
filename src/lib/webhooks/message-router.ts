@@ -8,6 +8,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MessageIntent } from "@/lib/types";
 import { processAccept, processDecline } from "@/lib/backfill/process-response";
+import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
+import { sendNotification } from "@/lib/twilio/send-notification";
 
 // AI input sanitization
 const MAX_AI_INPUT_CHARS = 500;
@@ -82,11 +84,11 @@ async function handleConfirm(
 
   if (error) {
     console.error("[Router] Confirm failed:", error);
-    return { reply: "Si e' verificato un errore. Riprova o contatta la segreteria." };
+    return { reply: "Si è verificato un errore. Riprova o contatta la segreteria." };
   }
 
   if (!data || data.length === 0) {
-    return { reply: "L'appuntamento e' gia' stato aggiornato. Contatta la segreteria per assistenza." };
+    return { reply: "L'appuntamento è già stato aggiornato. Contatta la segreteria per assistenza." };
   }
 
   // Update confirmation workflow if table exists (graceful — table may not be migrated yet)
@@ -105,7 +107,7 @@ async function handleConfirm(
   }
 
   return {
-    reply: "Perfetto! Il tuo appuntamento e' confermato. Ti aspettiamo!",
+    reply: "Perfetto! Il tuo appuntamento è confermato. Ti aspettiamo! 🎉",
     action: "appointment_confirmed",
   };
 }
@@ -127,15 +129,15 @@ async function handleCancel(
     .eq("id", input.appointmentId)
     .eq("tenant_id", input.tenantId)
     .in("status", ["scheduled", "reminder_sent", "reminder_pending", "confirmed"])
-    .select("id");
+    .select("id, patient_id, service_name, provider_name, location_name, scheduled_at, duration_min, patient:patients(phone)");
 
   if (error) {
     console.error("[Router] Cancel failed:", error);
-    return { reply: "Si e' verificato un errore. Riprova o contatta la segreteria." };
+    return { reply: "Si è verificato un errore. Riprova o contatta la segreteria." };
   }
 
   if (!data || data.length === 0) {
-    return { reply: "L'appuntamento e' gia' stato aggiornato. Contatta la segreteria per assistenza." };
+    return { reply: "L'appuntamento è già stato aggiornato. Contatta la segreteria per assistenza." };
   }
 
   // Update confirmation workflow if table exists (graceful — table may not be migrated yet)
@@ -153,8 +155,33 @@ async function handleCancel(
     }
   }
 
+  // Fire-and-forget: send smart rebooking suggestion via WhatsApp
+  const cancelledAppt = data[0];
+  const patientPhone = ((cancelledAppt.patient as unknown) as { phone: string | null } | null)?.phone;
+  if (patientPhone) {
+    const tenantId = input.tenantId;
+    const patientId = cancelledAppt.patient_id as string;
+    generateRebookingSuggestions(supabase, tenantId, patientId, {
+      id: cancelledAppt.id,
+      service_name: cancelledAppt.service_name as string,
+      provider_name: (cancelledAppt.provider_name as string | null) ?? null,
+      location_name: (cancelledAppt.location_name as string | null) ?? null,
+      scheduled_at: cancelledAppt.scheduled_at as string,
+      duration_min: cancelledAppt.duration_min as number,
+    })
+      .then((suggestions) =>
+        sendNotification({
+          to: patientPhone,
+          body: suggestions.message,
+          channel: "whatsapp",
+          tenantId,
+        })
+      )
+      .catch((err) => console.error("[SmartRebook] WhatsApp cancel rebook failed:", err));
+  }
+
   return {
-    reply: "Il tuo appuntamento e' stato cancellato. Se desideri riprogrammare, contatta la segreteria.",
+    reply: "Il tuo appuntamento è stato cancellato. Riceverai a breve alcune proposte per riprogrammare.",
     action: "appointment_cancelled",
   };
 }
@@ -170,13 +197,15 @@ async function handleAcceptOffer(
   const result = await processAccept(supabase, input.offerId);
   if (!result.success) {
     console.error("[Router] Accept offer failed:", result.error, "offerId:", input.offerId);
-    return { reply: "Non e' stato possibile accettare l'offerta. Contatta la segreteria per assistenza." };
+    return {
+      reply: "Non è stato possibile accettare l'offerta. Potrebbe essere già scaduta. Contatta la segreteria per assistenza.",
+    };
   }
 
-  return {
-    reply: "Ottimo! Hai accettato lo slot. Il tuo nuovo appuntamento e' confermato. Ti aspettiamo!",
-    action: "offer_accepted",
-  };
+  // Build detailed Italian confirmation with appointment details
+  const reply = await buildAcceptReply(supabase, result.newAppointmentId, result.freedAppointmentId);
+
+  return { reply, action: "offer_accepted" };
 }
 
 async function handleDeclineOffer(
@@ -190,11 +219,11 @@ async function handleDeclineOffer(
   const result = await processDecline(supabase, input.offerId);
   if (!result.success) {
     console.error("[Router] Decline offer failed:", result.error, "offerId:", input.offerId);
-    return { reply: "Si e' verificato un errore. Contatta la segreteria." };
+    return { reply: "Si è verificato un errore. Contatta la segreteria." };
   }
 
   return {
-    reply: "Nessun problema. Se cambi idea, contatta la segreteria.",
+    reply: "Nessun problema! Il tuo appuntamento attuale resta confermato, non cambia nulla. Se hai bisogno, contatta la segreteria.",
     action: "offer_declined",
   };
 }
@@ -205,7 +234,7 @@ async function handleSlotSelect(
 ): Promise<RouteResult> {
   const match = input.messageBody.match(/[123]/);
   if (!match) {
-    return { reply: "Per favore rispondi con 1, 2 o 3 per selezionare uno slot." };
+    return { reply: "Per favore rispondi con 1, 2 o 3 per scegliere l'orario." };
   }
 
   const selectedIndex = parseInt(match[0], 10);
@@ -245,14 +274,14 @@ async function handleSlotSelect(
 
     if (updateError) {
       console.error("[Router] Slot proposal update failed:", updateError);
-      return { reply: "Si e' verificato un errore. Contatta la segreteria." };
+      return { reply: "Si è verificato un errore. Contatta la segreteria." };
     }
   } catch {
     return { reply: "Non ho trovato una proposta attiva. Contatta la segreteria." };
   }
 
   return {
-    reply: `Perfetto! Hai selezionato l'opzione ${selectedIndex}. Il tuo appuntamento e' confermato.`,
+    reply: `Perfetto! Hai selezionato l'opzione ${selectedIndex}. Il tuo appuntamento è confermato.`,
     action: "slot_selected",
   };
 }
@@ -391,6 +420,77 @@ async function loadAppointmentContext(
   return { patientName, appointmentDetails: details, hasAppointment: true };
 }
 
+// --- Accept reply builder ---
+
+/**
+ * Build a detailed Italian accept confirmation including new appointment details
+ * and a mention of the freed old appointment.
+ */
+async function buildAcceptReply(
+  supabase: SupabaseClient,
+  newAppointmentId?: string,
+  freedAppointmentId?: string
+): Promise<string> {
+  const fallback = "Ottimo! Il tuo nuovo appuntamento è confermato. Ti aspettiamo!";
+
+  if (!newAppointmentId) {
+    return fallback;
+  }
+
+  try {
+    const { data: newAppt } = await supabase
+      .from("appointments")
+      .select("service_name, provider_name, scheduled_at")
+      .eq("id", newAppointmentId)
+      .maybeSingle();
+
+    if (!newAppt) {
+      return fallback;
+    }
+
+    const date = new Date(newAppt.scheduled_at);
+    const dateStr = date.toLocaleDateString("it-IT", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    const timeStr = date.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const providerSuffix = newAppt.provider_name
+      ? ` con ${newAppt.provider_name}`
+      : "";
+
+    let reply = `Ottimo! Il tuo nuovo appuntamento è confermato:\n${newAppt.service_name} il ${dateStr} alle ${timeStr}${providerSuffix}.`;
+
+    // Mention the freed old appointment if it was cancelled
+    if (freedAppointmentId) {
+      const { data: oldAppt } = await supabase
+        .from("appointments")
+        .select("scheduled_at")
+        .eq("id", freedAppointmentId)
+        .maybeSingle();
+
+      if (oldAppt) {
+        const oldDate = new Date(oldAppt.scheduled_at);
+        const oldDateStr = oldDate.toLocaleDateString("it-IT", {
+          day: "numeric",
+          month: "long",
+        });
+        reply += `\nIl tuo precedente appuntamento del ${oldDateStr} è stato cancellato.`;
+      }
+    }
+
+    reply += "\nTi aspettiamo!";
+    return reply;
+  } catch (err) {
+    console.error("[Router] Failed to build accept reply:", err);
+    return fallback;
+  }
+}
+
 // --- Utilities ---
 
 function buildSystemPrompt(context: AppointmentContext): string {
@@ -496,5 +596,5 @@ function getFallbackReply(input: RouteInput): string {
   if (input.appointmentId) {
     return "Grazie per il tuo messaggio. Per confermare rispondi SI, per cancellare rispondi NO. Per altre richieste, contatta la segreteria.";
   }
-  return "Grazie per il tuo messaggio. Un operatore ti rispondera' al piu' presto. Per urgenze, chiama direttamente la segreteria.";
+  return "Grazie! Un operatore ti risponderà al più presto. Per urgenze chiama la segreteria.";
 }

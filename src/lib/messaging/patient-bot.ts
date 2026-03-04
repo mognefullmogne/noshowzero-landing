@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MessageIntent } from "@/lib/types";
 import { classifyIntent } from "./intent-engine";
 import { routeIntent } from "@/lib/webhooks/message-router";
+import { updatePatientMemory } from "@/lib/ai/patient-memory";
 
 interface PatientContext {
   readonly tenantId: string;
@@ -71,6 +72,12 @@ export async function handlePatientMessage(
     appointmentId: context.nextAppointmentId ?? ctx.appointmentId,
     offerId: context.activeOfferId ?? ctx.offerId,
   });
+
+  // 5. Fire-and-forget: update patient memory from this interaction.
+  // Never awaited — never blocks the reply.
+  updatePatientMemory(supabase, ctx.patientId, ctx.messageBody, intent, confidence).catch(
+    (err) => console.error("[PatientBot] Memory update failed:", err)
+  );
 
   return {
     intent,

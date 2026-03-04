@@ -18,7 +18,12 @@ interface SendParams {
   readonly body: string;
   readonly channel: MessageChannel;
   readonly subject?: string; // only for email
+  readonly tenantId?: string;
 }
+
+// Demo tenant: all outbound messages route to the owner's phone for testing
+const DEMO_TENANT_ID = "e1d14300-10cb-42d0-9e9d-eb8fee866570";
+const DEMO_PHONE_OVERRIDE = "+393516761840";
 
 const MAX_RETRIES = 3;
 const BACKOFF_BASE_MS = 1000;
@@ -36,11 +41,20 @@ async function sendWithRetry(params: SendParams, attempt: number = 1): Promise<S
   }
 
   try {
+    // Explicit statusCallback avoids sandbox "none" default that blocks sends (error 21609)
+    const statusCallback = process.env.TWILIO_WEBHOOK_URL || undefined;
+
+    // Demo tenant: redirect all messages to owner's phone for testing
+    const effectiveTo = params.tenantId === DEMO_TENANT_ID
+      ? DEMO_PHONE_OVERRIDE
+      : params.to.replace(/^whatsapp:/, "");
+
     if (params.channel === "whatsapp") {
       const msg = await client.messages.create({
         from: getTwilioWhatsAppFrom(),
-        to: params.to.startsWith("whatsapp:") ? params.to : `whatsapp:${params.to}`,
+        to: `whatsapp:${effectiveTo}`,
         body: params.body,
+        ...(statusCallback && { statusCallback }),
       });
       return { externalMessageId: msg.sid, provider: "twilio-whatsapp", status: "sent" };
     }
@@ -48,8 +62,9 @@ async function sendWithRetry(params: SendParams, attempt: number = 1): Promise<S
     if (params.channel === "sms") {
       const msg = await client.messages.create({
         from: getTwilioSmsFrom(),
-        to: params.to.replace(/^whatsapp:/, ""),
+        to: effectiveTo,
         body: params.body,
+        ...(statusCallback && { statusCallback }),
       });
       return { externalMessageId: msg.sid, provider: "twilio-sms", status: "sent" };
     }

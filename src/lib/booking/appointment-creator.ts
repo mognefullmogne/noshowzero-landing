@@ -10,7 +10,10 @@ import {
   generateContactSchedule,
   scheduleToReminders,
 } from "@/lib/scoring/contact-timing";
-import { createConfirmationWorkflow } from "@/lib/confirmation/workflow";
+import { createConfirmationWorkflow, markMessageSent } from "@/lib/confirmation/workflow";
+import { calculateConfirmationDeadline } from "@/lib/confirmation/timing";
+import { sendMessage } from "@/lib/messaging/send-message";
+import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
 import type { MessageChannel } from "@/lib/types";
 
 interface CreateBookingResult {
@@ -159,13 +162,111 @@ export async function createAppointmentFromBooking(
       }
     }
 
-    // 8. Create confirmation workflow (non-blocking)
-    createConfirmationWorkflow(supabase, tenantId, appointment.id, scheduledAt)
-      .catch((err) => console.error("[BookingCreator] Workflow error:", err));
+    // 8. Create confirmation workflow and send immediately if the window is already open.
+    createAndMaybeSendConfirmation(
+      supabase,
+      tenantId,
+      appointment.id,
+      scheduledAt,
+      riskResult.score,
+      patientId,
+      preferredChannel,
+      serviceName,
+      slot.providerName
+    ).catch((err) => console.error("[BookingCreator] Workflow error:", err));
 
     return { success: true, appointmentId: appointment.id };
   } catch (err) {
     console.error("[BookingCreator] Unexpected error:", err);
     return { success: false, error: "unexpected_error" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helper: create confirmation workflow and send immediately if window is open
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a confirmation workflow for a booking.
+ * If the send deadline is already in the past (appointment is soon), send right away
+ * rather than waiting for the cron or opportunistic engine to pick it up.
+ */
+async function createAndMaybeSendConfirmation(
+  supabase: SupabaseClient,
+  tenantId: string,
+  appointmentId: string,
+  scheduledAt: Date,
+  riskScore: number,
+  patientId: string,
+  preferredChannel: MessageChannel,
+  serviceName: string,
+  providerName: string
+): Promise<void> {
+  const sendDeadline = calculateConfirmationDeadline(scheduledAt, riskScore);
+  const now = new Date();
+
+  const workflowId = await createConfirmationWorkflow(
+    supabase,
+    tenantId,
+    appointmentId,
+    scheduledAt,
+    riskScore
+  );
+
+  // Only send immediately when deadline is already past and workflow was created
+  if (!workflowId || sendDeadline > now) return;
+
+  const { data: patient } = await supabase
+    .from("patients")
+    .select("id, first_name, last_name, phone")
+    .eq("id", patientId)
+    .maybeSingle();
+
+  if (!patient?.phone) return;
+
+  const dateStr = scheduledAt.toLocaleDateString("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const timeStr = scheduledAt.toLocaleTimeString("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const vars = {
+    patientName: `${patient.first_name} ${patient.last_name}`,
+    serviceName,
+    date: dateStr,
+    time: timeStr,
+    providerName,
+  };
+
+  const channel = preferredChannel;
+  const body =
+    channel === "whatsapp"
+      ? renderConfirmationWhatsApp(vars)
+      : renderConfirmationSms(vars);
+
+  const result = await sendMessage(supabase, {
+    tenantId,
+    patientId: patient.id,
+    patientPhone: patient.phone,
+    channel,
+    body,
+    contextAppointmentId: appointmentId,
+  });
+
+  if (result.success && result.message) {
+    await markMessageSent(supabase, workflowId, result.message.id);
+    console.info(
+      `[BookingCreator] Conferma inviata immediatamente per appuntamento ${appointmentId}`
+    );
+  } else {
+    console.error(
+      "[BookingCreator] Invio conferma immediata fallito:",
+      appointmentId,
+      result.error
+    );
   }
 }

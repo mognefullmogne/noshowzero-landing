@@ -64,9 +64,9 @@ export async function GET(
     return htmlResponse(200, "Appuntamento confermato!", `
       <div style="text-align:center;">
         <div style="font-size:64px; margin-bottom:16px;">&#x2705;</div>
-        <p style="font-size:18px; color:#16a34a; font-weight:600;">Il suo appuntamento è stato confermato con successo!</p>
-        <p style="color:#666; margin-top:16px;">Riceverà un promemoria prima dell'appuntamento.</p>
-        <p style="color:#999; font-size:14px; margin-top:24px;">Può chiudere questa pagina.</p>
+        <p style="font-size:18px; color:#16a34a; font-weight:600;">Il tuo appuntamento è stato confermato con successo! 🎉</p>
+        <p style="color:#666; margin-top:16px;">Riceverai un promemoria prima dell'appuntamento.</p>
+        <p style="color:#999; font-size:14px; margin-top:24px;">Puoi chiudere questa pagina.</p>
       </div>
     `);
   } catch (err) {

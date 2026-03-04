@@ -4,6 +4,9 @@ import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { UpdateAppointmentSchema } from "@/lib/validations";
 import { VALID_TRANSITIONS, type AppointmentStatus } from "@/lib/types";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
+import { maybeProcessPending } from "@/lib/engine/process-pending";
+import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
+import { sendNotification } from "@/lib/twilio/send-notification";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -149,6 +152,28 @@ export async function PATCH(
         .then((serviceClient) => triggerBackfill(serviceClient, id, auth.data.tenantId))
         .catch((err) => console.error("[Backfill] Trigger failed:", err));
     }
+
+    // Send smart rebooking suggestion on cancellation (non-blocking, fire-and-forget)
+    if (newStatus === "cancelled" && updated.patient?.phone) {
+      const patientPhone = updated.patient.phone;
+      const tenantId = auth.data.tenantId;
+      createServiceClient()
+        .then(async (serviceClient) => {
+          const suggestions = await generateRebookingSuggestions(serviceClient, tenantId, updated.patient_id, {
+            id: updated.id,
+            service_name: updated.service_name,
+            provider_name: updated.provider_name ?? null,
+            location_name: updated.location_name ?? null,
+            scheduled_at: updated.scheduled_at,
+            duration_min: updated.duration_min,
+          });
+          await sendNotification({ to: patientPhone, body: suggestions.message, channel: "whatsapp", tenantId });
+        })
+        .catch((err) => console.error("[SmartRebook] Trigger failed:", err));
+    }
+
+    // After any appointment status change, run the full engine to catch any cascading work.
+    maybeProcessPending(supabase, auth.data.tenantId);
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {

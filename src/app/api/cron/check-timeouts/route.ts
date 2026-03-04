@@ -1,29 +1,32 @@
 /**
  * Cron: Check confirmation timeouts (every 10 min).
- * Picks up message_sent workflows past their deadline and marks them timed_out.
+ * Picks up workflows in any escalation state past their deadline and marks them timed_out.
  * Triggers backfill for timed-out appointments.
+ *
+ * Note: The escalate-confirmations cron handles the normal multi-touch flow.
+ * This cron is a safety net that catches any workflow past its deadline,
+ * regardless of which escalation state it's in.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { markTimedOut } from "@/lib/confirmation/workflow";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronSecret(request);
+  if (authError) return authError;
 
   const supabase = await createServiceClient();
   const now = new Date().toISOString();
 
-  // Fetch workflows that have timed out
+  // Fetch workflows that have timed out in any active escalation state
   const { data: workflows, error } = await supabase
     .from("confirmation_workflows")
     .select("id, tenant_id, appointment_id")
-    .eq("state", "message_sent")
+    .in("state", ["message_sent", "reminder_sent", "final_warning_sent"])
     .lte("deadline_at", now)
     .limit(50);
 

@@ -7,9 +7,9 @@ import { ChatWidget } from "@/components/chat/chat-widget";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pricing — NowShow",
+  title: "Pricing — NoShowZero",
   description:
-    "Simple, transparent pricing for NowShow. Start free for 14 days. Plans from $199/mo.",
+    "Simple, transparent pricing for NoShowZero. Start free for 14 days. Plans from $199/mo.",
 };
 
 export default function PricingPage() {

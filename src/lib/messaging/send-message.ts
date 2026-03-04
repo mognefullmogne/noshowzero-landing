@@ -70,6 +70,7 @@ export async function sendMessage(
     to: toNumber,
     body: input.body,
     channel: effectiveChannel,
+    tenantId: input.tenantId,
   });
 
   // Log message event

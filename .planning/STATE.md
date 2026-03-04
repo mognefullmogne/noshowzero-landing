@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-stopped_at: Completed 03-02-PLAN.md — all milestone plans complete
-last_updated: "2026-03-03T22:16:54.446Z"
-last_activity: 2026-03-03 — Plan 03-02 complete (connection status indicator)
+milestone: v1.1
+milestone_name: Slot Recovery Engine
+status: executing
+stopped_at: Phase 7 context gathered
+last_updated: "2026-03-04T16:17:40.512Z"
+last_activity: 2026-03-04 — Completed 06-02 (appointment value settings UI, recovery KPI dashboard cards)
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 7
+  completed_phases: 6
+  total_plans: 14
+  completed_plans: 14
   percent: 100
 ---
 
@@ -18,66 +18,63 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-03)
+See: .planning/PROJECT.md (updated 2026-03-04)
 
-**Core value:** When a patient confirms or cancels via WhatsApp, every staff member sees the change instantly — no refresh, no lag, no stale data.
-**Current focus:** Milestone complete
+**Core value:** When a patient cancels, the system automatically fills that slot by contacting the best-fit patient via WhatsApp -- no staff intervention, no empty chairs, no lost revenue.
+**Current focus:** Phase 6 complete — Revenue Metrics done. Ready for Phase 7.
 
 ## Current Position
 
-Phase: 3 of 3 (Resilience)
-Plan: 2 of 2 in current phase
-Status: All plans complete
-Last activity: 2026-03-03 — Plan 03-02 complete (connection status indicator)
+Phase: 6 of 7 (Revenue Metrics) — COMPLETE
+Plan: 2 of 2 in current phase — all complete
+Status: Executing
+Last activity: 2026-03-04 — Completed 06-02 (appointment value settings UI, recovery KPI dashboard cards)
 
-Progress: [██████████] 100%
+Progress: [██████████] 100% (14/14 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: — min
-- Total execution time: 0 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
-
-**Recent Trend:**
-- Last 5 plans: none yet
-- Trend: —
-
-*Updated after each plan completion*
-| Phase 02 P01 | 3 | 2 tasks | 3 files |
-| Phase 02 P02 | 3 | 2 tasks | 3 files |
-| Phase 02 P03 | 2 | 2 tasks | 4 files |
-| Phase 03 P01 | 2 | 2 tasks | 3 files |
-| Phase 03 P02 | 8 | 3 tasks | 5 files |
+- Total plans completed: 14
+- Average duration: --
+- Total execution time: --
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Pre-Phase 1]: Use Supabase Realtime over Pusher/Ably — already on Supabase, zero additional infrastructure
-- [Pre-Phase 1]: Fix production DB before adding real-time — can't subscribe to tables that don't exist
-- [Pre-Phase 1]: Target Vercel deployment only — local dev server (localhost:3010) is out of scope
-- [Phase 02]: Subscribe-first-then-fetch pattern chosen over TanStack Query invalidation for race condition prevention
-- [Phase 02]: RLS-only filtering for tenant scoping -- no client-side filter parameter on Realtime subscription
-- [Phase 02]: Preserve patient join data on UPDATE events -- Realtime payloads lack JOINed relations
-- [Phase 02]: AppointmentsPage uses pure client-side filtering/pagination against Realtime hook data
-- [Phase 02]: Dashboard uses Realtime-as-signal pattern for KPI re-fetch (not direct data replacement)
-- [Phase 02]: Calendar keeps REST fetch for date-range filtering, Realtime triggers re-fetch only
-- [Phase 02]: Extract notifyIfConfirmed as standalone function for DRY toast logic between live callback and pending drain
-- [Phase 03]: reconnectTrigger pattern: state counter forces useEffect re-run for clean channel teardown/recreation
-- [Phase 03]: Fire-and-forget auth.getSession() before subscription to handle overnight token expiry
-- [Phase 03]: React context bridge for page-to-layout status sharing -- lightest-weight solution, no prop drilling
-- [Phase 03]: Only SUBSCRIBED maps to "Live" -- all other statuses show non-live state for safety
-- [Phase 03]: Removed hardcoded badge entirely rather than replacing with dynamic version in dashboard body
+- [v1.0]: Supabase Realtime over Pusher/Ably -- zero additional infrastructure
+- [v1.0]: Subscribe-first-then-fetch pattern for race condition prevention
+- [v1.0]: RLS-only filtering for tenant scoping on Realtime subscriptions
+- [v1.1]: Auto-detect candidates from scheduled patients vs manual waitlist
+- [v1.1]: WhatsApp only for slot offers
+- [v1.1]: 1-hour timeout per offer before cascade to next candidate
+- [v1.1]: Revenue = filled slots + saved no-shows (honest metrics only)
+- [v1.1]: Configurable appointment value per tenant
+- [Phase 04-candidate-detection]: Two-factor scoring: appointmentDistance (0-60 primary) + reliability (0-40 tiebreaker) for candidate ranking
+- [Phase 04-candidate-detection]: New patients (<2 appointments) get neutral reliability score of 20 to avoid penalizing first-timers
+- [Phase 04-candidate-detection]: waitlist_entry_id made nullable in WaitlistOffer to support appointment-based candidates
+- [Phase 04-02]: Post-query canceller exclusion added as belt-and-suspenders (DB filter primary, app filter safety net)
+- [Phase 04-02]: Deduplication keeps farthest-out appointment to maximize appointmentDistance scoring component
+- [Phase 04-02]: send-offer.ts waitlist_entries update removed — appointment-based candidates have no entry to update
+- [Phase 04-candidate-detection]: Tests confirmed trigger-backfill.ts and send-offer.ts were already correctly updated in 04-02 — no implementation changes needed in 04-03, only test coverage added
+- [Phase 05-01]: MAX_OFFERS_PER_SLOT set to 10 — reasonable cap preventing runaway cascades
+- [Phase 05-01]: Cascade exhaustion recorded via audit_log insert (dashboard already queries audit_log)
+- [Phase 05-01]: WhatsApp template uses SI/NO reply, SMS/email keep URL-based links as fallback
+- [Phase 05-01]: Token generation preserved for DB security (token_hash), but URLs omitted from WhatsApp message body
+- [Phase 05-02]: Chain cascade is fire-and-forget (.catch()) to avoid blocking accept response
+- [Phase 05-02]: Freed appointment uses existing "cancelled" status with descriptive notes ("Freed by slot recovery")
+- [Phase 05-02]: AI offer classifier uses narrowed 3-intent schema (accept_offer/decline_offer/unknown) for higher accuracy
+- [Phase 05-02]: Clarification prompt returned when AI offer classification confidence below 0.6
+- [Phase 05]: Chain cascade is fire-and-forget (.catch()) to avoid blocking accept response
+- [Phase 05]: Freed appointment uses existing cancelled status with descriptive notes (Freed by slot recovery)
+- [Phase 05]: AI offer classifier uses narrowed 3-intent schema (accept_offer/decline_offer/unknown)
+- [Phase 06-01]: Default avg_appointment_value set to EUR 80 matching existing compute-snapshot default
+- [Phase 06-01]: Recovery = only accepted offers with new_appointment_id (honest metric per METR-01)
+- [Phase 06-01]: Fill rate uses METR-04 formula: slotsRecovered / (cancelled + noShow) x 100
+- [Phase 06-01]: Backward-compatible: waitlistFills and revenueSaved response fields preserved with honest values
+- [Phase 06]: Used valueAsNumber register option instead of z.coerce.number() for Zod 4 + react-hook-form compatibility
+- [Phase 06]: New AnalyticsData fields optional for backward compatibility with older API responses
 
 ### Pending Todos
 
@@ -85,12 +82,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- **DB password issue (RESOLVED)**: Direct PostgreSQL connection doesn't resolve; pooler gives auth error. Workaround: paste SQL in Supabase Dashboard SQL Editor. All migrations 004-011 applied successfully.
-- **Supabase key naming**: Supabase migrated to new key names (`sb_publishable_*` / `sb_secret_*`) with a Nov 2025 deadline. Audit env vars before Phase 2 Realtime work begins.
-- **Race condition strategy (RESOLVED)**: Subscribe-first-then-fetch pattern chosen. Implemented in Plan 02-01 with event queuing during initial fetch.
+- **Single test phone:** All 19 patients share +393516761840 -- cascade testing needs awareness
+- **WhatsApp sandbox:** Limited to pre-joined numbers; sandbox can reset and clear webhook URLs
+- **Existing backfill code:** Backend logic exists but is not triggered properly; needs rewiring, not rewriting
 
 ## Session Continuity
 
-Last session: 2026-03-03T22:14:00Z
-Stopped at: Completed 03-02-PLAN.md — all milestone plans complete
-Resume file: None
+Last session: 2026-03-04T16:17:40.510Z
+Stopped at: Phase 7 context gathered
+Resume file: .planning/phases/07-recovery-dashboard/07-CONTEXT.md

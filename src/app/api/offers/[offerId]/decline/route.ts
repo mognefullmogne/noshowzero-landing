@@ -64,8 +64,8 @@ export async function GET(
     return htmlResponse(200, "Offerta rifiutata", `
       <div style="text-align:center;">
         <div style="font-size:64px; margin-bottom:16px;">&#x1F44B;</div>
-        <p style="font-size:18px; color:#666;">Ha rifiutato l'offerta. Lo slot verrà offerto al prossimo paziente in lista d'attesa.</p>
-        <p style="color:#999; font-size:14px; margin-top:24px;">Può chiudere questa pagina.</p>
+        <p style="font-size:18px; color:#666;">Hai rifiutato l'offerta. Il posto verrà offerto al prossimo paziente in lista d'attesa.</p>
+        <p style="color:#999; font-size:14px; margin-top:24px;">Puoi chiudere questa pagina.</p>
       </div>
     `);
   } catch (err) {

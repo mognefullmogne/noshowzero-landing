@@ -11,14 +11,15 @@ import { triggerBackfill } from "./trigger-backfill";
  * 1. Guard: offer must be pending + not expired + slot in future
  * 2. Atomically claim the offer (WHERE status = 'pending')
  * 3. Create new appointment (same slot details)
- * 4. Update offer → link new appointment, waitlist entry → fulfilled
+ * 4. Update offer → link new appointment
  * 5. Cancel any other pending offers for the same original appointment
- * 6. Schedule reminders for the new appointment
+ * 6. Free the candidate's original appointment (chain cascade trigger)
+ * 7. Schedule reminders for the new appointment
  */
 export async function processAccept(
   supabase: SupabaseClient,
   offerId: string
-): Promise<{ success: boolean; newAppointmentId?: string; error?: string }> {
+): Promise<{ success: boolean; newAppointmentId?: string; freedAppointmentId?: string; error?: string }> {
   // Atomically claim the offer (WHERE status = 'pending' prevents double-acceptance)
   const { data: offer, error: claimError } = await supabase
     .from("waitlist_offers")
@@ -95,12 +96,6 @@ export async function processAccept(
     .update({ new_appointment_id: newAppt.id })
     .eq("id", offerId);
 
-  // Mark waitlist entry as fulfilled
-  await supabase
-    .from("waitlist_entries")
-    .update({ status: "fulfilled" })
-    .eq("id", offer.waitlist_entry_id);
-
   // Cancel any other pending offers for the same original appointment
   await supabase
     .from("waitlist_offers")
@@ -108,6 +103,26 @@ export async function processAccept(
     .eq("original_appointment_id", offer.original_appointment_id)
     .eq("status", "pending")
     .neq("id", offerId);
+
+  // Free the candidate's original appointment (they moved to the earlier slot)
+  const candidateApptId: string | null = offer.candidate_appointment_id ?? null;
+  if (candidateApptId) {
+    await supabase
+      .from("appointments")
+      .update({
+        status: "cancelled",
+        declined_at: new Date().toISOString(),
+        notes: `Freed by slot recovery — patient moved to earlier slot ${offer.original_appointment_id}`,
+      })
+      .eq("id", candidateApptId)
+      .eq("tenant_id", offer.tenant_id)
+      .in("status", ["scheduled", "reminder_pending", "reminder_sent", "confirmed"]);
+
+    // Chain cascade: the freed slot is now available for another patient
+    // Fire-and-forget — don't block the accept response
+    triggerBackfill(supabase, candidateApptId, offer.tenant_id, { triggerEvent: "cancellation" })
+      .catch((err) => console.error("[Backfill] Chain cascade failed:", err));
+  }
 
   // Use patient's actual preferred channel for reminders
   const patientData = offer.patient as unknown as { preferred_channel?: string } | null;
@@ -122,14 +137,17 @@ export async function processAccept(
     preferredChannel,
   });
 
-  return { success: true, newAppointmentId: newAppt.id };
+  return {
+    success: true,
+    newAppointmentId: newAppt.id,
+    freedAppointmentId: candidateApptId ?? undefined,
+  };
 }
 
 /**
  * Decline flow:
  * 1. Update offer → declined
- * 2. If offers_sent < max_offers: reset waitlist entry → waiting
- * 3. Trigger backfill again → finds next best candidate
+ * 2. Trigger backfill again → finds next best candidate
  */
 export async function processDecline(
   supabase: SupabaseClient,
@@ -143,32 +161,17 @@ export async function processDecline(
     })
     .eq("id", offerId)
     .eq("status", "pending")
-    .select("*, waitlist_entry:waitlist_entries(*), original_appointment:appointments!waitlist_offers_original_appointment_id_fkey(*)")
+    .select("*, original_appointment:appointments!waitlist_offers_original_appointment_id_fkey(*)")
     .single();
 
   if (claimError || !offer) {
     return { success: false, error: "Offer is no longer available" };
   }
 
-  const entry = offer.waitlist_entry;
-  if (entry && entry.offers_sent < entry.max_offers) {
-    // Reset to waiting so they can receive future offers
-    await supabase
-      .from("waitlist_entries")
-      .update({ status: "waiting" })
-      .eq("id", entry.id);
-  } else if (entry) {
-    // Max offers exhausted
-    await supabase
-      .from("waitlist_entries")
-      .update({ status: "offer_declined" })
-      .eq("id", entry.id);
-  }
-
   // Cascade: try next candidate for the same slot
   const originalAppt = offer.original_appointment;
   if (originalAppt && new Date(originalAppt.scheduled_at) > new Date()) {
-    await triggerBackfill(supabase, originalAppt.id, offer.tenant_id);
+    await triggerBackfill(supabase, originalAppt.id, offer.tenant_id, { triggerEvent: "offer_declined" });
   }
 
   return { success: true };
