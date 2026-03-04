@@ -89,11 +89,12 @@ Plans:
   2. The candidate list is ranked by AI priority score incorporating clinical urgency, wait time, proximity to the cancelled slot's time, and patient reliability history
   3. Candidates whose existing appointment would conflict with the open slot (same time, same provider) are excluded from the list
   4. The candidate detection runs within 10 seconds of the cancellation event, producing a ranked list stored in the database ready for the cascade
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md -- Test infrastructure, type contracts, scoring function, and DB migration
+- [ ] 04-02-PLAN.md -- Rewrite find-candidates to query appointments table (TDD)
+- [ ] 04-03-PLAN.md -- Rewire trigger-backfill and send-offer to new interfaces
 
 ### Phase 5: WhatsApp Cascade
 **Goal**: The system contacts candidates one-by-one via WhatsApp until the cancelled slot is filled or all candidates are exhausted
@@ -150,7 +151,7 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 1. Infrastructure | v1.0 | 2/2 | Complete | 2026-03-03 |
 | 2. Core Realtime | v1.0 | 3/3 | Complete | 2026-03-03 |
 | 3. Resilience | v1.0 | 2/2 | Complete | 2026-03-03 |
-| 4. Candidate Detection | v1.1 | 0/? | Not started | - |
+| 4. Candidate Detection | v1.1 | 0/3 | Not started | - |
 | 5. WhatsApp Cascade | v1.1 | 0/? | Not started | - |
 | 6. Revenue Metrics | v1.1 | 0/? | Not started | - |
 | 7. Recovery Dashboard | v1.1 | 0/? | Not started | - |
