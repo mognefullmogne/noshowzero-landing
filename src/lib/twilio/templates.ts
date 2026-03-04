@@ -29,7 +29,7 @@ const TEMPLATES = {
 
 Il tuo appuntamento attuale e' il {{current_appointment_date}} alle {{current_appointment_time}}.
 
-Hai 1 ora per rispondere (scade alle {{expires_at}}).
+Hai {{expiry_description}} per rispondere (scade alle {{expires_at}}).
 
 Rispondi SI per accettare o NO per rifiutare.`,
 
@@ -45,7 +45,7 @@ Buone notizie! Si è liberato uno slot per il servizio che stava aspettando.
 📅 Data: {{date}}
 🕐 Ora: {{time}}{{location_line}}{{provider_line}}
 
-Ha 2 ore per accettare questo slot (scade alle {{expires_at}}).
+Ha {{expiry_description}} per accettare questo slot (scade alle {{expires_at}}).
 
 👉 Per ACCETTARE: {{accept_url}}
 👉 Per RIFIUTARE: {{decline_url}}

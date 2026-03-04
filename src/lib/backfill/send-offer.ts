@@ -1,6 +1,10 @@
 /**
  * Create an offer record, generate HMAC tokens, send notification via Twilio,
  * and update the waitlist entry status to offer_pending.
+ *
+ * Supports:
+ *   - Variable expiry durations (time-aware cascade speed)
+ *   - Urgency prefix for critical-time slots
  */
 
 import { randomUUID } from "crypto";
@@ -25,6 +29,10 @@ interface SendOfferInput {
   readonly providerName: string | null;
   readonly locationName: string | null;
   readonly scheduledAt: Date;
+  /** Custom expiry in minutes. Defaults to 60 (standard). */
+  readonly expiryMinutes?: number;
+  /** Prefix prepended to message body for urgent slots (e.g., "URGENTE"). */
+  readonly urgencyPrefix?: string | null;
 }
 
 export interface SendOfferResult {
@@ -39,8 +47,9 @@ export async function sendOffer(
 ): Promise<SendOfferResult> {
   // Pre-generate UUID so we can create tokens before the insert
   const offerId = randomUUID();
-  const acceptToken = generateOfferToken(offerId, "accept");
-  const declineToken = generateOfferToken(offerId, "decline");
+  const effectiveExpiry = input.expiryMinutes ?? 60;
+  const acceptToken = generateOfferToken(offerId, "accept", effectiveExpiry);
+  const declineToken = generateOfferToken(offerId, "decline", effectiveExpiry);
 
   // Single atomic insert with the real token hash
   // waitlist_entry_id is nullable (migration 012) — appointment-based candidates don't have one
@@ -98,6 +107,11 @@ export async function sendOffer(
     minute: "2-digit",
   });
 
+  // Format expiry description for messages
+  const expiryDesc = effectiveExpiry >= 60
+    ? `${Math.round(effectiveExpiry / 60)} ora`
+    : `${effectiveExpiry} minuti`;
+
   const templateVars = {
     patient_name: input.candidate.patientName,
     service_name: input.serviceName,
@@ -111,6 +125,7 @@ export async function sendOffer(
     expires_at: expiresStr,
     current_appointment_date: currentApptDate,
     current_appointment_time: currentApptTime,
+    expiry_description: expiryDesc,
   };
 
   // Determine channel, message content, and recipient
@@ -131,6 +146,11 @@ export async function sendOffer(
     body = renderOfferSms(templateVars);
     to = input.candidate.patientPhone ?? "";
     subject = renderOfferEmailSubject(templateVars);
+  }
+
+  // Add urgency prefix for critical-time slots
+  if (input.urgencyPrefix) {
+    body = `🚨 ${input.urgencyPrefix}: ${body}`;
   }
 
   if (!to) {

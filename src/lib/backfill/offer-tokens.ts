@@ -1,11 +1,14 @@
 /**
  * HMAC-SHA256 token generation & verification for secure offer email/SMS links.
  * Accept and decline get separate tokens. DB stores only SHA-256 hash.
+ *
+ * Supports variable expiry durations for time-aware cascade speed.
  */
 
 import { createHmac, createHash, timingSafeEqual } from "crypto";
 
-const OFFER_EXPIRY_HOURS = 1;
+/** Default expiry when no explicit duration is provided. */
+const DEFAULT_EXPIRY_MINUTES = 60;
 
 function getSecret(): string {
   const secret = process.env.OFFER_TOKEN_SECRET;
@@ -16,12 +19,18 @@ function getSecret(): string {
 /**
  * Generate an HMAC token for an offer action.
  * Returns { token, tokenHash, expiresAt }.
+ *
+ * @param offerId - The offer UUID
+ * @param action - "accept" or "decline"
+ * @param expiryMinutes - Custom expiry in minutes (default: 60)
  */
 export function generateOfferToken(
   offerId: string,
-  action: "accept" | "decline"
+  action: "accept" | "decline",
+  expiryMinutes?: number
 ): { token: string; tokenHash: string; expiresAt: Date } {
-  const expiresAt = new Date(Date.now() + OFFER_EXPIRY_HOURS * 3_600_000);
+  const effectiveExpiry = expiryMinutes ?? DEFAULT_EXPIRY_MINUTES;
+  const expiresAt = new Date(Date.now() + effectiveExpiry * 60_000);
   const payload = `${offerId}:${action}:${expiresAt.getTime()}`;
   const signature = createHmac("sha256", getSecret()).update(payload).digest("hex");
   const token = `${payload}:${signature}`;
