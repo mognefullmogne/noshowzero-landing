@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Slot Recovery Engine
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-04T15:56:53Z"
-last_activity: 2026-03-04 — Completed 06-01 (honest recovery metrics, tenant settings API, METR-04 fill rate)
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-04T16:04:17.930Z"
+last_activity: 2026-03-04 — Completed 06-02 (appointment value settings UI, recovery KPI dashboard cards)
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 14
-  completed_plans: 13
-  percent: 93
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** When a patient cancels, the system automatically fills that slot by contacting the best-fit patient via WhatsApp -- no staff intervention, no empty chairs, no lost revenue.
-**Current focus:** Phase 6 in progress — Revenue Metrics
+**Current focus:** Phase 6 complete — Revenue Metrics done. Ready for Phase 7.
 
 ## Current Position
 
-Phase: 6 of 7 (Revenue Metrics) — IN PROGRESS
-Plan: 1 of 2 in current phase — 06-01 complete
+Phase: 6 of 7 (Revenue Metrics) — COMPLETE
+Plan: 2 of 2 in current phase — all complete
 Status: Executing
-Last activity: 2026-03-04 — Completed 06-01 (honest recovery metrics, tenant settings API, METR-04 fill rate)
+Last activity: 2026-03-04 — Completed 06-02 (appointment value settings UI, recovery KPI dashboard cards)
 
-Progress: [█████████░] 93% (13/14 plans)
+Progress: [██████████] 100% (14/14 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: --
 - Total execution time: --
 
@@ -73,6 +73,8 @@ Progress: [█████████░] 93% (13/14 plans)
 - [Phase 06-01]: Recovery = only accepted offers with new_appointment_id (honest metric per METR-01)
 - [Phase 06-01]: Fill rate uses METR-04 formula: slotsRecovered / (cancelled + noShow) x 100
 - [Phase 06-01]: Backward-compatible: waitlistFills and revenueSaved response fields preserved with honest values
+- [Phase 06]: Used valueAsNumber register option instead of z.coerce.number() for Zod 4 + react-hook-form compatibility
+- [Phase 06]: New AnalyticsData fields optional for backward compatibility with older API responses
 
 ### Pending Todos
 
@@ -86,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T15:56:53Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-04T16:04:17.928Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
