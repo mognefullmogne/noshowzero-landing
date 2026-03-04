@@ -26,14 +26,14 @@ export function FeaturesGrid() {
     <SectionWrapper id="features">
       <div className="text-center">
         <ScrollReveal>
-          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Features</p>
+          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Funzionalità</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            Everything You Need to{" "}
-            <span className="text-gradient-teal">Eliminate No-Shows</span>
+            Tutto Ciò che Serve per{" "}
+            <span className="text-gradient-teal">Eliminare i No-Show</span>
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
-            A complete toolkit for appointment-based businesses — from solo practitioners to
-            multi-location enterprises.
+            Un toolkit completo per attività su appuntamento — dal professionista singolo
+            alle imprese multi-sede.
           </p>
         </ScrollReveal>
       </div>

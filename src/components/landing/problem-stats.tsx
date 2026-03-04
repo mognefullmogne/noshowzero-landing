@@ -11,12 +11,12 @@ export function ProblemStats() {
       <div className="text-center">
         <ScrollReveal>
           <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            The No-Show Problem Is{" "}
-            <span className="text-rose-500">Massive</span>
+            Il Problema dei No-Show è{" "}
+            <span className="text-rose-500">Enorme</span>
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
-            Every missed appointment costs you money, wastes your team&apos;s time, and blocks
-            other clients from getting care.
+            Ogni appuntamento saltato ti costa denaro, spreca il tempo del tuo team e impedisce
+            ad altri clienti di ricevere assistenza.
           </p>
         </ScrollReveal>
       </div>

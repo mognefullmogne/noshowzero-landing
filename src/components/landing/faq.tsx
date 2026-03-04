@@ -18,10 +18,10 @@ export function Faq() {
           <ScrollReveal>
             <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">FAQ</p>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              Frequently Asked Questions
+              Domande Frequenti
             </h2>
             <p className="mt-4 text-lg text-slate-500">
-              Everything you need to know about NoShowZero.
+              Tutto quello che devi sapere su NoShowZero.
             </p>
           </ScrollReveal>
         </div>

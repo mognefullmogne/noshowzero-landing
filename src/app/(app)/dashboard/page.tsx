@@ -72,9 +72,9 @@ export default function DashboardPage() {
 
       if (!res.ok) {
         if (res.status === 404) {
-          setKeyError("Please complete business setup first. Click \"Set up your business\" above.");
+          setKeyError("Completa prima la configurazione. Clicca \"Configura la tua attività\" sopra.");
         } else {
-          setKeyError(data.error ?? "Failed to generate API key. Please try again.");
+          setKeyError(data.error ?? "Errore nella generazione della chiave API. Riprova.");
         }
         setGeneratingKey(false);
         return;
@@ -85,7 +85,7 @@ export default function DashboardPage() {
         await fetchKeys();
       }
     } catch {
-      setKeyError("Network error. Please check your connection and try again.");
+      setKeyError("Errore di rete. Controlla la connessione e riprova.");
     }
     setGeneratingKey(false);
   }
@@ -118,7 +118,7 @@ export default function DashboardPage() {
 
   const planStatus = tenant?.plan_status ?? "trialing";
   const trialEnds = tenant?.trial_ends_at
-    ? new Date(tenant.trial_ends_at).toLocaleDateString("en-US", {
+    ? new Date(tenant.trial_ends_at).toLocaleDateString("it-IT", {
         month: "long",
         day: "numeric",
         year: "numeric",
@@ -129,39 +129,39 @@ export default function DashboardPage() {
 
   const checklist = [
     {
-      title: "Create your account",
-      description: "Sign up and verify your email",
+      title: "Crea il tuo account",
+      description: "Registrati e verifica la tua email",
       done: true,
       action: null,
       actionLabel: null,
     },
     {
-      title: "Set up your business",
-      description: "Add your business name and industry",
+      title: "Configura la tua attività",
+      description: "Aggiungi nome e settore della tua attività",
       done: hasBusinessSetup,
       action: () => router.push("/onboarding"),
-      actionLabel: "Set up now",
+      actionLabel: "Configura ora",
     },
     {
-      title: "Generate an API key",
-      description: "Get your API key to connect your scheduling system",
+      title: "Genera una chiave API",
+      description: "Ottieni la chiave per collegare il gestionale",
       done: hasApiKey,
       action: hasBusinessSetup ? scrollToApiKeys : () => router.push("/onboarding"),
-      actionLabel: hasBusinessSetup ? "Generate key" : "Set up business first",
+      actionLabel: hasBusinessSetup ? "Genera chiave" : "Configura prima",
     },
     {
-      title: "Read the API docs",
-      description: "Learn how to integrate NoShowZero with your software",
+      title: "Leggi la documentazione API",
+      description: "Scopri come integrare NoShowZero",
       done: false,
       action: () => router.push("/docs"),
-      actionLabel: "View docs",
+      actionLabel: "Vedi docs",
     },
     {
-      title: "Send your first reminder",
-      description: "Configure and test an appointment reminder via the API",
+      title: "Invia il primo promemoria",
+      description: "Configura e testa un promemoria",
       done: false,
       action: () => router.push("/docs"),
-      actionLabel: "See how",
+      actionLabel: "Vedi come",
     },
   ];
 
@@ -175,7 +175,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500">
-            Welcome to {tenant?.name ?? "NoShowZero"}
+            Benvenuto/a su {tenant?.name ?? "NoShowZero"}
           </p>
         </div>
         <Badge
@@ -197,10 +197,10 @@ export default function DashboardPage() {
           <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-medium text-blue-900">
-              Your free trial ends on {trialEnds}
+              Il periodo di prova gratuito scade il {trialEnds}
             </p>
             <p className="text-xs text-blue-600">
-              Add your payment details to continue using NoShowZero after the trial.
+              Aggiungi i dettagli di pagamento per continuare a usare NoShowZero.
             </p>
           </div>
           <Button
@@ -208,7 +208,7 @@ export default function DashboardPage() {
             className="rounded-lg bg-blue-600 text-white hover:bg-blue-700"
             onClick={() => router.push("/billing")}
           >
-            Upgrade
+            Passa al piano
           </Button>
         </div>
       )}
@@ -217,9 +217,9 @@ export default function DashboardPage() {
       <div className="mt-8 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Getting Started</h2>
+            <h2 className="text-lg font-bold text-gray-900">Per Iniziare</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Complete these steps to start eliminating no-shows.
+              Completa questi passaggi per eliminare i no-show.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -291,9 +291,9 @@ export default function DashboardPage() {
       <div ref={apiKeySectionRef} className="mt-8 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">API Keys</h2>
+            <h2 className="text-lg font-bold text-gray-900">Chiavi API</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Use your API key to authenticate requests to the NoShowZero API.
+              Usa la tua chiave API per autenticare le richieste.
             </p>
           </div>
           <Button
@@ -306,7 +306,7 @@ export default function DashboardPage() {
             ) : (
               <Key className="mr-2 h-4 w-4" />
             )}
-            Generate New Key
+            Genera Nuova Chiave
           </Button>
         </div>
 
@@ -326,7 +326,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <p className="text-xs font-medium text-amber-700">
-                Copy this key now — it won&apos;t be shown again
+                Copia questa chiave ora — non verrà più mostrata
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -354,15 +354,15 @@ export default function DashboardPage() {
           <div className="mt-4 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
             <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-blue-800">How to use your API key</p>
+              <p className="text-sm font-medium text-blue-800">Come usare la tua chiave API</p>
               <p className="text-xs text-blue-600 mt-0.5">
-                Include your key in the <code className="bg-blue-100 px-1 rounded text-blue-700">X-API-Key</code> header
-                of every request.{" "}
+                Includi la chiave nell&apos;header <code className="bg-blue-100 px-1 rounded text-blue-700">X-API-Key</code>{" "}
+                di ogni richiesta.{" "}
                 <button
                   onClick={() => router.push("/docs")}
                   className="underline font-medium hover:text-blue-800"
                 >
-                  View full documentation →
+                  Vedi documentazione completa →
                 </button>
               </p>
             </div>
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                       : "bg-red-50 text-red-700",
                   )}
                 >
-                  {key.is_active ? "Active" : "Revoked"}
+                  {key.is_active ? "Attivo" : "Revocato"}
                 </Badge>
               </div>
             ))}
@@ -400,9 +400,9 @@ export default function DashboardPage() {
         ) : (
           <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-8 text-center">
             <Key className="mx-auto h-8 w-8 text-gray-300" />
-            <p className="mt-2 text-sm font-medium text-gray-600">No API keys yet</p>
+            <p className="mt-2 text-sm font-medium text-gray-600">Nessuna chiave API</p>
             <p className="text-xs text-gray-400 mt-1">
-              Generate a key to start integrating with your scheduling system.
+              Genera una chiave per iniziare.
             </p>
           </div>
         )}
@@ -418,8 +418,8 @@ export default function DashboardPage() {
             <BookOpen className="h-5 w-5 text-blue-600" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">API Documentation</p>
-            <p className="text-xs text-gray-500">Endpoints, auth, examples</p>
+            <p className="text-sm font-semibold text-gray-900">Documentazione API</p>
+            <p className="text-xs text-gray-500">Endpoint, autenticazione, esempi</p>
           </div>
           <ArrowRight className="h-4 w-4 text-gray-300" />
         </button>
@@ -431,8 +431,8 @@ export default function DashboardPage() {
             <Plug className="h-5 w-5 text-indigo-600" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">Quick Start Guide</p>
-            <p className="text-xs text-gray-500">Connect in 15 minutes</p>
+            <p className="text-sm font-semibold text-gray-900">Guida Rapida</p>
+            <p className="text-xs text-gray-500">Collegati in 15 minuti</p>
           </div>
           <ArrowRight className="h-4 w-4 text-gray-300" />
         </button>
@@ -444,8 +444,8 @@ export default function DashboardPage() {
             <Bell className="h-5 w-5 text-green-600" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">Get Support</p>
-            <p className="text-xs text-gray-500">We respond within 2 hours</p>
+            <p className="text-sm font-semibold text-gray-900">Supporto</p>
+            <p className="text-xs text-gray-500">Rispondiamo entro 2 ore</p>
           </div>
           <ArrowRight className="h-4 w-4 text-gray-300" />
         </a>

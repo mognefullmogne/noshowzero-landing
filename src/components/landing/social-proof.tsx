@@ -18,7 +18,7 @@ export function SocialProof() {
     <section className="border-y border-slate-100 bg-slate-50/60 py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <p className="text-center text-sm font-medium text-slate-400 uppercase tracking-wider">
-          Trusted by 500+ appointment-based businesses
+          Scelto da oltre 500 attività su appuntamento
         </p>
         <div className="relative mt-8 overflow-hidden">
           {/* Fade edges */}

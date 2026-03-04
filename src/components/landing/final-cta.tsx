@@ -20,15 +20,15 @@ export function FinalCta() {
       <div className="relative mx-auto max-w-3xl text-center">
         <ScrollReveal>
           <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Ready to Eliminate{" "}
+            Pronto a Eliminare i{" "}
             <span className="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-              No-Shows
+              No-Show
             </span>
             ?
           </h2>
           <p className="mt-4 text-lg text-slate-400">
-            Join 500+ businesses that have reduced no-shows by up to 80%.
-            Start your free 14-day trial today.
+            Unisciti a oltre 500 attività che hanno ridotto i no-show fino all&apos;80%.
+            Inizia oggi la tua prova gratuita di 14 giorni.
           </p>
         </ScrollReveal>
 
@@ -40,7 +40,7 @@ export function FinalCta() {
               className="h-13 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-400 px-8 text-base font-semibold text-white shadow-lg shadow-teal-500/25 transition-all hover:shadow-xl hover:brightness-110"
             >
               <Link href="/signup">
-                Get Started Free
+                Inizia Gratis
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -50,11 +50,11 @@ export function FinalCta() {
               asChild
               className="h-13 rounded-xl border-white/20 bg-white/5 px-8 text-base font-semibold text-white hover:bg-white/10 hover:border-white/30"
             >
-              <Link href="/pricing">View Pricing</Link>
+              <Link href="/pricing">Vedi i Prezzi</Link>
             </Button>
           </div>
           <p className="mt-6 text-sm text-slate-500">
-            No credit card required &middot; 14-day free trial &middot; Cancel anytime
+            Nessuna carta di credito &middot; 14 giorni di prova gratuita &middot; Cancella quando vuoi
           </p>
         </ScrollReveal>
       </div>

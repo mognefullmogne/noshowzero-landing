@@ -92,7 +92,7 @@ function SlotCard({ slot }: { readonly slot: MockSlot }) {
     <div className={cn("rounded-md border-l-2 px-1.5 py-1", SLOT_STYLES[slot.type])}>
       <p className="font-semibold text-slate-700">{slot.time}</p>
       {slot.type === "open" ? (
-        <p className="text-cyan-600 italic">Open slot</p>
+        <p className="text-cyan-600 italic">Slot libero</p>
       ) : (
         <>
           <p className="text-slate-500 truncate">{slot.specialty}</p>
@@ -100,7 +100,7 @@ function SlotCard({ slot }: { readonly slot: MockSlot }) {
           <p className="font-medium text-slate-600 truncate">{slot.patient}</p>
           {slot.risk && (
             <span className="inline-flex items-center rounded-full bg-amber-100 px-1 text-[8px] font-bold text-amber-700 mt-0.5">
-              AI: {slot.risk}% risk
+              IA: {slot.risk}% rischio
             </span>
           )}
         </>
@@ -133,16 +133,16 @@ function DayColumn({ day }: { readonly day: MockDay }) {
 
 const SIDEBAR_NAV = [
   { label: "Dashboard", icon: "grid", active: false },
-  { label: "Calendar", icon: "calendar", active: true },
-  { label: "Appointments", icon: "clipboard", active: false },
-  { label: "Waitlist", icon: "list", active: false },
-  { label: "Messages", icon: "chat", active: false },
+  { label: "Calendario", icon: "calendar", active: true },
+  { label: "Appuntamenti", icon: "clipboard", active: false },
+  { label: "Lista d'attesa", icon: "list", active: false },
+  { label: "Messaggi", icon: "chat", active: false },
 ] as const;
 
 const SIDEBAR_ADMIN = [
-  { label: "Analytics", icon: "chart" },
-  { label: "Settings", icon: "settings" },
-  { label: "AI Chat", icon: "zap" },
+  { label: "Statistiche", icon: "chart" },
+  { label: "Impostazioni", icon: "settings" },
+  { label: "Chat IA", icon: "zap" },
 ] as const;
 
 const NAV_ICONS: Record<string, string> = {
@@ -166,9 +166,9 @@ function SidebarIcon({ icon }: { readonly icon: string }) {
 }
 
 const TRUST_ITEMS = [
-  { icon: Shield, text: "HIPAA Compliant" },
-  { icon: Clock, text: "Setup in 15 min" },
-  { icon: Check, text: "No credit card" },
+  { icon: Shield, text: "Conforme HIPAA" },
+  { icon: Clock, text: "Attivo in 15 min" },
+  { icon: Check, text: "Nessuna carta richiesta" },
 ] as const;
 
 export function Hero() {
@@ -194,7 +194,7 @@ export function Hero() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-500" />
               </span>
-              AI-Powered Appointment Management
+              Gestione Appuntamenti con IA
             </span>
           </motion.div>
 
@@ -205,8 +205,8 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            Stop Losing Revenue to{" "}
-            <span className="text-gradient-teal">No-Shows</span>
+            Smetti di Perdere Fatturato per i{" "}
+            <span className="text-gradient-teal">No-Show</span>
           </motion.h1>
 
           {/* Sub-text */}
@@ -216,9 +216,9 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Smart reminders, AI-powered waitlists, and automatic slot filling.
-            Reduce no-shows by up to 80% and recover thousands in lost revenue —
-            for any appointment-based business.
+            Promemoria intelligenti, liste d&apos;attesa con IA e riempimento automatico degli slot.
+            Riduci i no-show fino all&apos;80% e recupera migliaia di euro di fatturato perso —
+            per qualsiasi attività su appuntamento.
           </motion.p>
 
           {/* CTAs */}
@@ -234,7 +234,7 @@ export function Hero() {
               className="h-13 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-teal-600/25 transition-all hover:shadow-xl hover:shadow-teal-600/30 hover:brightness-110"
             >
               <Link href="/signup">
-                Get Started Free
+                Inizia Gratis
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -245,7 +245,7 @@ export function Hero() {
               className="h-13 rounded-xl border-slate-200 px-8 text-base font-semibold text-slate-700 hover:border-teal-200 hover:bg-teal-50/50"
             >
               <Link href="/#how-it-works">
-                See How It Works
+                Scopri Come Funziona
               </Link>
             </Button>
           </motion.div>
@@ -285,8 +285,8 @@ export function Hero() {
               <Check className="h-3.5 w-3.5 text-teal-600" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-slate-900">Slot auto-filled by AI</p>
-              <p className="text-[10px] text-slate-400">Waitlist match: 94% score</p>
+              <p className="text-[11px] font-semibold text-slate-900">Slot riempito dall&apos;IA</p>
+              <p className="text-[10px] text-slate-400">Lista d&apos;attesa: 94% compatibilità</p>
             </div>
           </motion.div>
 
@@ -302,8 +302,8 @@ export function Hero() {
               <Zap className="h-3.5 w-3.5 text-cyan-600" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-slate-900">AI reminder sent</p>
-              <p className="text-[10px] text-slate-400">Emily Davis — tomorrow 10:00 AM</p>
+              <p className="text-[11px] font-semibold text-slate-900">Promemoria IA inviato</p>
+              <p className="text-[10px] text-slate-400">Emily Davis — domani 10:00</p>
             </div>
           </motion.div>
 
@@ -364,8 +364,8 @@ export function Hero() {
                     <div className="px-4 pt-3 pb-2 border-b border-slate-100">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-bold text-sm text-slate-900">Slot Calendar</p>
-                          <p className="text-[9px] text-slate-400">View and manage weekly slots</p>
+                          <p className="font-bold text-sm text-slate-900">Calendario Slot</p>
+                          <p className="text-[9px] text-slate-400">Visualizza e gestisci gli slot settimanali</p>
                         </div>
                         <div className="hidden sm:flex items-center gap-2">
                           <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1">
@@ -377,10 +377,10 @@ export function Hero() {
                         </div>
                       </div>
                       <div className="mt-2 flex items-center gap-4 text-[9px]">
-                        <span className="font-semibold text-slate-700">21 slots</span>
-                        <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />3 free</span>
-                        <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-teal-400" />16 booked</span>
-                        <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" />2 at risk</span>
+                        <span className="font-semibold text-slate-700">21 slot</span>
+                        <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />3 liberi</span>
+                        <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-teal-400" />16 prenotati</span>
+                        <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" />2 a rischio</span>
                       </div>
                     </div>
 

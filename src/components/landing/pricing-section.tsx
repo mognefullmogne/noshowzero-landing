@@ -16,12 +16,12 @@ export function PricingSection() {
     <SectionWrapper id="pricing">
       <div className="text-center">
         <ScrollReveal>
-          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Pricing</p>
+          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Prezzi</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            Simple, Transparent Pricing
+            Prezzi Semplici e Trasparenti
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
-            Start free for 14 days. No credit card required. Upgrade when you&apos;re ready.
+            Inizia gratis per 14 giorni. Nessuna carta di credito. Passa al piano a pagamento quando vuoi.
           </p>
         </ScrollReveal>
 
@@ -37,7 +37,7 @@ export function PricingSection() {
                   : "text-slate-500 hover:text-slate-700",
               )}
             >
-              Monthly
+              Mensile
             </button>
             <button
               onClick={() => setAnnual(true)}
@@ -48,8 +48,8 @@ export function PricingSection() {
                   : "text-slate-500 hover:text-slate-700",
               )}
             >
-              Annual
-              <span className="ml-1.5 text-xs font-bold text-teal-600">Save 20%</span>
+              Annuale
+              <span className="ml-1.5 text-xs font-bold text-teal-600">Risparmi il 20%</span>
             </button>
           </div>
         </ScrollReveal>
@@ -75,7 +75,7 @@ export function PricingSection() {
                 {plan.highlighted && (
                   <span className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
                     <Sparkles className="h-3 w-3" />
-                    Most Popular
+                    Più Popolare
                   </span>
                 )}
 
@@ -83,8 +83,8 @@ export function PricingSection() {
                 <p className="mt-1 text-sm text-slate-500">{plan.description}</p>
 
                 <div className="mt-6">
-                  <span className="text-4xl font-extrabold text-slate-900">${price}</span>
-                  <span className="text-slate-500">/mo</span>
+                  <span className="text-4xl font-extrabold text-slate-900">€{price}</span>
+                  <span className="text-slate-500">/mese</span>
                 </div>
 
                 <Button

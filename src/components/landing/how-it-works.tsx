@@ -16,12 +16,12 @@ export function HowItWorks() {
     <SectionWrapper id="how-it-works" className="bg-slate-50/60">
       <div className="text-center">
         <ScrollReveal>
-          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Simple setup</p>
+          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Configurazione semplice</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            How It Works
+            Come Funziona
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
-            Get up and running in three simple steps. No complex setup required.
+            Attivo in tre semplici passaggi. Nessuna configurazione complessa.
           </p>
         </ScrollReveal>
       </div>
@@ -42,7 +42,7 @@ export function HowItWorks() {
                   <div className="absolute left-[calc(50%+3rem)] top-8 hidden h-0.5 w-[calc(100%-6rem)] bg-gradient-to-r from-teal-200 to-cyan-200 md:block" />
                 )}
 
-                <span className="text-sm font-bold text-teal-600">Step {item.step}</span>
+                <span className="text-sm font-bold text-teal-600">Passo {item.step}</span>
                 <h3 className="mt-2 text-xl font-bold text-slate-900">{item.title}</h3>
                 <p className="mt-3 text-sm text-slate-500 leading-relaxed">{item.description}</p>
               </div>

@@ -10,12 +10,12 @@ export function Testimonials() {
     <SectionWrapper className="bg-slate-50/60">
       <div className="text-center">
         <ScrollReveal>
-          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Testimonials</p>
+          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Testimonianze</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            Loved by Businesses Everywhere
+            Amato dalle Attività di Tutta Italia
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
-            See what our customers have to say about eliminating no-shows.
+            Scopri cosa dicono i nostri clienti sull&apos;eliminazione dei no-show.
           </p>
         </ScrollReveal>
       </div>

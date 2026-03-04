@@ -26,12 +26,12 @@ export function Industries() {
     <SectionWrapper className="bg-slate-50/60">
       <div className="text-center">
         <ScrollReveal>
-          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Industries</p>
+          <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider">Settori</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            Built for Every Industry
+            Pensato per Ogni Settore
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
-            If your business runs on appointments, NoShowZero works for you.
+            Se la tua attività funziona su appuntamento, NoShowZero fa per te.
           </p>
         </ScrollReveal>
       </div>

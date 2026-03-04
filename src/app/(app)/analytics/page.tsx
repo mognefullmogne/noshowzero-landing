@@ -17,7 +17,6 @@ import {
   Loader2,
   Gift,
   Clock,
-  ArrowUpRight,
 } from "lucide-react";
 import type { AnalyticsData } from "@/lib/types";
 
@@ -57,24 +56,24 @@ export default function AnalyticsPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-sm text-gray-500">Track your no-show reduction performance</p>
+          <h1 className="text-2xl font-bold text-gray-900">Statistiche</h1>
+          <p className="text-sm text-gray-500">Monitora le performance di riduzione no-show</p>
         </div>
       </div>
 
       {/* Date range filter */}
       <div className="mt-6 flex items-end gap-3">
         <div>
-          <Label className="text-xs text-gray-500">From</Label>
+          <Label className="text-xs text-gray-500">Da</Label>
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
         </div>
         <div>
-          <Label className="text-xs text-gray-500">To</Label>
+          <Label className="text-xs text-gray-500">A</Label>
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
         </div>
         {(dateFrom || dateTo) && (
           <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-xs text-gray-500">
-            Clear
+            Cancella
           </Button>
         )}
       </div>
@@ -82,25 +81,25 @@ export default function AnalyticsPage() {
       {/* KPI Grid */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Total Appointments"
+          label="Appuntamenti totali"
           value={data.totalAppointments.toLocaleString()}
           icon={CalendarDays}
         />
         <KpiCard
-          label="No-Show Rate"
+          label="Tasso no-show"
           value={`${data.noShowRate}%`}
-          change={data.noShowRate > 15 ? "Above industry avg" : "Below industry avg"}
+          change={data.noShowRate > 15 ? "Sopra la media" : "Sotto la media"}
           trend={data.noShowRate > 15 ? "down" : "up"}
           icon={TrendingUp}
         />
         <KpiCard
-          label="Waitlist Fills"
+          label="Slot recuperati"
           value={data.waitlistFills.toLocaleString()}
           icon={Users}
         />
         <KpiCard
-          label="Revenue Saved"
-          value={`$${data.revenueSaved.toLocaleString()}`}
+          label="Ricavi salvati"
+          value={`€${data.revenueSaved.toLocaleString()}`}
           icon={Zap}
           trend="up"
         />
@@ -109,25 +108,25 @@ export default function AnalyticsPage() {
       {/* Detail cards */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Confirmed"
+          label="Confermati"
           value={data.confirmedCount.toLocaleString()}
           icon={CheckCircle}
           trend="up"
         />
         <KpiCard
-          label="Completed"
+          label="Completati"
           value={data.completedCount.toLocaleString()}
           icon={Target}
           trend="up"
         />
         <KpiCard
-          label="No-Shows"
+          label="No-show"
           value={data.noShowCount.toLocaleString()}
           icon={AlertTriangle}
           trend={data.noShowCount > 0 ? "down" : "neutral"}
         />
         <KpiCard
-          label="Cancelled"
+          label="Cancellati"
           value={data.cancelledCount.toLocaleString()}
           icon={XCircle}
           trend="neutral"
@@ -136,28 +135,28 @@ export default function AnalyticsPage() {
 
       {/* Backfill Engine Performance */}
       <div className="mt-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Backfill Engine</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Motore di Recupero</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
-            label="Offers Sent"
+            label="Offerte inviate"
             value={data.offersSent.toLocaleString()}
             icon={Gift}
           />
           <KpiCard
-            label="Accepted"
+            label="Accettate"
             value={data.offersAccepted.toLocaleString()}
-            change={data.offersSent > 0 ? `${data.offerFillRate}% fill rate` : undefined}
+            change={data.offersSent > 0 ? `${data.offerFillRate}% tasso riempimento` : undefined}
             trend="up"
             icon={CheckCircle}
           />
           <KpiCard
-            label="Declined"
+            label="Rifiutate"
             value={data.offersDeclined.toLocaleString()}
             icon={XCircle}
             trend="neutral"
           />
           <KpiCard
-            label="Avg Response Time"
+            label="Tempo medio risposta"
             value={
               data.avgResponseMinutes != null
                 ? data.avgResponseMinutes < 60
@@ -173,7 +172,7 @@ export default function AnalyticsPage() {
       {/* Fill rate visualization */}
       {data.offersSent > 0 && (
         <div className="mt-6 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-500">Offer Fill Rate</h3>
+          <h3 className="text-sm font-medium text-gray-500">Tasso di riempimento offerte</h3>
           <div className="mt-2 flex items-center gap-4">
             <p className="text-3xl font-bold text-indigo-700">{data.offerFillRate}%</p>
             <div className="flex-1">
@@ -185,22 +184,22 @@ export default function AnalyticsPage() {
               </div>
               <div className="mt-1 flex justify-between text-[10px] text-gray-400">
                 <span>0%</span>
-                <span>100% filled</span>
+                <span>100% riempito</span>
               </div>
             </div>
           </div>
           <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
-            <span>{data.offersAccepted} accepted</span>
-            <span>{data.offersDeclined} declined</span>
-            <span>{data.offersExpired} expired</span>
-            <span>{data.offersPending} pending</span>
+            <span>{data.offersAccepted} accettate</span>
+            <span>{data.offersDeclined} rifiutate</span>
+            <span>{data.offersExpired} scadute</span>
+            <span>{data.offersPending} in attesa</span>
           </div>
         </div>
       )}
 
       {/* Average risk score */}
       <div className="mt-6 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
-        <h3 className="text-sm font-medium text-gray-500">Average Risk Score</h3>
+        <h3 className="text-sm font-medium text-gray-500">Punteggio rischio medio</h3>
         <div className="mt-2 flex items-center gap-4">
           <p className="text-3xl font-bold text-gray-900">{data.avgRiskScore}</p>
           <div className="flex-1">
@@ -211,8 +210,8 @@ export default function AnalyticsPage() {
               />
             </div>
             <div className="mt-1 flex justify-between text-[10px] text-gray-400">
-              <span>Low Risk</span>
-              <span>High Risk</span>
+              <span>Rischio basso</span>
+              <span>Rischio alto</span>
             </div>
           </div>
         </div>

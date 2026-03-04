@@ -1,20 +1,20 @@
 export const SITE_NAME = "NoShowZero";
 export const SITE_DESCRIPTION =
-  "Eliminate no-shows, fill empty slots, and boost revenue with AI-powered appointment management.";
+  "Elimina i no-show, riempi gli slot vuoti e aumenta il fatturato con la gestione appuntamenti basata sull'IA.";
 export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const NAV_LINKS = [
-  { label: "Features", href: "/#features" },
-  { label: "Pricing", href: "/pricing" },
+  { label: "Funzionalità", href: "/#features" },
+  { label: "Prezzi", href: "/pricing" },
 ] as const;
 
 export const INDUSTRIES = [
-  { name: "Healthcare", icon: "Stethoscope", description: "Clinics, hospitals, telehealth" },
-  { name: "Dental", icon: "SmilePlus", description: "Dental offices & orthodontics" },
-  { name: "Salon & Spa", icon: "Scissors", description: "Hair salons, spas, beauty" },
-  { name: "Auto Service", icon: "Car", description: "Mechanics, detailing, dealers" },
-  { name: "Fitness", icon: "Dumbbell", description: "Gyms, personal training, yoga" },
-  { name: "Professional", icon: "Briefcase", description: "Consulting, legal, financial" },
+  { name: "Sanità", icon: "Stethoscope", description: "Cliniche, ospedali, telemedicina" },
+  { name: "Dentistico", icon: "SmilePlus", description: "Studi dentistici e ortodonzia" },
+  { name: "Salone & Spa", icon: "Scissors", description: "Parrucchieri, spa, estetica" },
+  { name: "Autofficina", icon: "Car", description: "Meccanici, carrozzieri, concessionari" },
+  { name: "Fitness", icon: "Dumbbell", description: "Palestre, personal training, yoga" },
+  { name: "Professionisti", icon: "Briefcase", description: "Consulenza, legale, finanziario" },
 ] as const;
 
 export type PlanTier = "growth" | "pro" | "enterprise";
@@ -41,20 +41,20 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
     tier: "growth",
     monthlyPrice: 199,
     annualPrice: 169,
-    description: "Perfect for solo practitioners and small practices.",
+    description: "Perfetto per professionisti singoli e piccoli studi.",
     highlighted: false,
-    cta: "Start Free Trial",
-    limits: { appointments: "1,000/mo", locations: "2", users: "5" },
+    cta: "Inizia la Prova Gratuita",
+    limits: { appointments: "1.000/mese", locations: "2", users: "5" },
     features: [
-      "1,000 appointments/month",
-      "Up to 2 locations",
-      "AI-timed smart reminders (WhatsApp, SMS, Email)",
-      "AI no-show risk scoring",
-      "AI waitlist with auto-fill",
-      "REST API access",
-      "5 team members",
-      "Analytics & reporting",
-      "Email support",
+      "1.000 appuntamenti/mese",
+      "Fino a 2 sedi",
+      "Promemoria intelligenti con IA (WhatsApp, SMS, Email)",
+      "Punteggio rischio no-show con IA",
+      "Lista d'attesa IA con riempimento automatico",
+      "Accesso API REST",
+      "5 membri del team",
+      "Statistiche e report",
+      "Supporto via email",
     ],
   },
   {
@@ -62,22 +62,22 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
     tier: "pro",
     monthlyPrice: 499,
     annualPrice: 399,
-    description: "For growing businesses with multiple locations.",
+    description: "Per attività in crescita con più sedi.",
     highlighted: true,
-    cta: "Start Free Trial",
-    limits: { appointments: "10,000/mo", locations: "10", users: "25" },
+    cta: "Inizia la Prova Gratuita",
+    limits: { appointments: "10.000/mese", locations: "10", users: "25" },
     features: [
-      "10,000 appointments/month",
-      "Up to 10 locations",
-      "Everything in Growth, plus:",
-      "AI calendar optimization engine",
-      "AI proactive reschedule suggestions",
-      "Advanced AI waitlist ranking",
-      "REST API + Webhooks",
-      "25 team members",
-      "Advanced analytics + ROI dashboard",
-      "Custom reminder templates",
-      "Priority support",
+      "10.000 appuntamenti/mese",
+      "Fino a 10 sedi",
+      "Tutto quello di Growth, più:",
+      "Motore IA di ottimizzazione calendario",
+      "Suggerimenti proattivi di riprogrammazione IA",
+      "Ranking avanzato lista d'attesa IA",
+      "API REST + Webhooks",
+      "25 membri del team",
+      "Statistiche avanzate + dashboard ROI",
+      "Template promemoria personalizzabili",
+      "Supporto prioritario",
     ],
   },
   {
@@ -85,149 +85,149 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
     tier: "enterprise",
     monthlyPrice: 999,
     annualPrice: 849,
-    description: "For large organizations and hospital networks.",
+    description: "Per grandi organizzazioni e reti ospedaliere.",
     highlighted: false,
-    cta: "Start Free Trial",
-    limits: { appointments: "Unlimited", locations: "Unlimited", users: "Unlimited" },
+    cta: "Inizia la Prova Gratuita",
+    limits: { appointments: "Illimitati", locations: "Illimitate", users: "Illimitati" },
     features: [
-      "Unlimited appointments",
-      "Unlimited locations",
-      "Everything in Professional, plus:",
-      "Full AI decision engine with custom models",
-      "AI contact timing optimization",
-      "Full API + FHIR + SSO",
-      "Unlimited team members",
-      "Custom analytics & reporting",
-      "Dedicated account manager",
-      "SLA guarantee",
-      "White-label option",
+      "Appuntamenti illimitati",
+      "Sedi illimitate",
+      "Tutto quello di Professional, più:",
+      "Motore decisionale IA completo con modelli personalizzati",
+      "Ottimizzazione IA dei tempi di contatto",
+      "API completa + FHIR + SSO",
+      "Membri del team illimitati",
+      "Statistiche e report personalizzati",
+      "Account manager dedicato",
+      "Garanzia SLA",
+      "Opzione white-label",
     ],
   },
 ] as const;
 
 export const FAQ_ITEMS = [
   {
-    question: "How does the 14-day free trial work?",
+    question: "Come funziona la prova gratuita di 14 giorni?",
     answer:
-      "Sign up and get full access to your chosen plan for 14 days — no credit card required. If you love it, add your payment details to continue. If not, your account simply pauses.",
+      "Registrati e ottieni accesso completo al piano scelto per 14 giorni — nessuna carta di credito richiesta. Se ti piace, aggiungi i dati di pagamento per continuare. Altrimenti, il tuo account si mette semplicemente in pausa.",
   },
   {
-    question: "What channels do reminders support?",
+    question: "Quali canali supportano i promemoria?",
     answer:
-      "We send reminders via WhatsApp, SMS, and email. You can configure which channels to use per appointment type, and customize the message templates and timing.",
+      "Inviamo promemoria via WhatsApp, SMS ed email. Puoi configurare quali canali usare per ogni tipo di appuntamento e personalizzare i template dei messaggi e i tempi di invio.",
   },
   {
-    question: "How does the AI waitlist work?",
+    question: "Come funziona la lista d'attesa IA?",
     answer:
-      "When a slot opens up (cancellation or no-show), our AI scores waitlisted patients based on urgency, reliability, time preference, distance, and more — then automatically offers the slot to the best match.",
+      "Quando si libera uno slot (cancellazione o no-show), la nostra IA valuta i pazienti in lista d'attesa in base a urgenza, affidabilità, preferenza oraria, distanza e altro — poi offre automaticamente lo slot alla migliore corrispondenza.",
   },
   {
-    question: "Can I integrate with my existing scheduling software?",
+    question: "Posso integrarlo con il mio software gestionale?",
     answer:
-      "Yes! Our REST API and webhooks let you connect NoShowZero with any scheduling system. We provide SDKs, documentation, and sample code to get you started in minutes.",
+      "Sì! Le nostre API REST e i webhooks ti permettono di collegare NoShowZero a qualsiasi sistema di prenotazione. Forniamo SDK, documentazione e codice di esempio per iniziare in pochi minuti.",
   },
   {
-    question: "Is my data secure?",
+    question: "I miei dati sono al sicuro?",
     answer:
-      "Absolutely. We use end-to-end encryption, SOC 2 compliant infrastructure, and follow HIPAA guidelines for healthcare data. Your data never leaves our secure cloud.",
+      "Assolutamente. Utilizziamo crittografia end-to-end, infrastruttura conforme SOC 2 e seguiamo le linee guida HIPAA per i dati sanitari. I tuoi dati non escono mai dal nostro cloud sicuro.",
   },
   {
-    question: "Can I switch plans later?",
+    question: "Posso cambiare piano in seguito?",
     answer:
-      "Yes, upgrade or downgrade at any time. Changes take effect at the start of your next billing cycle. If you upgrade mid-cycle, we prorate the difference.",
+      "Sì, puoi fare upgrade o downgrade in qualsiasi momento. Le modifiche hanno effetto all'inizio del ciclo di fatturazione successivo. Se fai upgrade a metà ciclo, calcoliamo la differenza proporzionalmente.",
   },
   {
-    question: "What happens if I exceed my appointment limit?",
+    question: "Cosa succede se supero il limite di appuntamenti?",
     answer:
-      "We'll notify you when you reach 80% of your limit. If you exceed it, reminders continue working but new appointments queue until the next cycle — or you can upgrade instantly.",
+      "Ti avviseremo quando raggiungi l'80% del limite. Se lo superi, i promemoria continuano a funzionare ma i nuovi appuntamenti vengono messi in coda fino al ciclo successivo — oppure puoi fare upgrade istantaneamente.",
   },
   {
-    question: "Do you offer discounts for annual billing?",
+    question: "Offrite sconti per la fatturazione annuale?",
     answer:
-      "Yes! Annual billing saves you ~15-20% compared to monthly. Growth drops from $199/mo to $169/mo, Professional from $499/mo to $399/mo, and Enterprise from $999/mo to $849/mo.",
+      "Sì! La fatturazione annuale ti fa risparmiare circa il 15-20% rispetto alla mensile. Growth scende da €199/mese a €169/mese, Professional da €499/mese a €399/mese ed Enterprise da €999/mese a €849/mese.",
   },
 ] as const;
 
 export const TESTIMONIALS = [
   {
-    name: "Dr. Sarah Chen",
-    role: "Owner, Bright Smile Dental",
+    name: "Dr.ssa Sara Bianchi",
+    role: "Titolare, Studio Dentistico Sorriso",
     content:
-      "Our no-show rate dropped from 22% to under 4% in the first month. The AI waitlist fills cancelled slots within minutes. It's been a game-changer for our practice.",
-    avatar: "SC",
+      "Il nostro tasso di no-show è sceso dal 22% a meno del 4% nel primo mese. La lista d'attesa IA riempie gli slot cancellati in pochi minuti. Ha rivoluzionato il nostro studio.",
+    avatar: "SB",
   },
   {
     name: "Marco Rossi",
-    role: "Manager, UrbanFit Gym",
+    role: "Manager, UrbanFit Palestra",
     content:
-      "We used to lose thousands every month to missed PT sessions. NoShowZero's smart reminders and automatic rebooking recovered over $12K in the first quarter.",
+      "Perdevamo migliaia di euro ogni mese per sessioni PT saltate. I promemoria intelligenti e la riprenotazione automatica di NoShowZero hanno recuperato oltre €12.000 nel primo trimestre.",
     avatar: "MR",
   },
   {
-    name: "Lisa Park",
-    role: "Owner, Glow Beauty Studio",
+    name: "Lisa Parisi",
+    role: "Titolare, Glow Beauty Studio",
     content:
-      "Setup took 15 minutes with the API. Now our clients get WhatsApp reminders, and when someone cancels, the next person on the waitlist gets notified instantly.",
+      "La configurazione ha richiesto 15 minuti con l'API. Ora i nostri clienti ricevono promemoria WhatsApp, e quando qualcuno cancella, il prossimo in lista d'attesa viene avvisato istantaneamente.",
     avatar: "LP",
   },
 ] as const;
 
 export const STATS = [
-  { value: 23, suffix: "%", prefix: "", label: "Average no-show rate across industries" },
-  { value: 150, suffix: "B", prefix: "$", label: "Lost annually to missed appointments" },
-  { value: 67, suffix: "%", prefix: "", label: "Of no-shows simply forgot their appointment" },
+  { value: 23, suffix: "%", prefix: "", label: "Tasso medio di no-show in tutti i settori" },
+  { value: 150, suffix: " mld", prefix: "$", label: "Persi ogni anno per appuntamenti saltati" },
+  { value: 67, suffix: "%", prefix: "", label: "Dei no-show ha semplicemente dimenticato l'appuntamento" },
 ] as const;
 
 export const HOW_IT_WORKS = [
   {
     step: 1,
-    title: "Connect Your Calendar",
-    description: "Integrate with your existing scheduling system via our API or use our built-in dashboard. Setup takes under 15 minutes.",
+    title: "Collega il Tuo Calendario",
+    description: "Integra il tuo sistema di prenotazione esistente tramite la nostra API o usa la dashboard integrata. Configurazione in meno di 15 minuti.",
     icon: "CalendarSync",
   },
   {
     step: 2,
-    title: "We Remind Your Clients",
-    description: "Smart multi-channel reminders via WhatsApp, SMS, and email — timed perfectly based on AI analysis of your client behavior.",
+    title: "Ricordiamo ai Tuoi Clienti",
+    description: "Promemoria intelligenti multi-canale via WhatsApp, SMS ed email — con tempistiche perfette basate sull'analisi IA del comportamento dei clienti.",
     icon: "Bell",
   },
   {
     step: 3,
-    title: "Empty Slots Get Filled",
-    description: "When someone cancels, our AI-powered waitlist instantly finds the best replacement — scoring by urgency, reliability, and preference.",
+    title: "Gli Slot Vuoti si Riempiono",
+    description: "Quando qualcuno cancella, la lista d'attesa con IA trova istantaneamente il miglior sostituto — valutando urgenza, affidabilità e preferenze.",
     icon: "UserCheck",
   },
 ] as const;
 
 export const FEATURES = [
   {
-    title: "Smart Reminders",
-    description: "AI-timed reminders via WhatsApp, SMS, and email that reduce no-shows by up to 80%.",
+    title: "Promemoria Intelligenti",
+    description: "Promemoria con tempistiche IA via WhatsApp, SMS ed email che riducono i no-show fino all'80%.",
     icon: "Bell",
   },
   {
-    title: "AI Waitlist",
-    description: "Automatically fill cancelled slots by scoring waitlisted clients on urgency, reliability, and preferences.",
+    title: "Lista d'Attesa IA",
+    description: "Riempimento automatico degli slot cancellati valutando i clienti in lista d'attesa per urgenza, affidabilità e preferenze.",
     icon: "ListChecks",
   },
   {
-    title: "Calendar Optimization",
-    description: "AI analyzes your schedule to reduce gaps, cluster appointments, and maximize daily throughput.",
+    title: "Ottimizzazione Calendario",
+    description: "L'IA analizza il tuo programma per ridurre i buchi, raggruppare gli appuntamenti e massimizzare la produttività giornaliera.",
     icon: "CalendarDays",
   },
   {
-    title: "Real-time Dashboard",
-    description: "Monitor no-show rates, revenue recovered, waitlist performance, and trends at a glance.",
+    title: "Dashboard in Tempo Reale",
+    description: "Monitora tassi di no-show, fatturato recuperato, performance della lista d'attesa e trend a colpo d'occhio.",
     icon: "LayoutDashboard",
   },
   {
-    title: "Multi-location",
-    description: "Manage multiple branches from one account with per-location analytics and team permissions.",
+    title: "Multi-sede",
+    description: "Gestisci più sedi da un unico account con statistiche per sede e permessi del team.",
     icon: "MapPin",
   },
   {
-    title: "Developer API",
-    description: "REST API with webhooks for seamless integration with any scheduling or EHR system.",
+    title: "API per Sviluppatori",
+    description: "API REST con webhooks per un'integrazione perfetta con qualsiasi sistema gestionale o EHR.",
     icon: "Code",
   },
 ] as const;

@@ -61,7 +61,7 @@ export default function BillingPage() {
   }
 
   const trialEnds = tenant?.trial_ends_at
-    ? new Date(tenant.trial_ends_at).toLocaleDateString("en-US", {
+    ? new Date(tenant.trial_ends_at).toLocaleDateString("it-IT", {
         month: "long",
         day: "numeric",
         year: "numeric",
@@ -70,14 +70,14 @@ export default function BillingPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
-      <p className="mt-1 text-sm text-gray-500">Manage your subscription and payment details.</p>
+      <h1 className="text-2xl font-bold text-gray-900">Fatturazione</h1>
+      <p className="mt-1 text-sm text-gray-500">Gestisci il tuo abbonamento e i dettagli di pagamento.</p>
 
       {/* Current Plan */}
       <div className="mt-8 rounded-2xl border border-black/[0.04] bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Current Plan</h2>
+            <h2 className="text-lg font-bold text-gray-900">Piano Attuale</h2>
             <div className="mt-2 flex items-center gap-3">
               <span className="text-2xl font-bold text-gray-900">
                 {currentPlan?.name ?? "Starter"}
@@ -95,7 +95,7 @@ export default function BillingPage() {
               </Badge>
             </div>
             {planStatus === "trialing" && trialEnds && (
-              <p className="mt-1 text-sm text-gray-500">Trial ends {trialEnds}</p>
+              <p className="mt-1 text-sm text-gray-500">Il periodo di prova scade il {trialEnds}</p>
             )}
           </div>
 
@@ -111,7 +111,7 @@ export default function BillingPage() {
               ) : (
                 <CreditCard className="mr-2 h-4 w-4" />
               )}
-              Manage Billing
+              Gestisci Pagamento
               <ExternalLink className="ml-2 h-3 w-3" />
             </Button>
           )}
@@ -121,19 +121,19 @@ export default function BillingPage() {
         {currentPlan && (
           <div className="mt-6 grid grid-cols-3 gap-4 border-t border-black/[0.04] pt-6">
             <div>
-              <p className="text-xs text-gray-400">Appointments</p>
+              <p className="text-xs text-gray-400">Appuntamenti</p>
               <p className="text-sm font-semibold text-gray-900">
                 {currentPlan.limits.appointments}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Locations</p>
+              <p className="text-xs text-gray-400">Sedi</p>
               <p className="text-sm font-semibold text-gray-900">
                 {currentPlan.limits.locations}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Team members</p>
+              <p className="text-xs text-gray-400">Membri del team</p>
               <p className="text-sm font-semibold text-gray-900">
                 {currentPlan.limits.users}
               </p>
@@ -145,7 +145,7 @@ export default function BillingPage() {
       {/* Upgrade options */}
       {planStatus !== "canceled" && (
         <div className="mt-8">
-          <h2 className="text-lg font-bold text-gray-900">Available Plans</h2>
+          <h2 className="text-lg font-bold text-gray-900">Piani Disponibili</h2>
           <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
             {PRICING_PLANS.map((plan) => {
               const isCurrent = plan.tier === (tenant?.plan ?? "growth");
@@ -165,7 +165,7 @@ export default function BillingPage() {
                     <h3 className="font-bold text-gray-900">{plan.name}</h3>
                     {isCurrent && (
                       <Badge className="rounded-full bg-blue-100 text-blue-700 text-xs">
-                        Current
+                        Attuale
                       </Badge>
                     )}
                   </div>
@@ -176,9 +176,9 @@ export default function BillingPage() {
                     ) : (
                       <>
                         <span className="text-2xl font-bold text-gray-900">
-                          ${plan.monthlyPrice}
+                          €{plan.monthlyPrice}
                         </span>
-                        <span className="text-gray-500">/mo</span>
+                        <span className="text-gray-500">/mese</span>
                       </>
                     )}
                   </div>
@@ -195,7 +195,7 @@ export default function BillingPage() {
                   <div className="mt-5">
                     {isCurrent ? (
                       <Button disabled variant="outline" className="w-full rounded-xl text-sm">
-                        Current Plan
+                        Piano Attuale
                       </Button>
                     ) : isEnterprise ? (
                       <Button
@@ -205,7 +205,7 @@ export default function BillingPage() {
                           location.assign("mailto:info@noshowzero.com?subject=Enterprise%20Inquiry")
                         }
                       >
-                        Contact Sales
+                        Contattaci
                       </Button>
                     ) : (
                       <Button
@@ -216,7 +216,7 @@ export default function BillingPage() {
                         {loadingCheckout === plan.tier ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : null}
-                        Upgrade to {plan.name}
+                        Passa a {plan.name}
                       </Button>
                     )}
                   </div>
@@ -232,9 +232,9 @@ export default function BillingPage() {
         <div className="mt-8 flex items-center gap-3 rounded-xl border border-yellow-200 bg-yellow-50 px-5 py-4">
           <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
           <div>
-            <p className="text-sm font-medium text-yellow-900">Payment failed</p>
+            <p className="text-sm font-medium text-yellow-900">Pagamento fallito</p>
             <p className="text-xs text-yellow-700">
-              Please update your payment method to avoid service interruption.
+              Aggiorna il metodo di pagamento per evitare interruzioni del servizio.
             </p>
           </div>
           <Button
@@ -242,7 +242,7 @@ export default function BillingPage() {
             onClick={openPortal}
             className="ml-auto rounded-lg bg-yellow-600 text-white hover:bg-yellow-700"
           >
-            Update Payment
+            Aggiorna Pagamento
           </Button>
         </div>
       )}

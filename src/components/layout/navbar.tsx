@@ -55,13 +55,13 @@ export function Navbar() {
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
           <Button variant="ghost" asChild className="text-slate-600 hover:text-slate-900">
-            <Link href="/login">Log in</Link>
+            <Link href="/login">Accedi</Link>
           </Button>
           <Button
             asChild
             className="rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 px-5 text-white shadow-lg shadow-teal-600/25 transition-all hover:shadow-xl hover:shadow-teal-600/30 hover:brightness-110"
           >
-            <Link href="/signup">Get Started Free</Link>
+            <Link href="/signup">Inizia Gratis</Link>
           </Button>
         </div>
 
@@ -91,13 +91,13 @@ export function Navbar() {
             ))}
             <div className="mt-2 flex flex-col gap-2">
               <Button variant="outline" asChild className="w-full rounded-xl border-slate-200">
-                <Link href="/login">Log in</Link>
+                <Link href="/login">Accedi</Link>
               </Button>
               <Button
                 asChild
                 className="w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 text-white"
               >
-                <Link href="/signup">Get Started Free</Link>
+                <Link href="/signup">Inizia Gratis</Link>
               </Button>
             </div>
           </div>
