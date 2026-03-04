@@ -125,6 +125,12 @@ export interface SmartScoreBreakdown {
   readonly paymentMatch: number;
 }
 
+export interface CandidateScoreBreakdown {
+  readonly total: number;               // 0-100
+  readonly appointmentDistance: number; // 0-60 (primary factor)
+  readonly reliability: number;         // 0-40 (secondary/tiebreaker)
+}
+
 // --- Waitlist Offer types ---
 
 export type OfferStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
@@ -133,7 +139,8 @@ export interface WaitlistOffer {
   readonly id: string;
   readonly tenant_id: string;
   readonly original_appointment_id: string;
-  readonly waitlist_entry_id: string;
+  readonly waitlist_entry_id: string | null;
+  readonly candidate_appointment_id: string | null;
   readonly patient_id: string;
   readonly new_appointment_id: string | null;
   readonly status: OfferStatus;
