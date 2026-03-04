@@ -1,7 +1,11 @@
 /**
  * Cron: Check confirmation timeouts (every 10 min).
- * Picks up message_sent workflows past their deadline and marks them timed_out.
+ * Picks up workflows in any escalation state past their deadline and marks them timed_out.
  * Triggers backfill for timed-out appointments.
+ *
+ * Note: The escalate-confirmations cron handles the normal multi-touch flow.
+ * This cron is a safety net that catches any workflow past its deadline,
+ * regardless of which escalation state it's in.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -19,11 +23,11 @@ export async function GET(request: NextRequest) {
   const supabase = await createServiceClient();
   const now = new Date().toISOString();
 
-  // Fetch workflows that have timed out
+  // Fetch workflows that have timed out in any active escalation state
   const { data: workflows, error } = await supabase
     .from("confirmation_workflows")
     .select("id, tenant_id, appointment_id")
-    .eq("state", "message_sent")
+    .in("state", ["message_sent", "reminder_sent", "final_warning_sent"])
     .lte("deadline_at", now)
     .limit(50);
 
