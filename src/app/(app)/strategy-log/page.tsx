@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Brain,
   ChevronDown,
@@ -16,28 +16,15 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface StrategyMetadata {
-  readonly strategy?: string;
-  readonly reasoning?: string;
-  readonly parallel_count?: number;
-  readonly expiry_minutes?: number;
-  readonly rebook_sent?: boolean;
-  readonly ai_generated?: boolean;
-  readonly [key: string]: unknown;
-}
-
-interface StrategyEntry {
-  readonly id: string;
-  readonly entity_id: string;
-  readonly action: string;
-  readonly metadata: StrategyMetadata;
-  readonly created_at: string;
-}
+import {
+  type StrategyEntry,
+  STRATEGY_BADGE,
+  getStrategyBadge,
+  getActionBadge,
+  formatTimestamp,
+  truncateId,
+  safeStringify,
+} from "@/lib/strategy-log/types";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -51,49 +38,7 @@ const ACTION_FILTERS = [
   { value: "cascade_exhausted", label: "Cascade Exhausted" },
 ] as const;
 
-const STRATEGY_BADGE: Record<string, { label: string; className: string }> = {
-  cascade: { label: "Cascade", className: "bg-blue-50 text-blue-700" },
-  rebook_first: { label: "Rebook First", className: "bg-indigo-50 text-indigo-700" },
-  parallel_blast: { label: "Parallel Blast", className: "bg-amber-50 text-amber-700" },
-  wait_and_cascade: { label: "Wait & Cascade", className: "bg-green-50 text-green-700" },
-  manual_review: { label: "Manual Review", className: "bg-red-50 text-red-700" },
-};
-
-const ACTION_BADGE: Record<string, { label: string; className: string }> = {
-  ai_strategy_applied: { label: "AI Strategy", className: "bg-indigo-50 text-indigo-700" },
-  cascade_deferred: { label: "Deferred", className: "bg-amber-50 text-amber-700" },
-  cascade_manual_review: { label: "Manual Review", className: "bg-red-50 text-red-700" },
-  cascade_exhausted: { label: "Exhausted", className: "bg-gray-100 text-gray-600" },
-};
-
 const PAGE_SIZE = 20;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getStrategyBadge(strategy: string | undefined): { label: string; className: string } {
-  if (!strategy) return { label: "Unknown", className: "bg-gray-100 text-gray-600" };
-  return STRATEGY_BADGE[strategy] ?? { label: strategy, className: "bg-gray-100 text-gray-600" };
-}
-
-function getActionBadge(action: string): { label: string; className: string } {
-  return ACTION_BADGE[action] ?? { label: action, className: "bg-gray-100 text-gray-600" };
-}
-
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function truncateId(id: string): string {
-  return id.length > 8 ? `${id.slice(0, 8)}...` : id;
-}
 
 // ---------------------------------------------------------------------------
 // KPI computations (pure functions, no mutation)
@@ -111,7 +56,6 @@ function computeKpis(entries: readonly StrategyEntry[]): KpiSummary {
     return { totalDecisions: 0, mostCommonStrategy: "—", aiVsRuleRatio: "—", avgDecisionsPerDay: 0 };
   }
 
-  // Count strategies
   const strategyCounts: Record<string, number> = {};
   let aiCount = 0;
   let ruleCount = 0;
@@ -127,18 +71,15 @@ function computeKpis(entries: readonly StrategyEntry[]): KpiSummary {
     }
   }
 
-  // Find most common strategy
   const sortedStrategies = Object.entries(strategyCounts).sort(([, a], [, b]) => b - a);
   const topStrategy = sortedStrategies[0]?.[0] ?? "—";
   const topLabel = STRATEGY_BADGE[topStrategy]?.label ?? topStrategy;
 
-  // AI vs rule ratio
   const ratio = ruleCount > 0 ? `${aiCount}:${ruleCount}` : `${aiCount}:0`;
 
-  // Average decisions per day
   const timestamps = entries.map((e) => new Date(e.created_at).getTime());
-  const minTs = Math.min(...timestamps);
-  const maxTs = Math.max(...timestamps);
+  const minTs = timestamps.reduce((min, t) => (t < min ? t : min), timestamps[0]!);
+  const maxTs = timestamps.reduce((max, t) => (t > max ? t : max), timestamps[0]!);
   const daySpan = Math.max(1, Math.ceil((maxTs - minTs) / (1000 * 60 * 60 * 24)));
   const avgPerDay = Math.round((entries.length / daySpan) * 10) / 10;
 
@@ -168,23 +109,23 @@ export default function StrategyLogPage() {
     setError(null);
 
     try {
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+      const offset = (pageNum - 1) * PAGE_SIZE;
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(offset),
+      });
       if (action) params.set("action", action);
 
       const res = await fetch(`/api/ai/strategy-log?${params}`);
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const json = await res.json();
 
       if (!json.success) {
         throw new Error(json.error ?? "Failed to load strategy log");
       }
 
-      const allEntries: readonly StrategyEntry[] = json.entries ?? [];
-      // Client-side pagination since API only supports limit
-      const startIdx = (pageNum - 1) * PAGE_SIZE;
-      const pageEntries = allEntries.slice(0, PAGE_SIZE);
-
-      setEntries(pageEntries);
-      setHasMore(json.count >= PAGE_SIZE);
+      setEntries(json.entries ?? []);
+      setHasMore(json.hasMore ?? false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load strategy log");
     } finally {
@@ -206,7 +147,7 @@ export default function StrategyLogPage() {
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
-  const kpis = computeKpis(entries);
+  const kpis = useMemo(() => computeKpis(entries), [entries]);
 
   return (
     <div>
@@ -378,31 +319,16 @@ export default function StrategyLogPage() {
                         )}
 
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                          <MetadataItem
-                            label="Strategy"
-                            value={stratBadge.label}
-                          />
-                          <MetadataItem
-                            label="Appointment ID"
-                            value={entry.entity_id || "—"}
-                          />
+                          <MetadataItem label="Strategy" value={stratBadge.label} />
+                          <MetadataItem label="Appointment ID" value={entry.entity_id || "—"} />
                           {entry.metadata.parallel_count != null && (
-                            <MetadataItem
-                              label="Parallel Count"
-                              value={String(entry.metadata.parallel_count)}
-                            />
+                            <MetadataItem label="Parallel Count" value={String(entry.metadata.parallel_count)} />
                           )}
                           {entry.metadata.expiry_minutes != null && (
-                            <MetadataItem
-                              label="Expiry"
-                              value={`${entry.metadata.expiry_minutes} min`}
-                            />
+                            <MetadataItem label="Expiry" value={`${entry.metadata.expiry_minutes} min`} />
                           )}
                           {entry.metadata.rebook_sent != null && (
-                            <MetadataItem
-                              label="Rebook Sent"
-                              value={entry.metadata.rebook_sent ? "Yes" : "No"}
-                            />
+                            <MetadataItem label="Rebook Sent" value={entry.metadata.rebook_sent ? "Yes" : "No"} />
                           )}
                           <MetadataItem
                             label="Decision Type"
@@ -410,7 +336,6 @@ export default function StrategyLogPage() {
                           />
                         </div>
 
-                        {/* Raw metadata fallback for extra fields */}
                         <RawMetadata metadata={entry.metadata} />
                       </div>
                     </div>
@@ -493,8 +418,7 @@ function MetadataItem({ label, value }: { readonly label: string; readonly value
   );
 }
 
-/** Show extra metadata keys not covered by the known fields */
-function RawMetadata({ metadata }: { readonly metadata: StrategyMetadata }) {
+function RawMetadata({ metadata }: { readonly metadata: Record<string, unknown> }) {
   const knownKeys = new Set([
     "strategy", "reasoning", "parallel_count", "expiry_minutes", "rebook_sent", "ai_generated",
   ]);
@@ -509,7 +433,7 @@ function RawMetadata({ metadata }: { readonly metadata: StrategyMetadata }) {
         Additional metadata ({extraEntries.length} fields)
       </summary>
       <pre className="mt-1 overflow-auto rounded bg-white border border-gray-200 p-2 text-xs">
-        {JSON.stringify(Object.fromEntries(extraEntries), null, 2)}
+        {safeStringify(Object.fromEntries(extraEntries))}
       </pre>
     </details>
   );

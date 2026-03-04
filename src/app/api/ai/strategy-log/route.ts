@@ -7,6 +7,7 @@
  *
  * Query params:
  *   - limit: number (default 20, max 50)
+ *   - offset: number (default 0) for pagination
  *   - action: filter by specific action type
  */
 
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 50);
+    const offset = Math.max(Number(searchParams.get("offset")) || 0, 0);
     const actionFilter = searchParams.get("action");
 
     const supabase = await createServiceClient();
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
       .select("id, entity_id, action, metadata, created_at")
       .eq("tenant_id", auth.data.tenantId)
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     if (actionFilter && STRATEGY_ACTIONS.includes(actionFilter as typeof STRATEGY_ACTIONS[number])) {
       query = query.eq("action", actionFilter);
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
       query = query.in("action", [...STRATEGY_ACTIONS]);
     }
 
-    const { data: entries, error } = await query;
+    const { data: entries, error, count } = await query;
 
     if (error) {
       console.error("[StrategyLog] Query error:", error);
@@ -56,6 +58,7 @@ export async function GET(request: NextRequest) {
       success: true,
       entries: entries ?? [],
       count: entries?.length ?? 0,
+      hasMore: (entries?.length ?? 0) >= limit,
     });
   } catch (err) {
     console.error("[StrategyLog] Unexpected error:", err);

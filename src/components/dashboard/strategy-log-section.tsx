@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Brain,
   ArrowRight,
@@ -13,44 +13,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface StrategyMetadata {
-  readonly strategy?: string;
-  readonly reasoning?: string;
-  readonly parallel_count?: number;
-  readonly expiry_minutes?: number;
-  readonly rebook_sent?: boolean;
-  readonly ai_generated?: boolean;
-  readonly [key: string]: unknown;
-}
-
-interface StrategyEntry {
-  readonly id: string;
-  readonly entity_id: string;
-  readonly action: string;
-  readonly metadata: StrategyMetadata;
-  readonly created_at: string;
-}
-
-interface StrategyLogSectionProps {
-  readonly className?: string;
-}
-
-// ---------------------------------------------------------------------------
-// Strategy badge config
-// ---------------------------------------------------------------------------
-
-const STRATEGY_BADGE: Record<string, { label: string; className: string }> = {
-  cascade: { label: "Cascade", className: "bg-blue-50 text-blue-700" },
-  rebook_first: { label: "Rebook First", className: "bg-indigo-50 text-indigo-700" },
-  parallel_blast: { label: "Parallel Blast", className: "bg-amber-50 text-amber-700" },
-  wait_and_cascade: { label: "Wait & Cascade", className: "bg-green-50 text-green-700" },
-  manual_review: { label: "Manual Review", className: "bg-red-50 text-red-700" },
-};
+import {
+  type StrategyEntry,
+  getStrategyBadge,
+  formatTimestamp,
+  truncateId,
+} from "@/lib/strategy-log/types";
 
 const ACTION_LABEL: Record<string, string> = {
   ai_strategy_applied: "AI Strategy",
@@ -59,34 +27,11 @@ const ACTION_LABEL: Record<string, string> = {
   cascade_exhausted: "Exhausted",
 };
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getStrategyBadge(strategy: string | undefined): { label: string; className: string } {
-  if (!strategy) return { label: "Unknown", className: "bg-gray-100 text-gray-600" };
-  return STRATEGY_BADGE[strategy] ?? { label: strategy, className: "bg-gray-100 text-gray-600" };
+interface StrategyLogSectionProps {
+  readonly className?: string;
 }
-
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function truncateId(id: string): string {
-  return id.length > 8 ? `${id.slice(0, 8)}...` : id;
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export function StrategyLogSection({ className }: StrategyLogSectionProps) {
-  const router = useRouter();
   const [entries, setEntries] = useState<readonly StrategyEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +43,7 @@ export function StrategyLogSection({ className }: StrategyLogSectionProps) {
 
     try {
       const res = await fetch("/api/ai/strategy-log?limit=5");
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const json = await res.json();
 
       if (!json.success) {
@@ -138,10 +84,12 @@ export function StrategyLogSection({ className }: StrategyLogSectionProps) {
           variant="ghost"
           size="sm"
           className="text-xs text-blue-600 hover:text-blue-700"
-          onClick={() => router.push("/strategy-log")}
+          asChild
         >
-          View all
-          <ArrowRight className="ml-1 h-3 w-3" />
+          <Link href="/strategy-log">
+            View all
+            <ArrowRight className="ml-1 h-3 w-3" />
+          </Link>
         </Button>
       </div>
 
