@@ -69,6 +69,11 @@ interface AnalyticsData {
   readonly offersPending: number;
   readonly offerFillRate: number;
   readonly avgResponseMinutes: number | null;
+  // New explicit fields from 06-01 (honest recovery metrics):
+  readonly slotsRecovered?: number;
+  readonly fillRatePercent?: number;
+  readonly revenueRecovered?: number;
+  readonly activeOffers?: number;
 }
 
 interface OfferPreview {
@@ -368,31 +373,35 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
         </div>
       </div>
 
-      {/* Overall Stats */}
+      {/* Overall Stats — Recovery-focused KPIs (METR-02) */}
       <div className="grid grid-cols-2 gap-4 mb-6 sm:grid-cols-4">
         <MiniStat
-          icon={CalendarDays}
-          label="Totale appuntamenti"
-          value={analytics?.totalAppointments ?? 0}
-          color="text-blue-600"
-        />
-        <MiniStat
-          icon={TrendingUp}
-          label="Tasso no-show"
-          value={`${analytics?.noShowRate ?? 0}%`}
-          color={analytics?.noShowRate && analytics.noShowRate > 10 ? "text-red-600" : "text-green-600"}
-        />
-        <MiniStat
-          icon={Users}
-          label="Slot recuperati"
-          value={analytics?.waitlistFills ?? 0}
+          icon={CheckCircle}
+          label="Slot recuperati oggi"
+          value={analytics?.slotsRecovered ?? analytics?.waitlistFills ?? 0}
           color="text-green-600"
         />
         <MiniStat
-          icon={Zap}
+          icon={TrendingUp}
           label="Ricavo recuperato"
-          value={analytics ? `€${analytics.revenueSaved.toLocaleString()}` : "—"}
+          value={
+            analytics
+              ? `€${(analytics.revenueRecovered ?? analytics.revenueSaved ?? 0).toLocaleString()}`
+              : "—"
+          }
           color="text-indigo-600"
+        />
+        <MiniStat
+          icon={Target}
+          label="Tasso riempimento"
+          value={`${analytics?.fillRatePercent ?? analytics?.offerFillRate ?? 0}%`}
+          color="text-blue-600"
+        />
+        <MiniStat
+          icon={Zap}
+          label="Offerte attive"
+          value={analytics?.activeOffers ?? analytics?.offersPending ?? 0}
+          color="text-amber-600"
         />
       </div>
 
@@ -422,7 +431,7 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <EngineStatCard icon={Gift} label="Offerte inviate" value={analytics?.offersSent ?? 0} color="text-blue-500" />
           <EngineStatCard icon={CheckCircle} label="Accettate" value={analytics?.offersAccepted ?? 0} color="text-green-500" />
-          <EngineStatCard icon={Target} label="Tasso riempimento" value={`${analytics?.offerFillRate ?? 0}%`} color="text-indigo-500" />
+          <EngineStatCard icon={Target} label="Tasso riempimento" value={`${analytics?.fillRatePercent ?? analytics?.offerFillRate ?? 0}%`} color="text-indigo-500" />
           <EngineStatCard
             icon={Clock}
             label="Tempo medio risposta"
