@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MessageIntent } from "@/lib/types";
 import { processAccept, processDecline } from "@/lib/backfill/process-response";
+import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
 import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
 import { sendNotification } from "@/lib/twilio/send-notification";
 
@@ -154,6 +155,10 @@ async function handleCancel(
       console.error("[Router] Unexpected confirmation_workflows error:", err);
     }
   }
+
+  // Fire-and-forget: trigger backfill cascade — offer the freed slot to other patients
+  triggerBackfill(supabase, input.appointmentId, input.tenantId, { triggerEvent: "cancellation" })
+    .catch((err) => console.error("[Router] Backfill cascade after cancel failed:", err));
 
   // Fire-and-forget: send smart rebooking suggestion via WhatsApp
   const cancelledAppt = data[0];
