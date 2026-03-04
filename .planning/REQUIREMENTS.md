@@ -18,10 +18,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Metrics & Revenue
 
-- [ ] **METR-01**: Revenue recovered counts only actually filled cancelled slots and saved no-shows (not regular confirmations)
+- [x] **METR-01**: Revenue recovered counts only actually filled cancelled slots and saved no-shows (not regular confirmations)
 - [ ] **METR-02**: Dashboard shows real-time KPIs: slots recovered today, revenue recovered, fill rate %, active offers
-- [ ] **METR-03**: Each tenant can configure their average appointment value in settings
-- [ ] **METR-04**: Fill rate is calculated as (slots filled / slots cancelled or no-showed) × 100
+- [x] **METR-03**: Each tenant can configure their average appointment value in settings
+- [x] **METR-04**: Fill rate is calculated as (slots filled / slots cancelled or no-showed) × 100
 
 ### Dashboard
 
@@ -71,10 +71,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SLOT-04 | Phase 5 | Complete |
 | SLOT-05 | Phase 5 | Complete |
 | SLOT-06 | Phase 5 | Complete |
-| METR-01 | Phase 6 | Pending |
+| METR-01 | Phase 6 | Complete |
 | METR-02 | Phase 6 | Pending |
-| METR-03 | Phase 6 | Pending |
-| METR-04 | Phase 6 | Pending |
+| METR-03 | Phase 6 | Complete |
+| METR-04 | Phase 6 | Complete |
 | DASH-01 | Phase 7 | Pending |
 | DASH-02 | Phase 7 | Pending |
 | DASH-03 | Phase 7 | Pending |

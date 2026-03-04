@@ -75,7 +75,7 @@ Plans:
 
 - [x] **Phase 4: Candidate Detection** - Wire cancellation trigger to auto-find and AI-rank replacement candidates from scheduled patients (completed 2026-03-04)
 - [x] **Phase 5: WhatsApp Cascade** - Send one-by-one offers with 1-hour timeout, handle accept/decline/expire, fill the slot (completed 2026-03-04)
-- [ ] **Phase 6: Revenue Metrics** - Fix inflated metrics to count only real recoveries, add configurable appointment value and fill rate
+- [ ] **Phase 6: Revenue Metrics** - Fix inflated metrics to count only real recoveries, add configurable appointment value and fill rate (in progress)
 - [ ] **Phase 7: Recovery Dashboard** - Active offers with countdown, recovery activity feed, real-time KPI cards
 
 ## Phase Details
@@ -121,10 +121,10 @@ Plans:
   2. Each tenant can set their average appointment value in a settings page, and this value is used for all revenue calculations for that tenant
   3. Fill rate percentage is calculated as (slots filled via recovery / total slots cancelled or no-showed) and displays correctly on the dashboard
   4. All metrics update in real-time as slots are recovered (leveraging existing Supabase Realtime from v1.0)
-**Plans:** 2 plans
+**Plans:** 1/2 complete
 
 Plans:
-- [ ] 06-01-PLAN.md -- DB migration, pure recovery metric functions (TDD), fix analytics API, tenant settings endpoint
+- [x] 06-01-PLAN.md -- DB migration, pure recovery metric functions (TDD), fix analytics API, tenant settings endpoint
 - [ ] 06-02-PLAN.md -- Settings page appointment value config, dashboard KPI cards with honest recovery metrics
 
 ### Phase 7: Recovery Dashboard
@@ -153,5 +153,5 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 3. Resilience | v1.0 | 2/2 | Complete | 2026-03-03 |
 | 4. Candidate Detection | v1.1 | 3/3 | Complete | 2026-03-04 |
 | 5. WhatsApp Cascade | 2/2 | Complete   | 2026-03-04 | - |
-| 6. Revenue Metrics | v1.1 | 0/2 | Not started | - |
+| 6. Revenue Metrics | v1.1 | 1/2 | In progress | - |
 | 7. Recovery Dashboard | v1.1 | 0/? | Not started | - |

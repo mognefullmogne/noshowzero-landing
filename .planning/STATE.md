@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Slot Recovery Engine
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-04T15:03:56.938Z"
-last_activity: 2026-03-04 — Completed 05-02 (chain cascade on accept, Italian messages, AI offer fallback)
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-04T15:56:53Z"
+last_activity: 2026-03-04 — Completed 06-01 (honest recovery metrics, tenant settings API, METR-04 fill rate)
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_plans: 14
+  completed_plans: 13
+  percent: 93
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** When a patient cancels, the system automatically fills that slot by contacting the best-fit patient via WhatsApp -- no staff intervention, no empty chairs, no lost revenue.
-**Current focus:** Phase 5 complete — WhatsApp Cascade
+**Current focus:** Phase 6 in progress — Revenue Metrics
 
 ## Current Position
 
-Phase: 5 of 7 (WhatsApp Cascade) — COMPLETE
-Plan: 2 of 2 in current phase — 05-02 complete
+Phase: 6 of 7 (Revenue Metrics) — IN PROGRESS
+Plan: 1 of 2 in current phase — 06-01 complete
 Status: Executing
-Last activity: 2026-03-04 — Completed 05-02 (chain cascade on accept, Italian messages, AI offer fallback)
+Last activity: 2026-03-04 — Completed 06-01 (honest recovery metrics, tenant settings API, METR-04 fill rate)
 
-Progress: [██████████] 100% (12/12 plans)
+Progress: [█████████░] 93% (13/14 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7 (from v1.0)
+- Total plans completed: 13
 - Average duration: --
 - Total execution time: --
 
@@ -69,6 +69,10 @@ Progress: [██████████] 100% (12/12 plans)
 - [Phase 05]: Chain cascade is fire-and-forget (.catch()) to avoid blocking accept response
 - [Phase 05]: Freed appointment uses existing cancelled status with descriptive notes (Freed by slot recovery)
 - [Phase 05]: AI offer classifier uses narrowed 3-intent schema (accept_offer/decline_offer/unknown)
+- [Phase 06-01]: Default avg_appointment_value set to EUR 80 matching existing compute-snapshot default
+- [Phase 06-01]: Recovery = only accepted offers with new_appointment_id (honest metric per METR-01)
+- [Phase 06-01]: Fill rate uses METR-04 formula: slotsRecovered / (cancelled + noShow) x 100
+- [Phase 06-01]: Backward-compatible: waitlistFills and revenueSaved response fields preserved with honest values
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T14:59:51.170Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-04T15:56:53Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
