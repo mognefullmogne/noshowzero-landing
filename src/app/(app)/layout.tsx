@@ -23,6 +23,7 @@ import {
   Settings2,
   ScrollText,
   Plug,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -43,6 +44,7 @@ const sidebarLinks = [
   { label: "AI Chat", href: "/ai-chat", icon: Bot },
   { label: "Optimization", href: "/optimization", icon: Sparkles },
   { label: "Rules", href: "/rules", icon: Settings2 },
+  { label: "AI Strategy", href: "/strategy-log", icon: Brain },
   { label: "Audit", href: "/audit", icon: ScrollText },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "API Docs", href: "/docs", icon: BookOpen },

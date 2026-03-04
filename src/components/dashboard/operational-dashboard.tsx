@@ -26,6 +26,7 @@ import { ActiveOffersSection, type ActiveOffer } from "./active-offers-section";
 import { ActivityFeedSection, type ActivityEvent } from "./activity-feed-section";
 import { MorningBriefing } from "./morning-briefing";
 import { NoShowInsights } from "./no-show-insights";
+import { StrategyLogSection } from "./strategy-log-section";
 
 // --- Types ---
 
@@ -484,6 +485,11 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
       {/* No-Show Insights — AI root cause analysis */}
       <div className="mb-6">
         <NoShowInsights />
+      </div>
+
+      {/* AI Strategy Log — recent decisions */}
+      <div className="mb-6">
+        <StrategyLogSection />
       </div>
 
       {/* Quick navigation */}
