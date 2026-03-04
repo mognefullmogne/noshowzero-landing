@@ -14,6 +14,7 @@ interface Tenant {
   readonly trial_ends_at: string | null;
   readonly stripe_customer_id: string | null;
   readonly stripe_subscription_id: string | null;
+  readonly avg_appointment_value: number;
 }
 
 export function useTenant() {
@@ -35,7 +36,7 @@ export function useTenant() {
 
       const { data, error: dbError } = await supabase
         .from("tenants")
-        .select("id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id")
+        .select("id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, avg_appointment_value")
         .eq("auth_user_id", user.id)
         .maybeSingle();
 
