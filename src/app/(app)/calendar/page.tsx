@@ -336,7 +336,7 @@ export default function CalendarPage() {
         />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr>
                 <th className="w-16 border-b border-r border-gray-200 bg-gray-50 p-2 text-xs font-medium text-gray-500">
