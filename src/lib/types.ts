@@ -126,9 +126,11 @@ export interface SmartScoreBreakdown {
 }
 
 export interface CandidateScoreBreakdown {
-  readonly total: number;               // 0-100
-  readonly appointmentDistance: number; // 0-60 (primary factor)
-  readonly reliability: number;         // 0-40 (secondary/tiebreaker)
+  readonly total: number;               // 0-130 (sum of all factors)
+  readonly appointmentDistance: number;  // 0-60 (primary factor)
+  readonly reliability: number;          // 0-40 (secondary/tiebreaker)
+  readonly urgencyBonus: number;         // 0-20 (time pressure on open slot)
+  readonly responsiveness: number;       // 0-10 (patient's historical response speed)
 }
 
 // --- Waitlist Offer types ---
