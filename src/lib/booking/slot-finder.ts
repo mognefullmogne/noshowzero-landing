@@ -2,10 +2,14 @@
  * Find available appointment slots for a given date.
  * Returns up to 3 slots ordered by start time.
  * Falls back to the next 3 days if no slots on the requested date.
+ *
+ * Also provides annotated slots with historical attendance data
+ * via findAvailableSlotsAnnotated().
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProposedSlotOption } from "./types";
+import { annotateSlots, type SlotRiskLabel } from "@/lib/intelligence/slot-recommendations";
 
 const MAX_SLOTS = 3;
 const FALLBACK_DAYS = 3;
@@ -32,6 +36,37 @@ export async function findAvailableSlots(
   }
 
   return [];
+}
+
+/** Extended slot with historical attendance annotation. */
+export interface AnnotatedProposedSlot extends ProposedSlotOption {
+  readonly riskLabel: SlotRiskLabel;
+  readonly attendanceRate: number;
+}
+
+/**
+ * Find available slots and annotate them with historical attendance data.
+ * Returns the same slots as findAvailableSlots, enriched with risk labels.
+ */
+export async function findAvailableSlotsAnnotated(
+  supabase: SupabaseClient,
+  tenantId: string,
+  date: string,
+  serviceName?: string
+): Promise<readonly AnnotatedProposedSlot[]> {
+  const slots = await findAvailableSlots(supabase, tenantId, date, serviceName);
+  if (slots.length === 0) return [];
+
+  const annotated = await annotateSlots(supabase, tenantId, slots);
+  return annotated.map((a, idx) => ({
+    index: idx + 1,
+    slotId: a.slotId,
+    startAt: a.startAt,
+    endAt: a.endAt,
+    providerName: a.providerName,
+    riskLabel: a.riskLabel,
+    attendanceRate: a.attendanceRate,
+  }));
 }
 
 async function querySlots(
