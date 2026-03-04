@@ -16,8 +16,19 @@ export function verifyTwilioSignature(
     return false;
   }
   if (!signature) {
+    console.error("[Twilio] Missing X-Twilio-Signature header");
     return false;
   }
 
-  return Twilio.validateRequest(authToken, signature, url, params);
+  const result = Twilio.validateRequest(authToken, signature, url, params);
+  if (!result) {
+    console.error(
+      `[Twilio] Signature validation FAILED\n` +
+      `  Expected URL  : ${url}\n` +
+      `  Signature     : ${signature.slice(0, 8)}...\n` +
+      `  Auth token ok : ${authToken.length > 0}\n` +
+      `  Param keys    : ${Object.keys(params).join(", ")}`
+    );
+  }
+  return result;
 }
