@@ -8,6 +8,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MessageIntent } from "@/lib/types";
 import { processAccept, processDecline } from "@/lib/backfill/process-response";
+import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
+import { sendNotification } from "@/lib/twilio/send-notification";
 
 // AI input sanitization
 const MAX_AI_INPUT_CHARS = 500;
@@ -127,7 +129,7 @@ async function handleCancel(
     .eq("id", input.appointmentId)
     .eq("tenant_id", input.tenantId)
     .in("status", ["scheduled", "reminder_sent", "reminder_pending", "confirmed"])
-    .select("id");
+    .select("id, patient_id, service_name, provider_name, location_name, scheduled_at, duration_min, patient:patients(phone)");
 
   if (error) {
     console.error("[Router] Cancel failed:", error);
@@ -153,8 +155,33 @@ async function handleCancel(
     }
   }
 
+  // Fire-and-forget: send smart rebooking suggestion via WhatsApp
+  const cancelledAppt = data[0];
+  const patientPhone = ((cancelledAppt.patient as unknown) as { phone: string | null } | null)?.phone;
+  if (patientPhone) {
+    const tenantId = input.tenantId;
+    const patientId = cancelledAppt.patient_id as string;
+    generateRebookingSuggestions(supabase, tenantId, patientId, {
+      id: cancelledAppt.id,
+      service_name: cancelledAppt.service_name as string,
+      provider_name: (cancelledAppt.provider_name as string | null) ?? null,
+      location_name: (cancelledAppt.location_name as string | null) ?? null,
+      scheduled_at: cancelledAppt.scheduled_at as string,
+      duration_min: cancelledAppt.duration_min as number,
+    })
+      .then((suggestions) =>
+        sendNotification({
+          to: patientPhone,
+          body: suggestions.message,
+          channel: "whatsapp",
+          tenantId,
+        })
+      )
+      .catch((err) => console.error("[SmartRebook] WhatsApp cancel rebook failed:", err));
+  }
+
   return {
-    reply: "Il tuo appuntamento e' stato cancellato. Se desideri riprogrammare, contatta la segreteria.",
+    reply: "Il tuo appuntamento e' stato cancellato. Riceverai a breve alcune proposte per riprogrammare.",
     action: "appointment_cancelled",
   };
 }
