@@ -65,25 +65,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLOT-01 | — | Pending |
-| SLOT-02 | — | Pending |
-| SLOT-03 | — | Pending |
-| SLOT-04 | — | Pending |
-| SLOT-05 | — | Pending |
-| SLOT-06 | — | Pending |
-| METR-01 | — | Pending |
-| METR-02 | — | Pending |
-| METR-03 | — | Pending |
-| METR-04 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
+| SLOT-01 | Phase 4 | Pending |
+| SLOT-02 | Phase 4 | Pending |
+| SLOT-03 | Phase 5 | Pending |
+| SLOT-04 | Phase 5 | Pending |
+| SLOT-05 | Phase 5 | Pending |
+| SLOT-06 | Phase 5 | Pending |
+| METR-01 | Phase 6 | Pending |
+| METR-02 | Phase 6 | Pending |
+| METR-03 | Phase 6 | Pending |
+| METR-04 | Phase 6 | Pending |
+| DASH-01 | Phase 7 | Pending |
+| DASH-02 | Phase 7 | Pending |
+| DASH-03 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after initial definition*
+*Last updated: 2026-03-04 after roadmap creation*
