@@ -128,6 +128,7 @@ export async function POST(
       to: patient.phone,
       body,
       channel: deliveryChannel,
+      tenantId: auth.data.tenantId,
     });
 
     if (result.status === "failed") {

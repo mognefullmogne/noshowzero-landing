@@ -128,7 +128,7 @@ export async function sendOffer(
 
   // Send notification (uses SMS template for email-preferred patients until SendGrid is set up)
   const effectiveChannel = channel === "email" ? "sms" : channel;
-  const sendResult = await sendNotification({ to, body, channel: effectiveChannel, subject });
+  const sendResult = await sendNotification({ to, body, channel: effectiveChannel, subject, tenantId: input.tenantId });
 
   if (sendResult.status === "failed") {
     console.error("[Backfill] Failed to send notification:", sendResult.errorMessage);
