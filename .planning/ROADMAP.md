@@ -135,11 +135,10 @@ Plans:
   1. An "Active Offers" section displays all pending cascade offers, each showing the patient name, slot time, and a live countdown timer showing time remaining until the 1-hour offer expires
   2. A recovery activity feed shows a chronological list of recent events: offer sent, offer accepted, offer declined, offer expired -- with timestamps and patient/slot details
   3. KPI cards (slots recovered, revenue recovered, fill rate %, active offers count) update in real-time when a slot is recovered or an offer status changes, without requiring a page refresh
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md -- Active offers section with countdown, activity feed, wire into dashboard with Realtime updates
 
 ## Progress
 
@@ -152,6 +151,6 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 2. Core Realtime | v1.0 | 3/3 | Complete | 2026-03-03 |
 | 3. Resilience | v1.0 | 2/2 | Complete | 2026-03-03 |
 | 4. Candidate Detection | v1.1 | 3/3 | Complete | 2026-03-04 |
-| 5. WhatsApp Cascade | 2/2 | Complete   | 2026-03-04 | - |
+| 5. WhatsApp Cascade | v1.1 | 2/2 | Complete | 2026-03-04 |
 | 6. Revenue Metrics | v1.1 | 1/2 | In progress | - |
-| 7. Recovery Dashboard | v1.1 | 0/? | Not started | - |
+| 7. Recovery Dashboard | v1.1 | 0/1 | Not started | - |
