@@ -24,6 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ActiveOffersSection, type ActiveOffer } from "./active-offers-section";
 import { ActivityFeedSection, type ActivityEvent } from "./activity-feed-section";
+import { MorningBriefing } from "./morning-briefing";
+import { NoShowInsights } from "./no-show-insights";
 
 // --- Types ---
 
@@ -187,7 +189,6 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
   }, [realtimeAppointments]);
 
   const today = new Date();
-  const isMorning = today.getHours() < 13;
 
   if (loading) {
     return (
@@ -211,39 +212,8 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
 
   return (
     <div>
-      {/* Morning briefing banner — visible until 1pm */}
-      {isMorning && dashboard && (
-        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 px-6 py-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 mb-3">
-            Briefing del mattino —{" "}
-            {today.toLocaleDateString("it-IT", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            })}
-          </p>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div>
-              <span className="text-2xl font-bold text-blue-800">{dashboard.todayCount}</span>
-              <span className="ml-1.5 text-xs text-blue-600">appuntamenti oggi</span>
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-amber-700">{dashboard.pendingCount}</span>
-              <span className="ml-1.5 text-xs text-blue-600">in attesa conferma</span>
-            </div>
-            <div>
-              <span className={cn("text-2xl font-bold", dashboard.urgentCount > 0 ? "text-red-600" : "text-blue-800")}>
-                {dashboard.urgentCount}
-              </span>
-              <span className="ml-1.5 text-xs text-blue-600">scadenza entro 2h</span>
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-blue-800">{dashboard.weekCount}</span>
-              <span className="ml-1.5 text-xs text-blue-600">questa settimana</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* AI Morning briefing — visible until 1pm, replaces the static banner */}
+      <MorningBriefing />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -509,6 +479,11 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
             </div>
           </div>
         )}
+      </div>
+
+      {/* No-Show Insights — AI root cause analysis */}
+      <div className="mb-6">
+        <NoShowInsights />
       </div>
 
       {/* Quick navigation */}
