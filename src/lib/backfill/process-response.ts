@@ -120,7 +120,7 @@ export async function processAccept(
 
     // Chain cascade: the freed slot is now available for another patient
     // Fire-and-forget — don't block the accept response
-    triggerBackfill(supabase, candidateApptId, offer.tenant_id)
+    triggerBackfill(supabase, candidateApptId, offer.tenant_id, { triggerEvent: "cancellation" })
       .catch((err) => console.error("[Backfill] Chain cascade failed:", err));
   }
 
@@ -171,7 +171,7 @@ export async function processDecline(
   // Cascade: try next candidate for the same slot
   const originalAppt = offer.original_appointment;
   if (originalAppt && new Date(originalAppt.scheduled_at) > new Date()) {
-    await triggerBackfill(supabase, originalAppt.id, offer.tenant_id);
+    await triggerBackfill(supabase, originalAppt.id, offer.tenant_id, { triggerEvent: "offer_declined" });
   }
 
   return { success: true };

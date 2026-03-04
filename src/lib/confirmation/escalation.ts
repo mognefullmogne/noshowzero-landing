@@ -280,7 +280,7 @@ async function escalateToTimeout(
         .in("status", ["scheduled", "reminder_sent", "reminder_pending"]);
 
       // Trigger cascade backfill
-      const offerId = await triggerBackfill(supabase, wf.appointment_id, wf.tenant_id);
+      const offerId = await triggerBackfill(supabase, wf.appointment_id, wf.tenant_id, { triggerEvent: "timeout" });
       if (offerId) {
         backfilled++;
         console.info(`[Escalation] Cascade triggered for timed-out workflow ${wf.id}`);

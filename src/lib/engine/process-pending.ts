@@ -404,7 +404,7 @@ async function checkTimeouts(
         .in("status", ["scheduled", "reminder_sent", "reminder_pending"]);
 
       // Trigger cascade — fire-and-forget within the engine run
-      triggerBackfill(supabase, wf.appointment_id, wf.tenant_id).catch((err) => {
+      triggerBackfill(supabase, wf.appointment_id, wf.tenant_id, { triggerEvent: "timeout" }).catch((err) => {
         console.error("[Engine] checkTimeouts cascade error for appointment:", wf.appointment_id, err);
       });
     } catch (err) {

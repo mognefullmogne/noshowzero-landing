@@ -1,110 +1,81 @@
 # Project Handoff
 
-> Last updated: 2026-03-04 16:00
-> Session: Phase 5 context gathering — discussed WhatsApp cascade implementation decisions
+> Last updated: 2026-03-04 19:40
+> Session: Built AI Decision Engine + merged all 3 AI enhancement agents + deployed
 
 ## Active Project
 
 - **Path**: /Users/aiassistant/products/noshowzero-landing
-- **Stack**: Next.js 15, Supabase, Twilio (WhatsApp sandbox), Tailwind, TypeScript
+- **Stack**: Next.js 15 + Supabase + Twilio WhatsApp + Claude AI (Haiku/Sonnet)
 - **Branch**: `redesign/landing-page`
-- **Build status**: Passing (deployed to Vercel production)
+- **Build status**: PASSING (113 tests, 0 errors)
+- **Production**: https://noshowzero-landing.vercel.app
 
 ## What Was Done This Session
 
-- **Completed Phase 4 context gathering + execution** (previous sessions): Candidate detection fully implemented with appointment-based scoring, 23 tests passing
-- **Gathered Phase 5 context**: Discussed all gray areas for WhatsApp Cascade (offer message wording, accept/decline mechanism, original appointment handling, cascade exhaustion)
-- **Created `.planning/phases/05-whatsapp-cascade/05-CONTEXT.md`** with locked decisions for downstream planning
+### Phase A: Bug Fixes (Sonnet agent)
+- Fixed `trigger-backfill.ts`: added `timeout` to allowed statuses, fixed `audit_log` → `audit_events`
+- Created `check-expired-offers.ts` shared utility for event-driven offer expiry
+
+### Phase B: Autonomous Cascade (Opus agent)
+- Multi-touch escalation (`src/lib/confirmation/escalation.ts`) — 3 touches before timeout
+- Risk-based timing (`src/lib/confirmation/timing.ts`) — critical=72h, high=48h, medium=36h, low=24h
+- Pre-emptive cascade (`src/lib/backfill/preemptive-cascade.ts`)
+- Time-aware parallel outreach (`src/lib/backfill/time-aware-config.ts`)
+
+### Phase C: Intelligence Layer (Opus agent)
+- Response pattern learning, 4-factor candidate scoring, auto no-show detection, overbooking recommendations
+
+### Event-Driven Engine
+- `src/lib/engine/process-pending.ts` — opportunistic processing on every API call (30s throttle)
+
+### AI Enhancements (3 parallel agents, all completed)
+- AI Candidate Re-ranking, AI Confirmation Personalizer, AI Morning Briefing, Smart Rebooking, Patient Memory, No-Show Analysis
+
+### AI Decision Engine (built end of session, NOT YET COMMITTED)
+- `src/lib/ai/decision-engine.ts` — Strategic reasoning brain (5 strategies: cascade, rebook_first, parallel_blast, wait_and_cascade, manual_review)
+- Wired into `trigger-backfill.ts` with `triggerEvent` parameter propagated to all callers
+- `src/app/api/ai/strategy-log/route.ts` — API to view AI decisions
+- Tests updated for new parameter
+
+## What Is In Progress
+
+- **AI Decision Engine uncommitted** — build passes, tests pass, deployed but needs git commit
 
 ## What To Do Next
 
-### IMMEDIATE: Plan and execute Phase 5
+1. **Commit the AI Decision Engine** changes
+2. **Apply migration** `supabase/migrations/014_intelligence_layer.sql` to production DB
+3. **Set ANTHROPIC_API_KEY on Vercel** for AI features to activate
+4. **Dashboard integration** — strategy log visualization
+5. **E2E testing** — full cancellation → AI strategy → cascade → offer flow
+6. **PR to main** from `redesign/landing-page`
 
-Run this command:
+## Key Decisions
 
-```
-/gsd:plan-phase 5
-```
+- Haiku for speed-critical paths (3s timeout), Sonnet for deep reasoning (5s timeout)
+- All AI non-blocking — failures fall back to rule-based logic
+- Event-driven > cron (crons are safety nets)
+- 5 strategy types, not just cascade
+- Italian language throughout (informal "tu")
 
-This will:
-1. Research the codebase for implementation details
-2. Create execution plans (PLAN.md files) in `.planning/phases/05-whatsapp-cascade/`
-3. After planning, run `/gsd:execute-phase 5` to implement
+## Known Issues
 
-### Phase 5 scope (SLOT-03, SLOT-04, SLOT-05, SLOT-06)
+- Vercel Hobby: crons limited to daily only
+- Twilio WhatsApp sandbox: pre-joined numbers only
+- `appointment_slots` table may not exist in all tenants
 
-The cascade system that contacts candidates one-by-one via WhatsApp until a cancelled slot is filled. Key decisions already locked in `05-CONTEXT.md`:
+## Uncommitted Files
 
-- **Offer messages**: Italian, informal, full context (name, service, provider, location, both dates), 1-hour urgency mention
-- **Accept/decline**: Reply-based only (SI/NO in chat), reuse existing keyword patterns, AI fallback for unclear messages
-- **On accept**: Free candidate's original appointment + trigger chain cascade on that freed slot (unlimited depth, natural stop)
-- **Cascade exhaustion**: Notify staff when all candidates contacted without filling slot
-
-### After Phase 5
-
-- Phase 6: Revenue Metrics (honest metrics, configurable appointment value)
-- Phase 7: Recovery Dashboard (active offers with countdown, activity feed, KPI cards)
-
-## GSD Project State
-
-- **Milestone**: v1.1 Slot Recovery Engine
-- **Phase 4**: Complete (candidate detection — 3/3 plans done, all tests passing)
-- **Phase 5**: Context gathered, needs planning (`/gsd:plan-phase 5`)
-- **Phases 6-7**: Not started
-- **STATE.md**: `.planning/STATE.md` tracks current position
-- **ROADMAP.md**: `.planning/ROADMAP.md` has full phase breakdown
-
-## What Is In Progress (from previous sessions)
-
-### Supabase Realtime not broadcasting
-- **Status**: NOT FIXED — needs user action in Supabase Dashboard
-- **Fix**: Go to https://supabase.com/dashboard/project/hwxebnmrgrdzpfappyvk/database/replication and toggle Realtime ON for `appointments` table
-
-### Twilio Sandbox webhook URL
-- **Status**: User needs to set "When a message comes in" URL in Twilio Console
-- **URL**: `https://noshowzero-landing.vercel.app/api/webhooks/twilio` (POST)
-- **Where**: Twilio Console > Messaging > Try it out > Send a WhatsApp message > Sandbox Configuration
-
-### Admin icon on demo account
-- **Status**: Not started — user requested an admin icon visible only on their tenant
-
-## Key Decisions Made
-
-- **Demo tenant phone override at send level** (not DB level): Messages route to owner's phone in `sendNotification()`
-- **Actionable-first appointment lookup**: `loadPatientContext` prioritizes scheduled/reminder_sent/reminder_pending
-- **Explicit statusCallback per message**: Resilient to sandbox restarts
-- **Two-factor scoring**: appointmentDistance (0-60) + reliability (0-40) for candidate ranking
-- **24-hour decline cooldown**: Global cooldown after any decline, not per-slot
-- **Chain cascades**: When a candidate accepts, their freed appointment triggers another cascade
-
-## Known Issues & Gotchas
-
-- **All 19 patients share one phone** (`+393516761840`): Cascade testing needs awareness
-- **GitHub auth expired**: Use `vercel --prod` for deployments or run `gh auth login`
-- **Twilio sandbox fragile**: Restarting clears webhooks. Use `/noshowzero-twilio-sandbox` skill
-- **Sandbox rejoin**: After restart, send `join built-mood` from WhatsApp to +14155238886
-- **check-timeouts cron backfill is dead code**: triggerBackfill guards on cancelled/no_show but cron sets status=timeout
-- **triggerBackfill only tries top 2 candidates**: Needs rewrite for full cascade (Phase 5 work)
-- **Offer expiry is 2 hours**: Needs changing to 1 hour per requirements
-
-## Environment & Config
-
-- **Vercel env vars**: `TWILIO_WEBHOOK_URL` = `https://noshowzero-landing.vercel.app/api/webhooks/twilio`
-- **Twilio sandbox number**: `whatsapp:+14155238886`
-- **Twilio Account SID**: `ACdf1258f0c7328c70456bb0fda16dec62` (in `.env.local`)
-- **Demo tenant ID**: `e1d14300-10cb-42d0-9e9d-eb8fee866570`
-- **Test phone**: `+393516761840`
-- **Supabase project ref**: `hwxebnmrgrdzpfappyvk`
+- `src/lib/ai/decision-engine.ts`, `src/lib/ai/__tests__/decision-engine.test.ts`
+- `src/app/api/ai/strategy-log/route.ts`
+- `src/lib/backfill/trigger-backfill.ts` (wired decision engine)
+- `src/lib/engine/process-pending.ts`, `src/lib/backfill/process-response.ts`, `src/lib/backfill/check-expired-offers.ts`, `src/lib/confirmation/escalation.ts`, `src/lib/intelligence/no-show-detector.ts` (added triggerEvent)
+- `src/lib/backfill/__tests__/trigger-backfill.test.ts`, `src/lib/backfill/__tests__/process-response.test.ts` (test updates)
 
 ## How to Verify
 
 ```bash
-# Build
-npx next build
-
-# Deploy (GitHub auth broken, use Vercel CLI)
-vercel --prod
-
-# Run tests
-npx jest --passWithNoTests
+npx next build        # should pass
+npx vitest run        # 113 tests passing
 ```

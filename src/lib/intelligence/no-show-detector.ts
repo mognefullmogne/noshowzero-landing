@@ -101,7 +101,7 @@ export async function detectNoShows(
     // Trigger cascade — the slot may be recoverable if it is part of a
     // same-day schedule where later candidates could still benefit
     try {
-      const offerId = await triggerBackfill(supabase, appt.id, tenantId);
+      const offerId = await triggerBackfill(supabase, appt.id, tenantId, { triggerEvent: "no_show" });
       if (offerId) cascaded++;
     } catch (err) {
       console.error("[NoShowDetector] Cascade error for appointment:", appt.id, err);

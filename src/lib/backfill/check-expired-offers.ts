@@ -63,7 +63,8 @@ export async function checkExpiredOffers(
     const offerId = await triggerBackfill(
       supabase,
       offer.original_appointment_id,
-      offer.tenant_id
+      offer.tenant_id,
+      { triggerEvent: "offer_expired" }
     );
     if (offerId) cascaded++;
   }

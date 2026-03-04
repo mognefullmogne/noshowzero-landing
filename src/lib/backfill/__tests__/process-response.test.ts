@@ -194,7 +194,8 @@ describe("processAccept", () => {
     expect(triggerBackfill).toHaveBeenCalledWith(
       expect.anything(),
       CANDIDATE_APPT_ID,
-      TENANT_ID
+      TENANT_ID,
+      expect.objectContaining({ triggerEvent: "cancellation" })
     );
   });
 
@@ -348,7 +349,8 @@ describe("processDecline", () => {
     expect(triggerBackfill).toHaveBeenCalledWith(
       expect.anything(),
       ORIGINAL_APPT_ID,
-      TENANT_ID
+      TENANT_ID,
+      expect.objectContaining({ triggerEvent: "offer_declined" })
     );
   });
 });

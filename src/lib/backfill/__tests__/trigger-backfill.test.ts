@@ -15,6 +15,28 @@ vi.mock("@/lib/backfill/send-offer", () => ({
   sendOffer: vi.fn(),
 }));
 
+vi.mock("@/lib/ai/decision-engine", () => ({
+  decideStrategy: vi.fn().mockResolvedValue({
+    strategy: "cascade",
+    reasoning: "Standard cascade.",
+    parallelCount: 1,
+    expiryMinutes: 60,
+    urgencyPrefix: null,
+    contactChannel: "best_for_patient",
+    rebookCancellingPatient: false,
+    messagePersonalization: null,
+    aiGenerated: false,
+  }),
+}));
+
+vi.mock("@/lib/ai/smart-rebook", () => ({
+  generateRebookingSuggestions: vi.fn(),
+}));
+
+vi.mock("@/lib/twilio/send-notification", () => ({
+  sendNotification: vi.fn(),
+}));
+
 import { findCandidates } from "@/lib/backfill/find-candidates";
 import { sendOffer } from "@/lib/backfill/send-offer";
 
