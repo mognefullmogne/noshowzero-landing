@@ -79,3 +79,47 @@ npx next build        # should pass, zero errors
 npx vitest run        # unit tests
 npm run dev           # http://localhost:3000
 ```
+
+## Parallel Agent Workflow (cmux + claude instances)
+
+The user prefers splitting work into parallel claude instances via cmux split panes. Here's how:
+
+```bash
+# 1. Create a split pane
+cmux new-split right    # returns e.g. "OK surface:5 workspace:1"
+
+# 2. Type 'claude' and press Enter to start a claude instance
+cmux send --surface surface:5 'claude'
+cmux send-key --surface surface:5 Enter
+
+# 3. Wait ~8 seconds for claude to boot, then verify it's ready
+sleep 8
+cmux read-screen --surface surface:5 --lines 5
+# Should show the "❯" prompt with "Opus 4.6 │ noshowzero-landing"
+
+# 4. Send the task prompt, then press Enter
+cmux send --surface surface:5 "Your job: [describe task clearly]. When done say DONE."
+cmux send-key --surface surface:5 Enter
+
+# 5. Monitor progress periodically
+cmux read-screen --surface surface:6 --lines 10
+
+# 6. When agent says DONE, exit and close
+cmux send --surface surface:5 '/exit'
+cmux send-key --surface surface:5 Enter
+sleep 2
+cmux close-surface --surface surface:5
+
+# 7. Notify the user and flash
+cmux notify --title "Task Complete" --subtitle "Details" --body "Description"
+cmux trigger-flash
+```
+
+Key notes:
+- Always send `claude` first, press Enter, wait for it to boot, THEN send the prompt separately
+- Do NOT use `claude -p "prompt"` — it runs non-interactively and may not work properly
+- Use `cmux read-screen --surface surface:N --lines 15` to check progress
+- Use `cmux read-screen --surface surface:N --lines 50 --scrollback` to see full output history
+- Max 3 parallel instances to avoid overwhelming the system
+- `cmux send-key` for special keys: `Enter`, `ctrl-c`, etc.
+- `cmux trigger-flash` to get user's attention when work is complete
