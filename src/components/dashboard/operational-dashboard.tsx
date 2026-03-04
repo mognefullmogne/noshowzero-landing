@@ -22,6 +22,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ActiveOffersSection, type ActiveOffer } from "./active-offers-section";
+import { ActivityFeedSection, type ActivityEvent } from "./activity-feed-section";
 
 // --- Types ---
 
@@ -111,31 +113,39 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [recentOffers, setRecentOffers] = useState<readonly OfferPreview[]>([]);
+  const [activeOffers, setActiveOffers] = useState<readonly ActiveOffer[]>([]);
+  const [activityEvents, setActivityEvents] = useState<readonly ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [dashRes, analyticsRes, offersRes] = await Promise.all([
+      const [dashRes, analyticsRes, offersRes, activeRes, activityRes] = await Promise.all([
         fetch("/api/dashboard"),
         fetch("/api/analytics"),
         fetch("/api/offers?pageSize=5"),
+        fetch("/api/offers?status=pending&pageSize=50"),
+        fetch("/api/offers?pageSize=20"),
       ]);
 
       if (!dashRes.ok || !analyticsRes.ok) {
         throw new Error("Errore nel caricamento dei dati");
       }
 
-      const [dashData, analyticsData, offersData] = await Promise.all([
+      const [dashData, analyticsData, offersData, activeData, activityData] = await Promise.all([
         dashRes.json(),
         analyticsRes.json(),
         offersRes.ok ? offersRes.json() : { success: false },
+        activeRes.ok ? activeRes.json() : { success: false },
+        activityRes.ok ? activityRes.json() : { success: false },
       ]);
 
       if (dashData.success) setDashboard(dashData.data);
       if (analyticsData.success) setAnalytics(analyticsData.data);
       if (offersData.success) setRecentOffers(offersData.data ?? []);
+      if (activeData.success) setActiveOffers(activeData.data ?? []);
+      if (activityData.success) setActivityEvents(activityData.data ?? []);
       setError(null);
     } catch {
       if (!silent) setError("Impossibile caricare i dati. Riprova tra qualche secondo.");
@@ -284,6 +294,16 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
           iconColor={dashboard?.urgentCount ? "text-red-600" : "text-gray-400"}
           iconBg={dashboard?.urgentCount ? "bg-red-50" : "bg-gray-50"}
         />
+      </div>
+
+      {/* Active Offers -- DASH-01 */}
+      <div className="mb-6">
+        <ActiveOffersSection offers={activeOffers} />
+      </div>
+
+      {/* Recovery Activity Feed -- DASH-02 */}
+      <div className="mb-6">
+        <ActivityFeedSection events={activityEvents} />
       </div>
 
       {/* Two-column: Recent Activity + Urgent Deadlines */}
