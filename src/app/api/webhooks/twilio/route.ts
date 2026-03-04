@@ -325,23 +325,26 @@ async function findPatientByPhone(
   if (!patients || patients.length === 0) return null;
   if (patients.length === 1) return patients[0];
 
-  // Multiple patients share this phone — prefer the one most likely responding.
-  // Priority: reminder_sent (actively contacted) > reminder_pending > scheduled
+  // Multiple patients share this phone — prefer the one with the nearest
+  // actionable appointment (most likely the one the user is responding to).
+  // Priority: reminder_sent > reminder_pending > scheduled, then by soonest date.
   const now = new Date().toISOString();
+  const patientIds = patients.map((p) => p.id);
   const STATUS_PRIORITY = ["reminder_sent", "reminder_pending", "scheduled"] as const;
 
   for (const targetStatus of STATUS_PRIORITY) {
-    for (const p of patients) {
-      const { data: appt } = await supabase
-        .from("appointments")
-        .select("id")
-        .eq("patient_id", p.id)
-        .eq("status", targetStatus)
-        .gte("scheduled_at", now)
-        .order("scheduled_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (appt) return p;
+    const { data: nearestAppt } = await supabase
+      .from("appointments")
+      .select("patient_id")
+      .in("patient_id", patientIds)
+      .eq("status", targetStatus)
+      .gte("scheduled_at", now)
+      .order("scheduled_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (nearestAppt) {
+      return patients.find((p) => p.id === nearestAppt.patient_id) ?? null;
     }
   }
 
