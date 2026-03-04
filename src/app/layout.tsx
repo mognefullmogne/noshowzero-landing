@@ -10,31 +10,31 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "NoShowZero — Eliminate No-Shows with AI",
+  title: "NoShowZero — Elimina i No-Show con l'IA",
   description:
-    "AI-powered appointment management that reduces no-shows by up to 80%. Smart reminders, AI waitlists, and automatic slot filling for any appointment-based business.",
+    "Gestione appuntamenti con IA che riduce i no-show fino all'80%. Promemoria intelligenti, liste d'attesa IA e riempimento automatico degli slot per qualsiasi attività su appuntamento.",
   keywords: [
     "no-show",
-    "appointment management",
-    "AI reminders",
-    "waitlist",
-    "scheduling",
-    "healthcare",
-    "salon",
+    "gestione appuntamenti",
+    "promemoria IA",
+    "lista d'attesa",
+    "prenotazioni",
+    "sanità",
+    "salone",
     "booking",
   ],
   openGraph: {
-    title: "NoShowZero — Eliminate No-Shows with AI",
+    title: "NoShowZero — Elimina i No-Show con l'IA",
     description:
-      "Smart reminders, AI-powered waitlists, and automatic slot filling. Reduce no-shows by up to 80%.",
+      "Promemoria intelligenti, liste d'attesa IA e riempimento automatico degli slot. Riduci i no-show fino all'80%.",
     type: "website",
     url: "https://noshowzero-landing.vercel.app",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NoShowZero — Eliminate No-Shows with AI",
+    title: "NoShowZero — Elimina i No-Show con l'IA",
     description:
-      "Smart reminders, AI-powered waitlists, and automatic slot filling. Reduce no-shows by up to 80%.",
+      "Promemoria intelligenti, liste d'attesa IA e riempimento automatico degli slot. Riduci i no-show fino all'80%.",
   },
 };
 
@@ -44,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="it" className="scroll-smooth">
       <body className={`${sora.variable} font-sans antialiased`}>
         {children}
         <Toaster position="top-right" richColors visibleToasts={3} />

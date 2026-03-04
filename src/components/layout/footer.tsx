@@ -2,21 +2,21 @@ import Link from "next/link";
 import { Zap } from "lucide-react";
 
 const footerLinks = {
-  Product: [
-    { label: "Features", href: "/#features" },
-    { label: "Pricing", href: "/pricing" },
-    { label: "API Docs", href: "/dashboard" },
-    { label: "Integrations", href: "/#how-it-works" },
+  Prodotto: [
+    { label: "Funzionalità", href: "/#features" },
+    { label: "Prezzi", href: "/pricing" },
+    { label: "Documentazione API", href: "/dashboard" },
+    { label: "Integrazioni", href: "/#how-it-works" },
   ],
-  Company: [
-    { label: "About", href: "/#" },
+  Azienda: [
+    { label: "Chi Siamo", href: "/#" },
     { label: "Blog", href: "/#" },
-    { label: "Careers", href: "/#" },
-    { label: "Contact", href: "/#" },
+    { label: "Lavora con Noi", href: "/#" },
+    { label: "Contatti", href: "/#" },
   ],
-  Legal: [
-    { label: "Privacy Policy", href: "/#" },
-    { label: "Terms of Service", href: "/#" },
+  "Note Legali": [
+    { label: "Informativa Privacy", href: "/#" },
+    { label: "Condizioni di Servizio", href: "/#" },
     { label: "HIPAA Compliance", href: "/#" },
     { label: "GDPR", href: "/#" },
   ],
@@ -38,8 +38,8 @@ export function Footer() {
               </span>
             </Link>
             <p className="mt-4 text-sm text-slate-500 leading-relaxed">
-              AI-powered appointment management that eliminates no-shows and fills empty slots
-              automatically.
+              Gestione appuntamenti con IA che elimina i no-show e riempie gli slot vuoti
+              automaticamente.
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-slate-100 pt-8">
           <p className="text-center text-sm text-slate-400">
-            &copy; {new Date().getFullYear()} NoShowZero. All rights reserved.
+            &copy; {new Date().getFullYear()} NoShowZero. Tutti i diritti riservati.
           </p>
         </div>
       </div>
