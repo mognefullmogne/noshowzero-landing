@@ -11,10 +11,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **SLOT-01**: When a patient cancels or no-shows, the system automatically identifies candidate patients from all future scheduled appointments
 - [x] **SLOT-02**: Candidates are ranked by AI priority score (clinical urgency, wait time, proximity to cancelled slot, reliability history)
-- [ ] **SLOT-03**: The system sends a WhatsApp offer to the top-ranked candidate with accept/decline options
-- [ ] **SLOT-04**: If a candidate declines or doesn't respond within 1 hour, the system automatically offers to the next candidate
+- [x] **SLOT-03**: The system sends a WhatsApp offer to the top-ranked candidate with accept/decline options
+- [x] **SLOT-04**: If a candidate declines or doesn't respond within 1 hour, the system automatically offers to the next candidate
 - [ ] **SLOT-05**: When a candidate accepts, a new appointment is created in the cancelled slot and the candidate's original appointment is freed
-- [ ] **SLOT-06**: The cascade stops when the slot is filled or all viable candidates have been contacted
+- [x] **SLOT-06**: The cascade stops when the slot is filled or all viable candidates have been contacted
 
 ### Metrics & Revenue
 
@@ -67,10 +67,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | SLOT-01 | Phase 4 | Complete |
 | SLOT-02 | Phase 4 | Complete |
-| SLOT-03 | Phase 5 | Pending |
-| SLOT-04 | Phase 5 | Pending |
+| SLOT-03 | Phase 5 | Complete |
+| SLOT-04 | Phase 5 | Complete |
 | SLOT-05 | Phase 5 | Pending |
-| SLOT-06 | Phase 5 | Pending |
+| SLOT-06 | Phase 5 | Complete |
 | METR-01 | Phase 6 | Pending |
 | METR-02 | Phase 6 | Pending |
 | METR-03 | Phase 6 | Pending |

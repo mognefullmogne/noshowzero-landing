@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Slot Recovery Engine
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-04T14:21:05.276Z"
-last_activity: 2026-03-04 — Completed 04-03 (trigger-backfill tests, 23 tests passing)
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-04T14:52:16.730Z"
+last_activity: 2026-03-04 — Completed 05-01 (Italian reply-based template, 1hr expiry, cascade plumbing)
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_plans: 12
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** When a patient cancels, the system automatically fills that slot by contacting the best-fit patient via WhatsApp -- no staff intervention, no empty chairs, no lost revenue.
-**Current focus:** Phase 4 — Candidate Detection
+**Current focus:** Phase 5 — WhatsApp Cascade
 
 ## Current Position
 
-Phase: 4 of 7 (Candidate Detection) — first phase of v1.1
-Plan: 3 of 3 in current phase — PHASE COMPLETE
+Phase: 5 of 7 (WhatsApp Cascade)
+Plan: 1 of 2 in current phase — 05-01 complete
 Status: Executing
-Last activity: 2026-03-04 — Completed 04-03 (trigger-backfill tests, 23 tests passing)
+Last activity: 2026-03-04 — Completed 05-01 (Italian reply-based template, 1hr expiry, cascade plumbing)
 
-Progress: [██████████] 100% (phase 4 complete)
+Progress: [█████████░] 92% (11/12 plans)
 
 ## Performance Metrics
 
@@ -58,6 +58,10 @@ Progress: [██████████] 100% (phase 4 complete)
 - [Phase 04-02]: Deduplication keeps farthest-out appointment to maximize appointmentDistance scoring component
 - [Phase 04-02]: send-offer.ts waitlist_entries update removed — appointment-based candidates have no entry to update
 - [Phase 04-candidate-detection]: Tests confirmed trigger-backfill.ts and send-offer.ts were already correctly updated in 04-02 — no implementation changes needed in 04-03, only test coverage added
+- [Phase 05-01]: MAX_OFFERS_PER_SLOT set to 10 — reasonable cap preventing runaway cascades
+- [Phase 05-01]: Cascade exhaustion recorded via audit_log insert (dashboard already queries audit_log)
+- [Phase 05-01]: WhatsApp template uses SI/NO reply, SMS/email keep URL-based links as fallback
+- [Phase 05-01]: Token generation preserved for DB security (token_hash), but URLs omitted from WhatsApp message body
 
 ### Pending Todos
 
@@ -71,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T14:21:05.274Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-whatsapp-cascade/05-CONTEXT.md
+Last session: 2026-03-04T14:52:16.729Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
