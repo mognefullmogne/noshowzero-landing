@@ -11,14 +11,15 @@ import { triggerBackfill } from "./trigger-backfill";
  * 1. Guard: offer must be pending + not expired + slot in future
  * 2. Atomically claim the offer (WHERE status = 'pending')
  * 3. Create new appointment (same slot details)
- * 4. Update offer → link new appointment, waitlist entry → fulfilled
+ * 4. Update offer → link new appointment
  * 5. Cancel any other pending offers for the same original appointment
- * 6. Schedule reminders for the new appointment
+ * 6. Free the candidate's original appointment (chain cascade trigger)
+ * 7. Schedule reminders for the new appointment
  */
 export async function processAccept(
   supabase: SupabaseClient,
   offerId: string
-): Promise<{ success: boolean; newAppointmentId?: string; error?: string }> {
+): Promise<{ success: boolean; newAppointmentId?: string; freedAppointmentId?: string; error?: string }> {
   // Atomically claim the offer (WHERE status = 'pending' prevents double-acceptance)
   const { data: offer, error: claimError } = await supabase
     .from("waitlist_offers")
@@ -103,6 +104,26 @@ export async function processAccept(
     .eq("status", "pending")
     .neq("id", offerId);
 
+  // Free the candidate's original appointment (they moved to the earlier slot)
+  const candidateApptId: string | null = offer.candidate_appointment_id ?? null;
+  if (candidateApptId) {
+    await supabase
+      .from("appointments")
+      .update({
+        status: "cancelled",
+        declined_at: new Date().toISOString(),
+        notes: `Freed by slot recovery — patient moved to earlier slot ${offer.original_appointment_id}`,
+      })
+      .eq("id", candidateApptId)
+      .eq("tenant_id", offer.tenant_id)
+      .in("status", ["scheduled", "reminder_pending", "reminder_sent", "confirmed"]);
+
+    // Chain cascade: the freed slot is now available for another patient
+    // Fire-and-forget — don't block the accept response
+    triggerBackfill(supabase, candidateApptId, offer.tenant_id)
+      .catch((err) => console.error("[Backfill] Chain cascade failed:", err));
+  }
+
   // Use patient's actual preferred channel for reminders
   const patientData = offer.patient as unknown as { preferred_channel?: string } | null;
   const preferredChannel = (patientData?.preferred_channel ?? "sms") as "email" | "sms" | "whatsapp";
@@ -116,14 +137,17 @@ export async function processAccept(
     preferredChannel,
   });
 
-  return { success: true, newAppointmentId: newAppt.id };
+  return {
+    success: true,
+    newAppointmentId: newAppt.id,
+    freedAppointmentId: candidateApptId ?? undefined,
+  };
 }
 
 /**
  * Decline flow:
  * 1. Update offer → declined
- * 2. If offers_sent < max_offers: reset waitlist entry → waiting
- * 3. Trigger backfill again → finds next best candidate
+ * 2. Trigger backfill again → finds next best candidate
  */
 export async function processDecline(
   supabase: SupabaseClient,
