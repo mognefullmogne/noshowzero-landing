@@ -16,6 +16,7 @@ import { findCandidates } from "./find-candidates";
 import { sendOffer } from "./send-offer";
 import { getPrequalifiedCandidates } from "./preemptive-cascade";
 import { getTimeAwareConfig } from "./time-aware-config";
+import { aiRerankCandidates } from "@/lib/scoring/ai-candidate-ranker";
 
 /** Maximum offers per slot to prevent runaway cascades. */
 const MAX_OFFERS_PER_SLOT = 10;
@@ -138,6 +139,33 @@ export async function triggerBackfill(
     }
 
     return null;
+  }
+
+  // AI re-ranking: only runs if ANTHROPIC_API_KEY is set and 3+ candidates
+  if (process.env.ANTHROPIC_API_KEY && candidates.length >= 3) {
+    try {
+      const rerankResult = await aiRerankCandidates(
+        candidates,
+        {
+          scheduledAt,
+          serviceName: appointment.service_name,
+          providerName: appointment.provider_name,
+          locationName: appointment.location_name,
+          durationMin: appointment.duration_min,
+        },
+        { tenantId }
+      );
+
+      if (rerankResult.aiReranked) {
+        candidates = rerankResult.candidates;
+        console.info(
+          `[Backfill] AI re-ranked ${candidates.length} candidates for appointment ${appointmentId}`
+        );
+      }
+    } catch (err) {
+      // AI failure is non-fatal — continue with math ranking
+      console.warn("[Backfill] AI rerank failed, using math ranking:", err);
+    }
   }
 
   // Determine how many candidates to contact in parallel
