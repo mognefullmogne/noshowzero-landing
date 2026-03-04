@@ -170,13 +170,15 @@ async function handleAcceptOffer(
   const result = await processAccept(supabase, input.offerId);
   if (!result.success) {
     console.error("[Router] Accept offer failed:", result.error, "offerId:", input.offerId);
-    return { reply: "Non e' stato possibile accettare l'offerta. Contatta la segreteria per assistenza." };
+    return {
+      reply: "Non e' stato possibile accettare l'offerta. Potrebbe essere gia' scaduta. Contatta la segreteria per assistenza.",
+    };
   }
 
-  return {
-    reply: "Ottimo! Hai accettato lo slot. Il tuo nuovo appuntamento e' confermato. Ti aspettiamo!",
-    action: "offer_accepted",
-  };
+  // Build detailed Italian confirmation with appointment details
+  const reply = await buildAcceptReply(supabase, result.newAppointmentId, result.freedAppointmentId);
+
+  return { reply, action: "offer_accepted" };
 }
 
 async function handleDeclineOffer(
@@ -194,7 +196,7 @@ async function handleDeclineOffer(
   }
 
   return {
-    reply: "Nessun problema. Se cambi idea, contatta la segreteria.",
+    reply: "Nessun problema! Il tuo appuntamento attuale resta confermato, non cambia nulla. Se hai bisogno, contatta la segreteria.",
     action: "offer_declined",
   };
 }
@@ -389,6 +391,77 @@ async function loadAppointmentContext(
     .join("\n");
 
   return { patientName, appointmentDetails: details, hasAppointment: true };
+}
+
+// --- Accept reply builder ---
+
+/**
+ * Build a detailed Italian accept confirmation including new appointment details
+ * and a mention of the freed old appointment.
+ */
+async function buildAcceptReply(
+  supabase: SupabaseClient,
+  newAppointmentId?: string,
+  freedAppointmentId?: string
+): Promise<string> {
+  const fallback = "Ottimo! Il tuo nuovo appuntamento e' confermato. Ti aspettiamo!";
+
+  if (!newAppointmentId) {
+    return fallback;
+  }
+
+  try {
+    const { data: newAppt } = await supabase
+      .from("appointments")
+      .select("service_name, provider_name, scheduled_at")
+      .eq("id", newAppointmentId)
+      .maybeSingle();
+
+    if (!newAppt) {
+      return fallback;
+    }
+
+    const date = new Date(newAppt.scheduled_at);
+    const dateStr = date.toLocaleDateString("it-IT", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    const timeStr = date.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const providerSuffix = newAppt.provider_name
+      ? ` con ${newAppt.provider_name}`
+      : "";
+
+    let reply = `Ottimo! Il tuo nuovo appuntamento e' confermato:\n${newAppt.service_name} il ${dateStr} alle ${timeStr}${providerSuffix}.`;
+
+    // Mention the freed old appointment if it was cancelled
+    if (freedAppointmentId) {
+      const { data: oldAppt } = await supabase
+        .from("appointments")
+        .select("scheduled_at")
+        .eq("id", freedAppointmentId)
+        .maybeSingle();
+
+      if (oldAppt) {
+        const oldDate = new Date(oldAppt.scheduled_at);
+        const oldDateStr = oldDate.toLocaleDateString("it-IT", {
+          day: "numeric",
+          month: "long",
+        });
+        reply += `\nIl tuo vecchio appuntamento del ${oldDateStr} e' stato cancellato.`;
+      }
+    }
+
+    reply += "\nTi aspettiamo!";
+    return reply;
+  } catch (err) {
+    console.error("[Router] Failed to build accept reply:", err);
+    return fallback;
+  }
 }
 
 // --- Utilities ---
