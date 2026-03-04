@@ -311,23 +311,33 @@ async function loadPatientContext(
   patientId: string,
   now: string
 ): Promise<{ nextAppointmentId?: string; activeOfferId?: string }> {
-  // Look for the most recent relevant appointment:
-  // 1. Future appointments (any actionable status)
-  // 2. OR recent appointments (past 7 days) that the patient might be replying to
-  // 3. Includes cancelled/declined so patients can change their mind
-  // This handles timezone mismatches and patients replying to today's appointment
+  // Prioritize actionable appointments (ones that can actually be confirmed/cancelled).
+  // Only fall back to confirmed/cancelled/declined if no actionable ones exist.
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: nextAppt } = await supabase
+  // 1. First: find an actionable appointment (scheduled, reminder_sent, reminder_pending)
+  const { data: actionableAppt } = await supabase
     .from("appointments")
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("patient_id", patientId)
-    .in("status", ["scheduled", "reminder_sent", "reminder_pending", "confirmed", "cancelled", "declined"])
+    .in("status", ["scheduled", "reminder_sent", "reminder_pending"])
     .gte("scheduled_at", sevenDaysAgo)
-    .order("scheduled_at", { ascending: false })
+    .order("scheduled_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+
+  // 2. Fallback: cancelled/declined (patient might want to re-confirm)
+  const nextAppt = actionableAppt ?? (await supabase
+    .from("appointments")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("patient_id", patientId)
+    .in("status", ["cancelled", "declined"])
+    .gte("scheduled_at", sevenDaysAgo)
+    .order("scheduled_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()).data;
 
   const { data: activeOffer } = await supabase
     .from("waitlist_offers")
