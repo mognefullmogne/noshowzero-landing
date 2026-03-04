@@ -74,7 +74,7 @@ Plans:
 ### v1.1 Slot Recovery Engine
 
 - [x] **Phase 4: Candidate Detection** - Wire cancellation trigger to auto-find and AI-rank replacement candidates from scheduled patients (completed 2026-03-04)
-- [ ] **Phase 5: WhatsApp Cascade** - Send one-by-one offers with 1-hour timeout, handle accept/decline/expire, fill the slot
+- [x] **Phase 5: WhatsApp Cascade** - Send one-by-one offers with 1-hour timeout, handle accept/decline/expire, fill the slot (completed 2026-03-04)
 - [ ] **Phase 6: Revenue Metrics** - Fix inflated metrics to count only real recoveries, add configurable appointment value and fill rate
 - [ ] **Phase 7: Recovery Dashboard** - Active offers with countdown, recovery activity feed, real-time KPI cards
 
@@ -106,7 +106,7 @@ Plans:
   3. When a candidate accepts, a new appointment is created in the cancelled slot's time and the candidate's original (later) appointment is freed for other patients
   4. The cascade stops immediately when a candidate accepts (slot filled) or when all viable candidates have been contacted (slot unfilled)
   5. No two candidates ever hold an active offer for the same slot simultaneously
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 05-01-PLAN.md -- Cascade engine: Italian reply-based offer messages, 1-hour expiry, clean cascade plumbing, max offers cap, exhaustion notification
@@ -152,6 +152,6 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 2. Core Realtime | v1.0 | 3/3 | Complete | 2026-03-03 |
 | 3. Resilience | v1.0 | 2/2 | Complete | 2026-03-03 |
 | 4. Candidate Detection | v1.1 | 3/3 | Complete | 2026-03-04 |
-| 5. WhatsApp Cascade | v1.1 | 0/2 | Not started | - |
+| 5. WhatsApp Cascade | 2/2 | Complete   | 2026-03-04 | - |
 | 6. Revenue Metrics | v1.1 | 0/? | Not started | - |
 | 7. Recovery Dashboard | v1.1 | 0/? | Not started | - |

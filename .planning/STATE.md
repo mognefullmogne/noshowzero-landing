@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Slot Recovery Engine
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-04T14:52:16.730Z"
-last_activity: 2026-03-04 — Completed 05-01 (Italian reply-based template, 1hr expiry, cascade plumbing)
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-04T14:59:56.687Z"
+last_activity: 2026-03-04 — Completed 05-02 (chain cascade on accept, Italian messages, AI offer fallback)
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** When a patient cancels, the system automatically fills that slot by contacting the best-fit patient via WhatsApp -- no staff intervention, no empty chairs, no lost revenue.
-**Current focus:** Phase 5 — WhatsApp Cascade
+**Current focus:** Phase 5 complete — WhatsApp Cascade
 
 ## Current Position
 
-Phase: 5 of 7 (WhatsApp Cascade)
-Plan: 1 of 2 in current phase — 05-01 complete
+Phase: 5 of 7 (WhatsApp Cascade) — COMPLETE
+Plan: 2 of 2 in current phase — 05-02 complete
 Status: Executing
-Last activity: 2026-03-04 — Completed 05-01 (Italian reply-based template, 1hr expiry, cascade plumbing)
+Last activity: 2026-03-04 — Completed 05-02 (chain cascade on accept, Italian messages, AI offer fallback)
 
-Progress: [█████████░] 92% (11/12 plans)
+Progress: [██████████] 100% (12/12 plans)
 
 ## Performance Metrics
 
@@ -62,6 +62,13 @@ Progress: [█████████░] 92% (11/12 plans)
 - [Phase 05-01]: Cascade exhaustion recorded via audit_log insert (dashboard already queries audit_log)
 - [Phase 05-01]: WhatsApp template uses SI/NO reply, SMS/email keep URL-based links as fallback
 - [Phase 05-01]: Token generation preserved for DB security (token_hash), but URLs omitted from WhatsApp message body
+- [Phase 05-02]: Chain cascade is fire-and-forget (.catch()) to avoid blocking accept response
+- [Phase 05-02]: Freed appointment uses existing "cancelled" status with descriptive notes ("Freed by slot recovery")
+- [Phase 05-02]: AI offer classifier uses narrowed 3-intent schema (accept_offer/decline_offer/unknown) for higher accuracy
+- [Phase 05-02]: Clarification prompt returned when AI offer classification confidence below 0.6
+- [Phase 05]: Chain cascade is fire-and-forget (.catch()) to avoid blocking accept response
+- [Phase 05]: Freed appointment uses existing cancelled status with descriptive notes (Freed by slot recovery)
+- [Phase 05]: AI offer classifier uses narrowed 3-intent schema (accept_offer/decline_offer/unknown)
 
 ### Pending Todos
 
@@ -75,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T14:52:16.729Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-04T14:59:51.170Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
