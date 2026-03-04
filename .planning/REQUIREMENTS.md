@@ -9,8 +9,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Slot Recovery
 
-- [ ] **SLOT-01**: When a patient cancels or no-shows, the system automatically identifies candidate patients from all future scheduled appointments
-- [ ] **SLOT-02**: Candidates are ranked by AI priority score (clinical urgency, wait time, proximity to cancelled slot, reliability history)
+- [x] **SLOT-01**: When a patient cancels or no-shows, the system automatically identifies candidate patients from all future scheduled appointments
+- [x] **SLOT-02**: Candidates are ranked by AI priority score (clinical urgency, wait time, proximity to cancelled slot, reliability history)
 - [ ] **SLOT-03**: The system sends a WhatsApp offer to the top-ranked candidate with accept/decline options
 - [ ] **SLOT-04**: If a candidate declines or doesn't respond within 1 hour, the system automatically offers to the next candidate
 - [ ] **SLOT-05**: When a candidate accepts, a new appointment is created in the cancelled slot and the candidate's original appointment is freed
@@ -65,8 +65,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLOT-01 | Phase 4 | Pending |
-| SLOT-02 | Phase 4 | Pending |
+| SLOT-01 | Phase 4 | Complete |
+| SLOT-02 | Phase 4 | Complete |
 | SLOT-03 | Phase 5 | Pending |
 | SLOT-04 | Phase 5 | Pending |
 | SLOT-05 | Phase 5 | Pending |

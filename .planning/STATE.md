@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Slot Recovery Engine
 status: planning
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-04T13:28:31.355Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-04T13:55:25.933Z"
 last_activity: 2026-03-04 — Roadmap created for v1.1 Slot Recovery Engine
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 10
+  completed_plans: 8
   percent: 0
 ---
 
@@ -51,6 +51,9 @@ Progress: [=======░░░░░░░░░░░░░] 0% (v1.1) | 100% (v1.
 - [v1.1]: 1-hour timeout per offer before cascade to next candidate
 - [v1.1]: Revenue = filled slots + saved no-shows (honest metrics only)
 - [v1.1]: Configurable appointment value per tenant
+- [Phase 04-candidate-detection]: Two-factor scoring: appointmentDistance (0-60 primary) + reliability (0-40 tiebreaker) for candidate ranking
+- [Phase 04-candidate-detection]: New patients (<2 appointments) get neutral reliability score of 20 to avoid penalizing first-timers
+- [Phase 04-candidate-detection]: waitlist_entry_id made nullable in WaitlistOffer to support appointment-based candidates
 
 ### Pending Todos
 
@@ -64,6 +67,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T13:28:31.353Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-candidate-detection/04-CONTEXT.md
+Last session: 2026-03-04T13:55:25.932Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
