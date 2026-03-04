@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[Webhook] Unhandled error:", err);
     return twimlResponse(
-      "Si e' verificato un errore. Riprova o contatta la segreteria."
+      "Si è verificato un errore. Riprova o contatta la segreteria."
     );
   }
 }

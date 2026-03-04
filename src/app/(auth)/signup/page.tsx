@@ -14,9 +14,9 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { createClient } from "@/lib/supabase/client";
 
 const signupSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(2, "Il nome deve contenere almeno 2 caratteri"),
+  email: z.string().email("Inserisci un'email valida"),
+  password: z.string().min(8, "La password deve contenere almeno 8 caratteri"),
 });
 
 type SignupValues = z.infer<typeof signupSchema>;
@@ -80,9 +80,9 @@ function SignupForm() {
   return (
     <div className="w-full max-w-md">
       <div className="rounded-2xl border border-black/[0.04] bg-white p-8 shadow-xl shadow-black/[0.03]">
-        <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Crea il tuo account</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Start your 14-day free trial. No credit card required.
+          Inizia la tua prova gratuita di 14 giorni. Nessuna carta richiesta.
         </p>
 
         <div className="mt-6">
@@ -94,17 +94,17 @@ function SignupForm() {
             <div className="w-full border-t border-black/[0.06]" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-3 text-gray-400">or continue with email</span>
+            <span className="bg-white px-3 text-gray-400">o continua con l&apos;email</span>
           </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="name">Full name</Label>
+            <Label htmlFor="name">Nome e cognome</Label>
             <Input
               id="name"
               type="text"
-              placeholder="John Doe"
+              placeholder="Mario Rossi"
               className="mt-1 rounded-xl"
               {...register("name")}
             />
@@ -133,7 +133,7 @@ function SignupForm() {
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Min. 8 characters"
+                placeholder="Min. 8 caratteri"
                 className="rounded-xl pr-10"
                 {...register("password")}
               />
@@ -162,18 +162,18 @@ function SignupForm() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account...
+                Creazione account...
               </>
             ) : (
-              "Create Account"
+              "Crea account"
             )}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-500">
-          Already have an account?{" "}
+          Hai già un account?{" "}
           <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700">
-            Log in
+            Accedi
           </Link>
         </p>
       </div>

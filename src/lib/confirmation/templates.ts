@@ -19,16 +19,16 @@ export function renderConfirmationWhatsApp(vars: ConfirmationVars): string {
   const location = vars.locationName ? ` presso ${vars.locationName}` : "";
 
   return [
-    `Gentile ${vars.patientName},`,
+    `Ciao ${vars.patientName}!`,
     "",
-    `le ricordiamo il suo appuntamento:`,
+    `Ti ricordiamo il tuo appuntamento:`,
     `📋 ${vars.serviceName}${provider}`,
     `📅 ${vars.date} alle ${vars.time}${location}`,
     "",
     `Per confermare rispondi *SI*`,
     `Per cancellare rispondi *NO*`,
     "",
-    `Grazie!`,
+    `A presto!`,
   ].join("\n");
 }
 
@@ -52,13 +52,13 @@ export function renderReminderWhatsApp(vars: ConfirmationVars): string {
   const location = vars.locationName ? ` presso ${vars.locationName}` : "";
 
   return [
-    `Gentile ${vars.patientName},`,
+    `Ciao ${vars.patientName}!`,
     "",
-    `non abbiamo ancora ricevuto la sua conferma per l'appuntamento di domani:`,
+    `Non abbiamo ancora ricevuto la tua conferma per l'appuntamento di domani:`,
     `📋 ${vars.serviceName}${provider}`,
     `📅 ${vars.date} alle ${vars.time}${location}`,
     "",
-    `La preghiamo di confermare rispondendo *SI* o cancellare con *NO*.`,
+    `Rispondi *SI* per confermare o *NO* per cancellare.`,
     "",
     `Grazie!`,
   ].join("\n");
@@ -68,8 +68,8 @@ export function renderReminderWhatsApp(vars: ConfirmationVars): string {
 
 export function renderFinalWarningSms(vars: ConfirmationVars): string {
   return (
-    `ULTIMO AVVISO: Il tuo appuntamento ${vars.serviceName} e' tra poche ore ` +
-    `(${vars.date} ore ${vars.time}). Rispondi SI per confermare o il posto verra' offerto ad altri.`
+    `ULTIMO AVVISO: Il tuo appuntamento ${vars.serviceName} è tra poche ore ` +
+    `(${vars.date} ore ${vars.time}). Rispondi SI per confermare o il posto verrà offerto ad altri.`
   );
 }
 
@@ -80,11 +80,11 @@ export function renderFinalWarningWhatsApp(vars: ConfirmationVars): string {
   return [
     `⚠️ *ULTIMO AVVISO*`,
     "",
-    `Gentile ${vars.patientName},`,
-    `il suo appuntamento e' tra poche ore:`,
+    `Ciao ${vars.patientName},`,
+    `il tuo appuntamento è tra poche ore:`,
     `📋 ${vars.serviceName}${provider}`,
     `📅 ${vars.date} alle ${vars.time}${location}`,
     "",
-    `Rispondi *SI* per confermare o il posto verra' offerto ad altri pazienti.`,
+    `Rispondi *SI* per confermare o il posto verrà offerto ad altri pazienti.`,
   ].join("\n");
 }

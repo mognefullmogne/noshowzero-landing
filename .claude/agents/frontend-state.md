@@ -1,37 +1,76 @@
 # Frontend Engineer State
 
-> Last checkpoint: 2026-03-04 (session start)
+> Last checkpoint: 2026-03-04 22:00 (context at 85% — stopping)
 
 ## Identity
 - Role: Frontend Engineer — builds and polishes dashboard pages and components
 - Model: sonnet (claude-sonnet-4-6)
+- Project path: /Users/aiassistant/products/noshowzero-landing
 
-## Currently Working On
-- Task: Visual audit of ALL pages (code review + UI localization audit)
-- Then: Fix any UI issues found (confirmed: auth pages are in English, need Italian)
+## RESUME FROM HERE
+After compaction, do this IN ORDER:
+1. Read /Users/aiassistant/products/noshowzero-landing/.claude/agents/AGENT-PROTOCOL.md
+2. Read THIS file
+3. Read /Users/aiassistant/products/noshowzero-landing/.claude/BOARD.md
+4. Then continue with "Next Up" section below
+
+## Build Status
+- Build: ✅ PASSING
+- Tests: ✅ 134/134 (Backend fixed the broken test — confirmed in BOARD.md)
 
 ## Completed This Session
-- Read HANDOFF.md, BOARD.md, AGENT-PROTOCOL.md
-- Claimed spot in BOARD.md Active Work section
-- Created this state file
+- ✅ src/app/(auth)/login/page.tsx — fully Italian
+- ✅ src/app/(auth)/signup/page.tsx — fully Italian
+- ✅ src/app/(auth)/forgot-password/page.tsx — fully Italian
+- ✅ src/components/auth/google-button.tsx — "Continua con Google"
+- ✅ src/app/(app)/settings/page.tsx — fully Italian (profile, password, danger zone)
+- ✅ src/app/(app)/onboarding/page.tsx — fully Italian (all 3 steps, €, /mese)
 
-## Next Up
-1. Audit auth pages (login, signup, forgot-password) — fix English copy to Italian
-2. Visual code audit of all main app pages for UI issues
-3. Run build + tests after fixes
+## Next Up (EXACT tasks to do on resume)
+
+### TASK 1: Fix sidebar "Sign Out" label
+- File: src/app/(app)/layout.tsx
+- Line ~183: Button with "Sign Out" text → change to "Esci"
+- This file is not locked by any agent
+
+### TASK 2: Audit & fix billing page
+- File: src/app/(app)/billing/page.tsx
+- Read the full file, look for English UI copy
+- Seen so far: lines 1-50 — all English strings expected (plan names, Stripe UI)
+- Need to read rest of file to find all strings
+
+### TASK 3: Audit & fix integrations page
+- File: src/app/(app)/integrations/page.tsx
+- Read full file, fix English copy
+
+### TASK 4: Audit & fix audit page
+- File: src/app/(app)/audit/page.tsx
+- Seen: "Audit Trail", "Immutable log of all system actions", "Entity Type" filter labels
+- These need Italian
+
+### TASK 5: Check rules page
+- File: src/app/(app)/rules/page.tsx
+- Not yet read — needs full read + audit
+
+### TASK 6: After all fixes — run build + tests
+- npx next build && npx vitest run
+- Must be 134/134 passing
+
+### TASK 7: Update BOARD.md
+- Change Frontend P1 task from 🔄 to ✅
+- Move Active Work entry to Completed
 
 ## Key Context
-- Sprint goal: Make NoShowZero work FLAWLESSLY end-to-end
-- CRITICAL UI issue from User Simulator: auth pages (login, signup) are in ENGLISH
-  - Login: "Log In", "Welcome back", "Forgot password?" — needs Italian
-  - Signup: "Create your account", "Create Account" — needs Italian
-- Italian Copywriter found 2 systemic backend issues (accents + Lei form) — those are Backend's job
-- Build: PASSING (134 tests after QA session)
-- Prod URL: https://noshowzero-landing.vercel.app
-- Auth pages: src/app/(auth)/login/page.tsx, signup/page.tsx, forgot-password/page.tsx
+- This is an Italian product for Italian clinics/studios
+- Staff-facing UI should be Italian (not just patient messages)
+- The sidebar nav items are already Italian (from layout.tsx)
+- Only the Sign Out button in sidebar footer is still English
 
-## Files I Own (locked in BOARD.md)
-- src/app/(auth)/login/page.tsx
-- src/app/(auth)/signup/page.tsx
-- src/app/(auth)/forgot-password/page.tsx
-- (more to be added after visual audit)
+## BOARD.md Active Work (my current entry)
+"Frontend Engineer | ⚠️ CONTEXT LIMIT — paused. Resume: check billing, integrations, rules, audit pages + sidebar Sign Out label."
+
+## Design Patterns (for reference)
+- Cards: rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm
+- Colors: blue=primary, indigo=secondary, amber=alert, green=success, red=danger
+- Loading: Loader2 spinner
+- Error: AlertTriangle + red bg

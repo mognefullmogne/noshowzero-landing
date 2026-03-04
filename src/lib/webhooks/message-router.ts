@@ -84,11 +84,11 @@ async function handleConfirm(
 
   if (error) {
     console.error("[Router] Confirm failed:", error);
-    return { reply: "Si e' verificato un errore. Riprova o contatta la segreteria." };
+    return { reply: "Si è verificato un errore. Riprova o contatta la segreteria." };
   }
 
   if (!data || data.length === 0) {
-    return { reply: "L'appuntamento e' gia' stato aggiornato. Contatta la segreteria per assistenza." };
+    return { reply: "L'appuntamento è già stato aggiornato. Contatta la segreteria per assistenza." };
   }
 
   // Update confirmation workflow if table exists (graceful — table may not be migrated yet)
@@ -107,7 +107,7 @@ async function handleConfirm(
   }
 
   return {
-    reply: "Perfetto! Il tuo appuntamento e' confermato. Ti aspettiamo!",
+    reply: "Perfetto! Il tuo appuntamento è confermato. Ti aspettiamo! 🎉",
     action: "appointment_confirmed",
   };
 }
@@ -133,11 +133,11 @@ async function handleCancel(
 
   if (error) {
     console.error("[Router] Cancel failed:", error);
-    return { reply: "Si e' verificato un errore. Riprova o contatta la segreteria." };
+    return { reply: "Si è verificato un errore. Riprova o contatta la segreteria." };
   }
 
   if (!data || data.length === 0) {
-    return { reply: "L'appuntamento e' gia' stato aggiornato. Contatta la segreteria per assistenza." };
+    return { reply: "L'appuntamento è già stato aggiornato. Contatta la segreteria per assistenza." };
   }
 
   // Update confirmation workflow if table exists (graceful — table may not be migrated yet)
@@ -181,7 +181,7 @@ async function handleCancel(
   }
 
   return {
-    reply: "Il tuo appuntamento e' stato cancellato. Riceverai a breve alcune proposte per riprogrammare.",
+    reply: "Il tuo appuntamento è stato cancellato. Riceverai a breve alcune proposte per riprogrammare.",
     action: "appointment_cancelled",
   };
 }
@@ -198,7 +198,7 @@ async function handleAcceptOffer(
   if (!result.success) {
     console.error("[Router] Accept offer failed:", result.error, "offerId:", input.offerId);
     return {
-      reply: "Non e' stato possibile accettare l'offerta. Potrebbe essere gia' scaduta. Contatta la segreteria per assistenza.",
+      reply: "Non è stato possibile accettare l'offerta. Potrebbe essere già scaduta. Contatta la segreteria per assistenza.",
     };
   }
 
@@ -219,7 +219,7 @@ async function handleDeclineOffer(
   const result = await processDecline(supabase, input.offerId);
   if (!result.success) {
     console.error("[Router] Decline offer failed:", result.error, "offerId:", input.offerId);
-    return { reply: "Si e' verificato un errore. Contatta la segreteria." };
+    return { reply: "Si è verificato un errore. Contatta la segreteria." };
   }
 
   return {
@@ -234,7 +234,7 @@ async function handleSlotSelect(
 ): Promise<RouteResult> {
   const match = input.messageBody.match(/[123]/);
   if (!match) {
-    return { reply: "Per favore rispondi con 1, 2 o 3 per selezionare uno slot." };
+    return { reply: "Per favore rispondi con 1, 2 o 3 per scegliere l'orario." };
   }
 
   const selectedIndex = parseInt(match[0], 10);
@@ -274,14 +274,14 @@ async function handleSlotSelect(
 
     if (updateError) {
       console.error("[Router] Slot proposal update failed:", updateError);
-      return { reply: "Si e' verificato un errore. Contatta la segreteria." };
+      return { reply: "Si è verificato un errore. Contatta la segreteria." };
     }
   } catch {
     return { reply: "Non ho trovato una proposta attiva. Contatta la segreteria." };
   }
 
   return {
-    reply: `Perfetto! Hai selezionato l'opzione ${selectedIndex}. Il tuo appuntamento e' confermato.`,
+    reply: `Perfetto! Hai selezionato l'opzione ${selectedIndex}. Il tuo appuntamento è confermato.`,
     action: "slot_selected",
   };
 }
@@ -431,7 +431,7 @@ async function buildAcceptReply(
   newAppointmentId?: string,
   freedAppointmentId?: string
 ): Promise<string> {
-  const fallback = "Ottimo! Il tuo nuovo appuntamento e' confermato. Ti aspettiamo!";
+  const fallback = "Ottimo! Il tuo nuovo appuntamento è confermato. Ti aspettiamo!";
 
   if (!newAppointmentId) {
     return fallback;
@@ -463,7 +463,7 @@ async function buildAcceptReply(
       ? ` con ${newAppt.provider_name}`
       : "";
 
-    let reply = `Ottimo! Il tuo nuovo appuntamento e' confermato:\n${newAppt.service_name} il ${dateStr} alle ${timeStr}${providerSuffix}.`;
+    let reply = `Ottimo! Il tuo nuovo appuntamento è confermato:\n${newAppt.service_name} il ${dateStr} alle ${timeStr}${providerSuffix}.`;
 
     // Mention the freed old appointment if it was cancelled
     if (freedAppointmentId) {
@@ -479,7 +479,7 @@ async function buildAcceptReply(
           day: "numeric",
           month: "long",
         });
-        reply += `\nIl tuo vecchio appuntamento del ${oldDateStr} e' stato cancellato.`;
+        reply += `\nIl tuo precedente appuntamento del ${oldDateStr} è stato cancellato.`;
       }
     }
 
@@ -596,5 +596,5 @@ function getFallbackReply(input: RouteInput): string {
   if (input.appointmentId) {
     return "Grazie per il tuo messaggio. Per confermare rispondi SI, per cancellare rispondi NO. Per altre richieste, contatta la segreteria.";
   }
-  return "Grazie per il tuo messaggio. Un operatore ti rispondera' al piu' presto. Per urgenze, chiama direttamente la segreteria.";
+  return "Grazie! Un operatore ti risponderà al più presto. Per urgenze chiama la segreteria.";
 }

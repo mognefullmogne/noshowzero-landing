@@ -14,8 +14,8 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { createClient } from "@/lib/supabase/client";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Inserisci un'email valida"),
+  password: z.string().min(1, "La password è obbligatoria"),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -29,9 +29,9 @@ export default function LoginPage() {
 }
 
 const ALLOWED_MESSAGES: Record<string, string> = {
-  "check-email": "Check your email to confirm your account.",
-  "session-expired": "Your session has expired. Please log in again.",
-  "password-reset": "Password reset successfully. Please log in.",
+  "check-email": "Controlla la tua email per confermare il tuo account.",
+  "session-expired": "La tua sessione è scaduta. Effettua nuovamente l'accesso.",
+  "password-reset": "Password reimpostata con successo. Accedi al tuo account.",
 };
 
 function isSafeRedirect(url: string): boolean {
@@ -78,8 +78,8 @@ function LoginForm() {
   return (
     <div className="w-full max-w-md">
       <div className="rounded-2xl border border-black/[0.04] bg-white p-8 shadow-xl shadow-black/[0.03]">
-        <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-gray-500">Log in to your NowShow account.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Bentornato/a</h1>
+        <p className="mt-1 text-sm text-gray-500">Accedi al tuo account NoShowZero.</p>
 
         {message && (
           <div className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-600">
@@ -96,7 +96,7 @@ function LoginForm() {
             <div className="w-full border-t border-black/[0.06]" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-3 text-gray-400">or continue with email</span>
+            <span className="bg-white px-3 text-gray-400">o continua con l&apos;email</span>
           </div>
         </div>
 
@@ -122,14 +122,14 @@ function LoginForm() {
                 href="/forgot-password"
                 className="text-xs font-medium text-blue-600 hover:text-blue-700"
               >
-                Forgot password?
+                Password dimenticata?
               </Link>
             </div>
             <div className="relative mt-1">
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
+                placeholder="Inserisci la tua password"
                 className="rounded-xl pr-10"
                 {...register("password")}
               />
@@ -158,18 +158,18 @@ function LoginForm() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Logging in...
+                Accesso in corso...
               </>
             ) : (
-              "Log In"
+              "Accedi"
             )}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-500">
-          Don&apos;t have an account?{" "}
+          Non hai un account?{" "}
           <Link href="/signup" className="font-semibold text-blue-600 hover:text-blue-700">
-            Sign up free
+            Registrati gratis
           </Link>
         </p>
       </div>

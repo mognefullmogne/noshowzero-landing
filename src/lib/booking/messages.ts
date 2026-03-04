@@ -17,7 +17,7 @@ export function askService(name: string): string {
 }
 
 export const ASK_DATE =
-  "Per quando preferisci? (es: lunedi prossimo, domani, il 15 marzo)";
+  "Per quando preferisci? (es: lunedì prossimo, domani, il 15 marzo)";
 
 export function slotsFound(slots: readonly ProposedSlotOption[]): string {
   const lines = slots.map((s) => {
@@ -34,11 +34,11 @@ export function slotsFound(slots: readonly ProposedSlotOption[]): string {
     return `${s.index}. ${dayStr} ore ${timeStr} - ${s.providerName}`;
   });
 
-  return `Ho trovato questi slot disponibili:\n\n${lines.join("\n")}\n\nRispondi con il numero (${slots.map((s) => s.index).join(", ")}) per confermare.`;
+  return `Ho trovato questi orari disponibili:\n\n${lines.join("\n")}\n\nRispondi con il numero (${slots.map((s) => s.index).join(", ")}) per confermare.`;
 }
 
 export const NO_SLOTS =
-  "Non ci sono slot disponibili per quella data. Prova un'altra data o scrivi 'annulla' per uscire.";
+  "Non ci sono orari disponibili per quella data. Prova un'altra data o scrivi 'annulla' per uscire.";
 
 export function confirmed(
   service: string,
@@ -46,14 +46,14 @@ export function confirmed(
   time: string,
   provider: string
 ): string {
-  return `Perfetto! Il tuo appuntamento e' stato prenotato:\n- ${service}\n- ${date} ore ${time}\n- ${provider}\n\nRiceverai un promemoria prima dell'appuntamento. A presto!`;
+  return `Perfetto! Il tuo appuntamento è stato prenotato:\n- ${service}\n- ${date} ore ${time}\n- ${provider}\n\nRiceverai un promemoria prima dell'appuntamento. A presto!`;
 }
 
 export const CANCELLED =
-  "Prenotazione annullata. Se desideri prenotare in futuro, scrivi 'prenotare'.";
+  "Prenotazione annullata. Se desideri prenotare in futuro, scrivi 'prenota'.";
 
 export const EXPIRED =
-  "La sessione di prenotazione e' scaduta per inattivita'. Scrivi 'prenotare' per ricominciare.";
+  "La sessione di prenotazione è scaduta per inattività. Scrivi 'prenota' per ricominciare.";
 
 export const MAX_ATTEMPTS =
   "Mi dispiace, non sono riuscito a capire. Contatta la segreteria per assistenza nella prenotazione.";
@@ -65,13 +65,13 @@ export const INVALID_NAME =
   "Non ho capito il nome. Per favore scrivi Nome e Cognome (es: Mario Rossi).";
 
 export const INVALID_DATE =
-  "Non ho capito la data. Prova con: domani, lunedi prossimo, il 15 marzo...";
+  "Non ho capito la data. Prova con: domani, lunedì prossimo, il 15 marzo...";
 
 export const INVALID_SLOT =
-  "Scelta non valida. Per favore rispondi con il numero dello slot desiderato.";
+  "Scelta non valida. Per favore rispondi con il numero dell'orario desiderato.";
 
 export const SLOT_TAKEN =
-  "Lo slot selezionato non e' piu' disponibile. Prova un'altra data o scrivi 'annulla'.";
+  "L'orario selezionato non è più disponibile. Prova un'altra data o scrivi 'annulla'.";
 
 export const GENERIC_ERROR =
-  "Si e' verificato un errore. Riprova o contatta la segreteria.";
+  "Si è verificato un errore. Riprova o contatta la segreteria.";

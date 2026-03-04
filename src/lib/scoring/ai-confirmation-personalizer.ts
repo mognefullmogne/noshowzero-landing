@@ -251,7 +251,7 @@ export function buildFallbackMessage(
         return `${input.patientName}, ricorda il tuo appuntamento${provider}: ${dateStr} ore ${timeStr}. Rispondi SI per confermare o NO per cancellare.`;
       case "high":
       case "critical":
-        return `${input.patientName}, il tuo posto${provider} il ${dateStr} ore ${timeStr} e' richiesto. Conferma con SI o sara' offerto ad altri.`;
+        return `${input.patientName}, il tuo posto${provider} il ${dateStr} ore ${timeStr} è richiesto. Conferma con SI o sarà offerto ad altri.`;
     }
   }
 
@@ -267,11 +267,11 @@ export function buildFallbackMessage(
       ].join("\n");
     case "medium":
       return [
-        `Gentile ${input.patientName},`,
+        `Ciao ${input.patientName},`,
         `ti ricordiamo il tuo appuntamento:`,
         `${input.serviceName}${provider}`,
         `${dateStr} alle ${timeStr}`,
-        `Ti preghiamo di confermare rispondendo *SI* o cancellare con *NO*.`,
+        `Rispondi *SI* per confermare o *NO* per cancellare.`,
       ].join("\n");
     case "high":
     case "critical":
@@ -279,7 +279,7 @@ export function buildFallbackMessage(
         `${input.patientName}, il tuo appuntamento si avvicina:`,
         `${input.serviceName}${provider}`,
         `${dateStr} alle ${timeStr}`,
-        `Questo posto e' molto richiesto. Conferma con *SI* o il posto sara' offerto ad altri pazienti.`,
+        `Questo posto è molto richiesto. Conferma con *SI* o il posto sarà offerto ad altri pazienti.`,
       ].join("\n");
   }
 }

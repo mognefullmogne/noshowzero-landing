@@ -113,7 +113,7 @@ export async function runOperatorChat(
 
   // Max iterations reached
   return {
-    response: "Ho raggiunto il limite di operazioni. Per favore riprova con una richiesta piu' semplice.",
+    response: "Ho raggiunto il limite di operazioni. Per favore riprova con una richiesta più semplice.",
     tool_calls: toolCalls,
     tokens_used: totalTokens,
   };

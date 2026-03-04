@@ -233,7 +233,7 @@ describe("buildFallbackMessage", () => {
   it("builds a professional message for medium risk", () => {
     const msg = buildFallbackMessage(input, "medium", 300);
 
-    expect(msg).toContain("Gentile");
+    expect(msg).toContain("Ciao");
     expect(msg).toContain("*SI*");
     expect(msg).toContain("*NO*");
   });

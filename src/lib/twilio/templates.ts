@@ -25,35 +25,35 @@ function render(template: string, vars: TemplateVars): string {
 }
 
 const TEMPLATES = {
-  waitlist_offer_whatsapp: `Ciao {{patient_name}}! Si e' liberato un posto per {{service_name}} il {{date}} alle {{time}}{{location_suffix}}{{provider_suffix}}.
+  waitlist_offer_whatsapp: `Ciao {{patient_name}}! Si è liberato un posto per {{service_name}} il {{date}} alle {{time}}{{location_suffix}}{{provider_suffix}}.
 
-Il tuo appuntamento attuale e' il {{current_appointment_date}} alle {{current_appointment_time}}.
+Il tuo appuntamento attuale è il {{current_appointment_date}} alle {{current_appointment_time}}.
 
 Hai {{expiry_description}} per rispondere (scade alle {{expires_at}}).
 
 Rispondi SI per accettare o NO per rifiutare.`,
 
-  waitlist_offer_sms: `NoShowZero: Slot disponibile per {{service_name}} il {{date}} {{time}}. Accetta: {{accept_url}} | Rifiuta: {{decline_url}} (scade {{expires_at}})`,
+  waitlist_offer_sms: `NoShowZero: Posto disponibile per {{service_name}} il {{date}} {{time}}. Accetta: {{accept_url}} | Rifiuta: {{decline_url}} (scade {{expires_at}})`,
 
-  waitlist_offer_email_subject: `Slot disponibile: {{service_name}} il {{date}} alle {{time}}`,
+  waitlist_offer_email_subject: `Posto disponibile: {{service_name}} il {{date}} alle {{time}}`,
 
-  waitlist_offer_email_body: `Gentile {{patient_name}},
+  waitlist_offer_email_body: `Ciao {{patient_name}}!
 
-Buone notizie! Si è liberato uno slot per il servizio che stava aspettando.
+Buone notizie! Si è liberato un posto per il servizio che stavi aspettando.
 
 📋 Servizio: {{service_name}}
 📅 Data: {{date}}
 🕐 Ora: {{time}}{{location_line}}{{provider_line}}
 
-Ha {{expiry_description}} per accettare questo slot (scade alle {{expires_at}}).
+Hai {{expiry_description}} per accettare (scade alle {{expires_at}}).
 
 👉 Per ACCETTARE: {{accept_url}}
 👉 Per RIFIUTARE: {{decline_url}}
 👉 Stato offerta: {{status_url}}
 
-Se non risponde entro la scadenza, lo slot verrà offerto al prossimo paziente in lista d'attesa.
+Se non rispondi entro la scadenza, il posto verrà offerto al prossimo paziente in lista d'attesa.
 
-Cordiali saluti,
+A presto!
 Il team NoShowZero`,
 } as const;
 

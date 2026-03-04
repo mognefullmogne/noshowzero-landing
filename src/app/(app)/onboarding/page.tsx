@@ -22,21 +22,21 @@ import { useTenant } from "@/hooks/use-tenant";
 import { cn } from "@/lib/utils";
 
 const INDUSTRIES = [
-  "Healthcare",
-  "Dental",
-  "Salon & Spa",
-  "Auto Service",
+  "Sanità",
+  "Dentistico",
+  "Salone & Spa",
+  "Autofficina",
   "Fitness",
-  "Professional Services",
-  "Veterinary",
-  "Other",
+  "Servizi Professionali",
+  "Veterinario",
+  "Altro",
 ];
 
 const SIZES = [
-  "Solo (1 person)",
-  "Small (2-10)",
-  "Medium (11-50)",
-  "Large (50+)",
+  "Solo (1 persona)",
+  "Piccolo (2-10)",
+  "Medio (11-50)",
+  "Grande (50+)",
 ];
 
 type Step = 1 | 2 | 3;
@@ -105,7 +105,7 @@ export default function OnboardingPage() {
     );
 
     if (dbError) {
-      setError("Failed to save your business info. Please try again.");
+      setError("Errore nel salvataggio. Riprova tra qualche istante.");
       setLoading(false);
       return;
     }
@@ -179,9 +179,9 @@ export default function OnboardingPage() {
   }
 
   const STEP_LABELS = [
-    "Business Info",
-    "Choose Plan",
-    "You're Ready!",
+    "Il tuo studio",
+    "Piano",
+    "Pronti!",
   ];
 
   return (
@@ -233,30 +233,30 @@ export default function OnboardingPage() {
               <Building2 className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Tell us about your business</h1>
-              <p className="text-sm text-gray-500">This helps us customize your experience.</p>
+              <h1 className="text-2xl font-bold text-gray-900">Raccontaci del tuo studio</h1>
+              <p className="text-sm text-gray-500">Ci aiuta a personalizzare la tua esperienza.</p>
             </div>
           </div>
 
           <div className="mt-8 space-y-6">
             <div>
-              <Label htmlFor="business-name">Business name *</Label>
+              <Label htmlFor="business-name">Nome dello studio *</Label>
               <Input
                 id="business-name"
-                placeholder="e.g., Bright Smile Dental"
+                placeholder="es. Studio Dentistico Rossi"
                 className="mt-1 rounded-xl"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
               />
               <p className="mt-1 text-xs text-gray-400">
-                This will be shown in your dashboard and reminders.
+                Verrà mostrato nella dashboard e nei promemoria ai pazienti.
               </p>
             </div>
 
             <div>
-              <Label>Industry <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <Label>Settore <span className="text-gray-400 font-normal">(facoltativo)</span></Label>
               <p className="text-xs text-gray-400 mt-0.5">
-                Helps us tailor AI settings for your business type.
+                Ci aiuta a ottimizzare le impostazioni AI per il tuo tipo di studio.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {INDUSTRIES.map((ind) => (
@@ -277,9 +277,9 @@ export default function OnboardingPage() {
             </div>
 
             <div>
-              <Label>Team size <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <Label>Dimensioni del team <span className="text-gray-400 font-normal">(facoltativo)</span></Label>
               <p className="text-xs text-gray-400 mt-0.5">
-                Helps us recommend the right plan.
+                Ci aiuta a consigliarti il piano più adatto.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {SIZES.map((s) => (
@@ -307,7 +307,7 @@ export default function OnboardingPage() {
               className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 text-white shadow-lg shadow-blue-600/25"
             >
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Continue
+              Continua
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -322,9 +322,9 @@ export default function OnboardingPage() {
               <CreditCard className="h-6 w-6 text-indigo-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Choose your plan</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Scegli il tuo piano</h1>
               <p className="text-sm text-gray-500">
-                All plans include a 14-day free trial. You won&apos;t be charged today.
+                Tutti i piani includono 14 giorni gratuiti. Non ti verrà addebitato nulla oggi.
               </p>
             </div>
           </div>
@@ -340,7 +340,7 @@ export default function OnboardingPage() {
                   : "text-gray-500 hover:text-gray-700",
               )}
             >
-              Monthly
+              Mensile
             </button>
             <button
               onClick={() => setBillingInterval("annual")}
@@ -351,7 +351,7 @@ export default function OnboardingPage() {
                   : "text-gray-500 hover:text-gray-700",
               )}
             >
-              Annual <span className="text-green-500 font-bold">-20%</span>
+              Annuale <span className="text-green-500 font-bold">-20%</span>
             </button>
           </div>
 
@@ -378,7 +378,7 @@ export default function OnboardingPage() {
                         <span className="font-bold text-gray-900">{plan.name}</span>
                         {plan.highlighted && (
                           <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700">
-                            Popular
+                            Popolare
                           </span>
                         )}
                       </div>
@@ -386,11 +386,11 @@ export default function OnboardingPage() {
                     </div>
                     <div className="text-right">
                       {plan.tier === "enterprise" ? (
-                        <span className="text-lg font-bold text-gray-900">Custom</span>
+                        <span className="text-lg font-bold text-gray-900">Personalizzato</span>
                       ) : (
                         <>
-                          <span className="text-lg font-bold text-gray-900">${price}</span>
-                          <span className="text-sm text-gray-500">/mo</span>
+                          <span className="text-lg font-bold text-gray-900">€{price}</span>
+                          <span className="text-sm text-gray-500">/mese</span>
                         </>
                       )}
                     </div>
@@ -407,7 +407,7 @@ export default function OnboardingPage() {
               className="text-gray-500"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              Indietro
             </Button>
             <div className="flex gap-3">
               <Button
@@ -416,7 +416,7 @@ export default function OnboardingPage() {
                 className="rounded-xl"
                 disabled={loading}
               >
-                Skip for now
+                Salta per ora
               </Button>
               <Button
                 onClick={handleStep2}
@@ -424,7 +424,7 @@ export default function OnboardingPage() {
                 className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 text-white shadow-lg shadow-blue-600/25"
               >
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {selectedPlan === "enterprise" ? "Contact Sales" : "Start Free Trial"}
+                {selectedPlan === "enterprise" ? "Contatta il team" : "Inizia la prova gratuita"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -440,15 +440,15 @@ export default function OnboardingPage() {
           </div>
 
           <h1 className="mt-6 text-2xl font-bold text-gray-900">
-            You&apos;re all set!
+            Tutto pronto!
           </h1>
           <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
-            Your NowShow account is ready. {apiKey ? "Here's your API key to get started — or head to the dashboard where everything is waiting for you." : "Head to your dashboard to generate an API key and start integrating."}
+            Il tuo account NoShowZero è pronto. {apiKey ? "Ecco la tua chiave API per iniziare — o vai alla dashboard dove trovi tutto quello che ti serve." : "Vai alla dashboard per generare una chiave API e iniziare l'integrazione."}
           </p>
 
           {apiKey && (
             <div className="mx-auto mt-8 max-w-md">
-              <Label className="text-left block text-sm font-medium text-gray-700">Your API Key</Label>
+              <Label className="text-left block text-sm font-medium text-gray-700">La tua chiave API</Label>
               <div className="mt-2 flex items-center gap-2">
                 <code className="flex-1 rounded-xl border border-black/[0.06] bg-gray-50 px-4 py-3 text-left text-sm font-mono text-gray-700 break-all">
                   {apiKey}
@@ -468,7 +468,7 @@ export default function OnboardingPage() {
               </div>
               <p className="mt-2 text-xs text-amber-600 text-left flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
-                Save this key now — it won&apos;t be shown again.
+                Salva questa chiave ora — non sarà mostrata di nuovo.
               </p>
             </div>
           )}
@@ -478,14 +478,14 @@ export default function OnboardingPage() {
               onClick={() => router.push("/dashboard")}
               className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 text-white shadow-lg shadow-blue-600/25"
             >
-              Go to Dashboard
+              Vai alla dashboard
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <button
               onClick={() => router.push("/docs")}
               className="text-sm text-blue-600 hover:text-blue-700 underline"
             >
-              Read the API documentation
+              Leggi la documentazione API
             </button>
           </div>
         </div>

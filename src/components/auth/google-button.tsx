@@ -39,7 +39,7 @@ export function GoogleButton() {
           fill="#EA4335"
         />
       </svg>
-      Continue with Google
+      Continua con Google
     </Button>
   );
 }

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
 const forgotSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
+  email: z.string().email("Inserisci un'email valida"),
 });
 
 type ForgotValues = z.infer<typeof forgotSchema>;
@@ -52,15 +52,15 @@ export default function ForgotPasswordPage() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
             <CheckCircle className="h-7 w-7 text-green-600" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-gray-900">Check your email</h1>
+          <h1 className="mt-4 text-2xl font-bold text-gray-900">Controlla la tua email</h1>
           <p className="mt-2 text-sm text-gray-500">
-            We&apos;ve sent a password reset link to your email address. Click the link to reset
-            your password.
+            Abbiamo inviato un link per reimpostare la password al tuo indirizzo email. Clicca il
+            link per continuare.
           </p>
           <Button asChild variant="outline" className="mt-6 w-full rounded-xl">
             <Link href="/login">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to login
+              Torna all&apos;accesso
             </Link>
           </Button>
         </div>
@@ -71,9 +71,9 @@ export default function ForgotPasswordPage() {
   return (
     <div className="w-full max-w-md">
       <div className="rounded-2xl border border-black/[0.04] bg-white p-8 shadow-xl shadow-black/[0.03]">
-        <h1 className="text-2xl font-bold text-gray-900">Reset your password</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Reimposta la password</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Enter your email and we&apos;ll send you a reset link.
+          Inserisci la tua email e ti invieremo un link per reimpostare la password.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
@@ -103,10 +103,10 @@ export default function ForgotPasswordPage() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending...
+                Invio in corso...
               </>
             ) : (
-              "Send Reset Link"
+              "Invia link di reimpostazione"
             )}
           </Button>
         </form>
@@ -114,7 +114,7 @@ export default function ForgotPasswordPage() {
         <p className="mt-6 text-center text-sm text-gray-500">
           <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700">
             <ArrowLeft className="mr-1 inline-block h-3 w-3" />
-            Back to login
+            Torna all&apos;accesso
           </Link>
         </p>
       </div>
