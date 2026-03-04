@@ -113,7 +113,7 @@ export default function OnboardingPage() {
 
   async function handleStep2() {
     if (selectedPlan === "enterprise") {
-      location.assign("mailto:sales@nowshow.com?subject=Enterprise%20Inquiry");
+      location.assign("mailto:info@noshowzero.com?subject=Enterprise%20Inquiry");
       return;
     }
 

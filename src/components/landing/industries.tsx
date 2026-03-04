@@ -31,7 +31,7 @@ export function Industries() {
             Built for Every Industry
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
-            If your business runs on appointments, NowShow works for you.
+            If your business runs on appointments, NoShowZero works for you.
           </p>
         </ScrollReveal>
       </div>

@@ -21,7 +21,7 @@ export function Faq() {
               Frequently Asked Questions
             </h2>
             <p className="mt-4 text-lg text-slate-500">
-              Everything you need to know about NowShow.
+              Everything you need to know about NoShowZero.
             </p>
           </ScrollReveal>
         </div>

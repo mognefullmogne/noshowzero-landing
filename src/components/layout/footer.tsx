@@ -65,7 +65,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-slate-100 pt-8">
           <p className="text-center text-sm text-slate-400">
-            &copy; {new Date().getFullYear()} NowShow. All rights reserved.
+            &copy; {new Date().getFullYear()} NoShowZero. All rights reserved.
           </p>
         </div>
       </div>

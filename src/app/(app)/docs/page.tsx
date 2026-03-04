@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const API_BASE = "https://api.nowshow.com/v1";
+const API_BASE = "https://api.noshowzero.com/v1";
 
 interface CodeBlockProps {
   readonly code: string;
@@ -114,9 +114,9 @@ export default function DocsPage() {
 
         {/* How It Works */}
         <section id="how-it-works">
-          <h1 className="text-2xl font-bold text-gray-900">How NowShow Works</h1>
+          <h1 className="text-2xl font-bold text-gray-900">How NoShowZero Works</h1>
           <p className="mt-2 text-gray-600 leading-relaxed">
-            NowShow plugs into your existing scheduling software and <strong>runs entirely on autopilot</strong>.
+            NoShowZero plugs into your existing scheduling software and <strong>runs entirely on autopilot</strong>.
             There is nothing to run manually — once connected, the AI handles everything.
           </p>
 
@@ -127,12 +127,12 @@ export default function DocsPage() {
                 {
                   step: "1",
                   title: "Your software creates an appointment",
-                  desc: "A client books via your website, app, or front desk. Your system sends the appointment data to NowShow automatically.",
+                  desc: "A client books via your website, app, or front desk. Your system sends the appointment data to NoShowZero automatically.",
                   color: "blue",
                 },
                 {
                   step: "2",
-                  title: "NowShow AI takes over",
+                  title: "NoShowZero AI takes over",
                   desc: "We score the no-show risk, pick the best reminder channel & timing, and schedule everything. Zero human effort.",
                   color: "indigo",
                 },
@@ -165,7 +165,7 @@ export default function DocsPage() {
               <div>
                 <p className="text-sm font-semibold text-green-800">This is fully automatic</p>
                 <p className="text-xs text-green-600 mt-0.5">
-                  After the one-time setup, your scheduling software talks to NowShow in the background.
+                  After the one-time setup, your scheduling software talks to NoShowZero in the background.
                   Every new appointment is automatically analyzed, reminders are sent at the perfect time,
                   and cancellations trigger instant waitlist matching. Nobody runs any commands — it just works.
                 </p>
@@ -178,7 +178,7 @@ export default function DocsPage() {
         <section id="no-code">
           <h2 className="text-xl font-bold text-gray-900">Option A: No Code Needed</h2>
           <p className="mt-2 text-sm text-gray-600">
-            If you don&apos;t have custom scheduling software and just want to use NowShow directly,
+            If you don&apos;t have custom scheduling software and just want to use NoShowZero directly,
             you don&apos;t need any code at all.
           </p>
 
@@ -188,9 +188,9 @@ export default function DocsPage() {
                 <Monitor className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Use the NowShow Dashboard</h3>
+                <h3 className="font-semibold text-gray-900">Use the NoShowZero Dashboard</h3>
                 <p className="mt-1 text-sm text-gray-600 leading-relaxed">
-                  Log in to your NowShow account, add appointments through our web interface,
+                  Log in to your NoShowZero account, add appointments through our web interface,
                   manage your waitlist, and see analytics — all without writing a single line of code.
                   The AI works the same way whether you use the dashboard or the API.
                 </p>
@@ -209,7 +209,7 @@ export default function DocsPage() {
                 <p className="text-sm font-medium text-amber-800">When do you need the API?</p>
                 <p className="text-xs text-amber-600 mt-0.5">
                   The API is for <strong>software companies</strong> or businesses with <strong>existing scheduling systems</strong> (like
-                  an EHR, a booking platform, or a custom app) that want to integrate NowShow automatically.
+                  an EHR, a booking platform, or a custom app) that want to integrate NoShowZero automatically.
                   If you book appointments using Google Calendar, a notebook, or our dashboard — you don&apos;t need it.
                 </p>
               </div>
@@ -221,8 +221,8 @@ export default function DocsPage() {
         <section id="quick-start">
           <h2 className="text-xl font-bold text-gray-900">Option B: API Integration (for Developers)</h2>
           <p className="mt-2 text-sm text-gray-600">
-            If you have existing scheduling software, a developer connects it to NowShow <strong>once</strong>.
-            After that, everything is automatic — your software sends appointments to NowShow, and NowShow handles the rest.
+            If you have existing scheduling software, a developer connects it to NoShowZero <strong>once</strong>.
+            After that, everything is automatic — your software sends appointments to NoShowZero, and NoShowZero handles the rest.
           </p>
 
           <div className="mt-6 space-y-8">
@@ -244,7 +244,7 @@ export default function DocsPage() {
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">Add a few lines to your booking code (one time)</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Wherever your software creates a new appointment, add a call to NowShow.
+                  Wherever your software creates a new appointment, add a call to NoShowZero.
                   Here&apos;s what that looks like — this code goes <strong>inside your existing software</strong> and runs automatically every time a client books:
                 </p>
 
@@ -253,7 +253,7 @@ export default function DocsPage() {
 // whenever a new appointment is created
 
 async function onAppointmentCreated(appointment) {
-  // Send the appointment to NowShow — AI handles the rest
+  // Send the appointment to NoShowZero — AI handles the rest
   await fetch("${API_BASE}/appointments", {
     method: "POST",
     headers: {
@@ -270,7 +270,7 @@ async function onAppointmentCreated(appointment) {
       type: appointment.serviceType,
     }),
   });
-  // That's it! NowShow now:
+  // That's it! NoShowZero now:
   // ✓ Scores the no-show risk
   // ✓ Schedules smart reminders (WhatsApp, SMS, email)
   // ✓ Monitors for cancellations
@@ -299,7 +299,7 @@ def on_appointment_created(appointment):
             "type": appointment["service_type"],
         },
     )
-    # Done! NowShow AI takes it from here.`} />
+    # Done! NoShowZero AI takes it from here.`} />
                 </div>
               </div>
             </div>
@@ -310,7 +310,7 @@ def on_appointment_created(appointment):
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">Optionally: handle cancellations too</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  If a client cancels through your software, tell NowShow so the AI can instantly offer the slot to the next person on the waitlist:
+                  If a client cancels through your software, tell NoShowZero so the AI can instantly offer the slot to the next person on the waitlist:
                 </p>
 
                 <div className="mt-3">
@@ -335,7 +335,7 @@ async function onAppointmentCancelled(appointmentId, reason) {
   const result = await response.json();
   // result.waitlist_triggered = true
   // result.slot_offered_to = "Jane Doe"
-  // → NowShow already texted Jane to offer her the slot!
+  // → NoShowZero already texted Jane to offer her the slot!
 }`} />
                 </div>
               </div>
@@ -350,7 +350,7 @@ async function onAppointmentCancelled(appointmentId, reason) {
                 <h3 className="font-semibold text-gray-900">That&apos;s the entire integration</h3>
                 <p className="mt-1 text-sm text-gray-500">
                   From this point forward, everything is automatic. Your software creates appointments
-                  as usual, NowShow analyzes each one, sends perfectly timed reminders, and fills
+                  as usual, NoShowZero analyzes each one, sends perfectly timed reminders, and fills
                   cancellations from the waitlist. No manual work, no commands to run, no monitoring needed.
                 </p>
               </div>
@@ -370,7 +370,7 @@ async function onAppointmentCancelled(appointmentId, reason) {
             <CodeBlock language="javascript" code={`// Set your API key once in your app's config
 const NOWSHOW_API_KEY = process.env.NOWSHOW_API_KEY;
 
-// Every request to NowShow includes this header automatically
+// Every request to NoShowZero includes this header automatically
 const headers = {
   "X-API-Key": NOWSHOW_API_KEY,
   "Content-Type": "application/json",
@@ -392,7 +392,7 @@ const headers = {
         <section id="appointments">
           <h2 className="text-xl font-bold text-gray-900">Appointments</h2>
           <p className="mt-2 text-sm text-gray-600">
-            When your software sends an appointment to NowShow, the AI automatically scores
+            When your software sends an appointment to NoShowZero, the AI automatically scores
             the no-show risk and schedules the optimal reminders. No further action needed.
           </p>
 
@@ -400,7 +400,7 @@ const headers = {
             <EndpointBlock
               method="POST"
               path="/appointments"
-              description="Send a new appointment to NowShow"
+              description="Send a new appointment to NoShowZero"
               requestBody={`{
   "patient_name": "John Smith",
   "patient_phone": "+1234567890",
@@ -423,7 +423,7 @@ const headers = {
   "created_at": "2026-03-03T12:00:00Z"
 }
 
-→ NowShow immediately scheduled 2 reminders
+→ NoShowZero immediately scheduled 2 reminders
 → Risk score 0.23 = low risk, standard reminders`}
             />
 
@@ -492,7 +492,7 @@ Query params:
         <section id="reminders">
           <h2 className="text-xl font-bold text-gray-900">Reminders</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Reminders are <strong>100% automatic</strong>. When you send an appointment to NowShow,
+            Reminders are <strong>100% automatic</strong>. When you send an appointment to NoShowZero,
             the AI picks the best channel and timing. You can also check reminder status or manually
             trigger extras if needed.
           </p>
@@ -600,7 +600,7 @@ Query params:
         <section id="contacts">
           <h2 className="text-xl font-bold text-gray-900">Contacts</h2>
           <p className="mt-2 text-sm text-gray-600">
-            NowShow automatically builds a reliability profile for each client over time.
+            NoShowZero automatically builds a reliability profile for each client over time.
             The more appointments they have, the better the AI predicts their no-show risk.
           </p>
 
@@ -634,13 +634,13 @@ Query params:
         <section id="webhooks">
           <h2 className="text-xl font-bold text-gray-900">Webhooks</h2>
           <p className="mt-2 text-sm text-gray-600">
-            NowShow can notify your software in real-time when things happen — like a reminder
+            NoShowZero can notify your software in real-time when things happen — like a reminder
             being delivered, a slot being filled, or a high-risk appointment detected. Your software
             receives these events automatically (no polling needed).
           </p>
 
           <div className="mt-4 rounded-xl border border-black/[0.06] bg-white p-4">
-            <p className="text-sm font-semibold text-gray-900 mb-3">Events NowShow sends to you</p>
+            <p className="text-sm font-semibold text-gray-900 mb-3">Events NoShowZero sends to you</p>
             <div className="space-y-2">
               {[
                 { event: "appointment.created", desc: "New appointment registered" },
@@ -732,7 +732,7 @@ Query params:
           </p>
           <div className="mt-4 flex items-center justify-center gap-3">
             <a
-              href="mailto:support@nowshow.com?subject=API%20Integration%20Help"
+              href="mailto:support@noshowzero.com?subject=API%20Integration%20Help"
               className="inline-flex items-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Email Support

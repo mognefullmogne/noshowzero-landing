@@ -10,7 +10,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "NowShow — Eliminate No-Shows with AI",
+  title: "NoShowZero — Eliminate No-Shows with AI",
   description:
     "AI-powered appointment management that reduces no-shows by up to 80%. Smart reminders, AI waitlists, and automatic slot filling for any appointment-based business.",
   keywords: [
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     "booking",
   ],
   openGraph: {
-    title: "NowShow — Eliminate No-Shows with AI",
+    title: "NoShowZero — Eliminate No-Shows with AI",
     description:
       "Smart reminders, AI-powered waitlists, and automatic slot filling. Reduce no-shows by up to 80%.",
     type: "website",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "NowShow — Eliminate No-Shows with AI",
+    title: "NoShowZero — Eliminate No-Shows with AI",
     description:
       "Smart reminders, AI-powered waitlists, and automatic slot filling. Reduce no-shows by up to 80%.",
   },
