@@ -36,11 +36,15 @@ async function sendWithRetry(params: SendParams, attempt: number = 1): Promise<S
   }
 
   try {
+    // Explicit statusCallback avoids sandbox "none" default that blocks sends (error 21609)
+    const statusCallback = process.env.TWILIO_WEBHOOK_URL || undefined;
+
     if (params.channel === "whatsapp") {
       const msg = await client.messages.create({
         from: getTwilioWhatsAppFrom(),
         to: params.to.startsWith("whatsapp:") ? params.to : `whatsapp:${params.to}`,
         body: params.body,
+        ...(statusCallback && { statusCallback }),
       });
       return { externalMessageId: msg.sid, provider: "twilio-whatsapp", status: "sent" };
     }
@@ -50,6 +54,7 @@ async function sendWithRetry(params: SendParams, attempt: number = 1): Promise<S
         from: getTwilioSmsFrom(),
         to: params.to.replace(/^whatsapp:/, ""),
         body: params.body,
+        ...(statusCallback && { statusCallback }),
       });
       return { externalMessageId: msg.sid, provider: "twilio-sms", status: "sent" };
     }
