@@ -56,17 +56,13 @@ export async function triggerBackfill(
     return null;
   }
 
-  // Find candidates
+  // Find candidates — appointment-based detection (SLOT-01)
   const candidates = await findCandidates(supabase, {
     appointmentId,
     tenantId,
-    serviceName: appointment.service_name,
-    serviceCode: appointment.service_code,
-    providerName: appointment.provider_name,
-    locationName: appointment.location_name,
+    cancellingPatientId: appointment.patient_id,
     scheduledAt: new Date(appointment.scheduled_at),
     durationMin: appointment.duration_min,
-    paymentCategory: appointment.payment_category,
   });
 
   if (candidates.length === 0) {

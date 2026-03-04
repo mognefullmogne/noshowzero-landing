@@ -1,134 +1,237 @@
 /**
- * Find and rank waitlist candidates for a cancelled appointment slot.
- * Uses smart scoring to match candidates based on urgency, reliability,
- * time preference, waiting time, distance, provider, and payment.
+ * Find and rank candidate patients for a cancelled appointment slot.
+ *
+ * Queries the appointments table (not waitlist_entries) for scheduled patients
+ * who could move to an earlier slot. Applies filtering, deduplication, and
+ * scoring via the 2-factor computeCandidateScore algorithm.
+ *
+ * SLOT-01: Appointment-based candidate detection
+ * SLOT-02: Candidate scoring and ranking
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { SmartScoreBreakdown } from "@/lib/types";
-import { computeWaitlistScore } from "@/lib/scoring/waitlist-score";
+import type { CandidateScoreBreakdown } from "@/lib/types";
+import { computeCandidateScore } from "@/lib/scoring/candidate-score";
+
+export interface OpenSlotDetails {
+  readonly appointmentId: string; // the cancelled appointment
+  readonly tenantId: string;
+  readonly cancellingPatientId: string; // exclude self-referential candidates
+  readonly scheduledAt: Date; // the slot's time
+  readonly durationMin: number; // for conflict detection
+}
 
 export interface RankedCandidate {
-  readonly waitlistEntryId: string;
+  readonly candidateAppointmentId: string; // the appointment being moved earlier
   readonly patientId: string;
   readonly patientName: string;
   readonly patientPhone: string | null;
   readonly patientEmail: string | null;
   readonly preferredChannel: "whatsapp" | "sms" | "email";
-  readonly smartScore: SmartScoreBreakdown;
+  readonly candidateScore: CandidateScoreBreakdown;
+  readonly currentAppointmentAt: Date;
 }
 
-interface SlotDetails {
-  readonly appointmentId: string;
-  readonly tenantId: string;
-  readonly serviceName: string;
-  readonly serviceCode: string | null;
-  readonly providerName: string | null;
-  readonly locationName: string | null;
-  readonly scheduledAt: Date;
-  readonly durationMin: number;
-  readonly paymentCategory: string | null;
+const MIN_LEAD_TIME_MS = 2 * 3_600_000; // 2 hours
+const CANDIDATE_FETCH_LIMIT = 200; // fetch more than needed for post-query filtering
+const ACTIVE_STATUSES = ["scheduled", "reminder_pending", "reminder_sent", "confirmed"] as const;
+
+/** Shape of a row returned from the appointments query with joined patient data. */
+interface AppointmentRow {
+  readonly id: string;
+  readonly tenant_id: string;
+  readonly patient_id: string;
+  readonly scheduled_at: string;
+  readonly duration_min: number;
+  readonly status: string;
+  readonly patient: {
+    readonly id: string;
+    readonly first_name: string;
+    readonly last_name: string;
+    readonly phone: string | null;
+    readonly email: string | null;
+    readonly preferred_channel: string;
+  } | null;
 }
 
 /**
- * Query waitlist for matching candidates, score & rank them by smart_score DESC.
- * Excludes candidates who have already exhausted their max_offers.
+ * Returns a ranked list of candidate patients for an open appointment slot.
+ *
+ * Filtering rules applied in order:
+ * 1. Slot must be at least 2 hours in the future
+ * 2. Only appointments AFTER the open slot are considered
+ * 3. Cancelling patient is excluded
+ * 4. Patients who declined an offer in the last 24 hours are excluded
+ * 5. Appointments that time-conflict with the open slot are excluded
+ * 6. Deduplication: one entry per patient (farthest-out appointment kept)
+ *
+ * Results are scored by computeCandidateScore and sorted descending.
  */
 export async function findCandidates(
   supabase: SupabaseClient,
-  slot: SlotDetails,
-  limit: number = 10
+  slot: OpenSlotDetails,
+  limit: number = 50
 ): Promise<readonly RankedCandidate[]> {
-  // Slot must be in the future
-  if (slot.scheduledAt <= new Date()) {
+  const now = new Date();
+
+  // Guard: slot must be in the future with at least 2-hour lead time
+  if (slot.scheduledAt <= now) {
     console.warn("[Backfill] Slot is in the past — skipping candidate search");
     return [];
   }
-
-  // Query active waitlist entries matching service + tenant
-  let query = supabase
-    .from("waitlist_entries")
-    .select("*, patient:patients(*)")
-    .eq("tenant_id", slot.tenantId)
-    .eq("status", "waiting")
-    .eq("service_name", slot.serviceName);
-
-  // Filter by location if specified (sanitize to prevent PostgREST filter injection)
-  if (slot.locationName) {
-    const safeLocation = slot.locationName.replace(/[,()."'\\]/g, "");
-    query = query.or(`location_name.eq.${safeLocation},location_name.is.null`);
-  }
-
-  const { data: entries, error } = await query.limit(50);
-
-  if (error) {
-    console.error("[Backfill] Failed to query waitlist:", error);
+  if (slot.scheduledAt.getTime() - now.getTime() < MIN_LEAD_TIME_MS) {
+    console.warn("[Backfill] Slot is less than 2 hours away — skipping candidate search");
     return [];
   }
 
-  if (!entries || entries.length === 0) return [];
+  // Fetch candidate appointments: scheduled AFTER the open slot, active statuses
+  const { data: appointments, error: apptError } = await supabase
+    .from("appointments")
+    .select("*, patient:patients(id, first_name, last_name, phone, email, preferred_channel)")
+    .eq("tenant_id", slot.tenantId)
+    .in("status", ACTIVE_STATUSES)
+    .gt("scheduled_at", slot.scheduledAt.toISOString())
+    .neq("patient_id", slot.cancellingPatientId)
+    .limit(CANDIDATE_FETCH_LIMIT);
 
-  // Filter: valid_until not expired, offers_sent < max_offers
-  const now = new Date();
-  const validEntries = entries.filter((e) => {
-    if (e.offers_sent >= e.max_offers) return false;
-    if (e.valid_until && new Date(e.valid_until) < now) return false;
+  if (apptError) {
+    console.error("[Backfill] Failed to query candidate appointments:", apptError);
+    return [];
+  }
+
+  if (!appointments || appointments.length === 0) return [];
+
+  const typedAppointments = appointments as AppointmentRow[];
+
+  // Fetch patients in 24-hour decline cooldown
+  const cooldownCutoff = new Date(now.getTime() - 24 * 3_600_000);
+  const { data: declinedOffers } = await supabase
+    .from("waitlist_offers")
+    .select("patient_id")
+    .eq("tenant_id", slot.tenantId)
+    .eq("status", "declined")
+    .gte("responded_at", cooldownCutoff.toISOString());
+
+  const declinedPatientIds = new Set<string>(
+    (declinedOffers ?? []).map((o: { patient_id: string }) => o.patient_id)
+  );
+
+  // Post-query filtering
+  const filtered = typedAppointments.filter((appt) => {
+    // Belt-and-suspenders: exclude cancelling patient even if DB filter missed them
+    if (appt.patient_id === slot.cancellingPatientId) return false;
+
+    // Exclude patients in 24-hour decline cooldown
+    if (declinedPatientIds.has(appt.patient_id)) return false;
+
+    // Exclude appointments scheduled at or before the open slot
+    // (the DB query uses gt, but we double-check for safety)
+    const apptAt = new Date(appt.scheduled_at);
+    if (apptAt <= slot.scheduledAt) return false;
+
+    // Exclude time-conflicting appointments
+    if (hasTimeConflict(apptAt, appt.duration_min, slot.scheduledAt, slot.durationMin)) return false;
+
     return true;
   });
 
-  // Count no-shows per patient (for reliability scoring)
-  const patientIds = [...new Set(validEntries.map((e) => e.patient_id))];
+  if (filtered.length === 0) return [];
+
+  // Deduplicate by patient_id — keep the farthest-out appointment per patient
+  const deduped = deduplicateByPatient(filtered);
+
+  // Fetch no-show stats for remaining patient IDs
+  const patientIds = deduped.map((a) => a.patient_id);
   const { data: apptStats } = await supabase
     .from("appointments")
     .select("patient_id, status")
     .eq("tenant_id", slot.tenantId)
     .in("patient_id", patientIds);
 
-  const statsMap = new Map<string, { total: number; noShows: number }>();
-  for (const a of apptStats ?? []) {
-    const prev = statsMap.get(a.patient_id) ?? { total: 0, noShows: 0 };
-    statsMap.set(a.patient_id, {
+  const statsMap = buildStatsMap(apptStats ?? []);
+
+  // Score, sort, and cap
+  const scored = deduped.map((appt) => {
+    const patient = appt.patient;
+
+    if (!patient) return null;
+
+    const stats = statsMap.get(appt.patient_id) ?? { total: 0, noShows: 0 };
+    const candidateScore = computeCandidateScore({
+      appointmentScheduledAt: new Date(appt.scheduled_at),
+      openSlotAt: slot.scheduledAt,
+      patientNoShows: stats.noShows,
+      patientTotal: stats.total,
+    });
+
+    const candidate: RankedCandidate = {
+      candidateAppointmentId: appt.id,
+      patientId: appt.patient_id,
+      patientName: `${patient.first_name} ${patient.last_name}`,
+      patientPhone: patient.phone,
+      patientEmail: patient.email,
+      preferredChannel: patient.preferred_channel as "whatsapp" | "sms" | "email",
+      candidateScore,
+      currentAppointmentAt: new Date(appt.scheduled_at),
+    };
+
+    return candidate;
+  }).filter((c): c is RankedCandidate => c !== null);
+
+  // Sort by total score descending
+  const sorted = [...scored].sort((a, b) => b.candidateScore.total - a.candidateScore.total);
+
+  return sorted.slice(0, limit);
+}
+
+/**
+ * Check whether two appointments overlap in time.
+ * Uses half-open interval comparison: [start, end)
+ * Overlap condition: candidateStart < slotEnd AND slotStart < candidateEnd
+ */
+function hasTimeConflict(
+  candidateStart: Date,
+  candidateDurationMin: number,
+  slotStart: Date,
+  slotDurationMin: number
+): boolean {
+  const candidateEnd = new Date(candidateStart.getTime() + candidateDurationMin * 60_000);
+  const slotEnd = new Date(slotStart.getTime() + slotDurationMin * 60_000);
+  return candidateStart < slotEnd && slotStart < candidateEnd;
+}
+
+/**
+ * Deduplicate appointments by patient_id, keeping the farthest-out appointment.
+ * Patients with farther appointments benefit most from an earlier slot.
+ */
+function deduplicateByPatient(appointments: readonly AppointmentRow[]): AppointmentRow[] {
+  const byPatient = new Map<string, AppointmentRow>();
+
+  for (const appt of appointments) {
+    const existing = byPatient.get(appt.patient_id);
+    if (!existing || appt.scheduled_at > existing.scheduled_at) {
+      byPatient.set(appt.patient_id, appt);
+    }
+  }
+
+  return Array.from(byPatient.values());
+}
+
+/**
+ * Build a map of patient_id → { total appointments, no-show count }.
+ */
+function buildStatsMap(
+  apptStats: Array<{ patient_id: string; status: string }>
+): Map<string, { total: number; noShows: number }> {
+  const map = new Map<string, { total: number; noShows: number }>();
+
+  for (const a of apptStats) {
+    const prev = map.get(a.patient_id) ?? { total: 0, noShows: 0 };
+    map.set(a.patient_id, {
       total: prev.total + 1,
       noShows: prev.noShows + (a.status === "no_show" ? 1 : 0),
     });
   }
 
-  // Score each candidate against this specific slot
-  const scored: RankedCandidate[] = validEntries
-    .map((entry) => {
-      const patient = entry.patient as { first_name: string; last_name: string; phone: string | null; email: string | null; preferred_channel: string } | null;
-      if (!patient) return null;
-
-      const stats = statsMap.get(entry.patient_id) ?? { total: 0, noShows: 0 };
-
-      const smartScore = computeWaitlistScore({
-        clinicalUrgency: entry.clinical_urgency,
-        patientNoShows: stats.noShows,
-        patientTotal: stats.total,
-        preferredTimeSlots: entry.preferred_time_slots ?? [],
-        createdAt: new Date(entry.created_at),
-        distanceKm: entry.distance_km,
-        preferredProvider: entry.preferred_provider,
-        slotProvider: slot.providerName,
-        paymentCategory: entry.payment_category,
-        slotPaymentCategory: slot.paymentCategory,
-        slotStartsAt: slot.scheduledAt,
-      });
-
-      return {
-        waitlistEntryId: entry.id,
-        patientId: entry.patient_id,
-        patientName: `${patient.first_name} ${patient.last_name}`,
-        patientPhone: patient.phone,
-        patientEmail: patient.email,
-        preferredChannel: patient.preferred_channel as "whatsapp" | "sms" | "email",
-        smartScore,
-      };
-    })
-    .filter((c): c is RankedCandidate => c !== null);
-
-  // Sort by total smart score descending
-  scored.sort((a, b) => b.smartScore.total - a.smartScore.total);
-
-  return scored.slice(0, limit);
+  return map;
 }

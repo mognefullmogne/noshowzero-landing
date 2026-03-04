@@ -43,17 +43,19 @@ export async function sendOffer(
   const declineToken = generateOfferToken(offerId, "decline");
 
   // Single atomic insert with the real token hash
+  // waitlist_entry_id is nullable (migration 012) — appointment-based candidates don't have one
   const { error: insertError } = await supabase
     .from("waitlist_offers")
     .insert({
       id: offerId,
       tenant_id: input.tenantId,
       original_appointment_id: input.originalAppointmentId,
-      waitlist_entry_id: input.candidate.waitlistEntryId,
+      waitlist_entry_id: null,
+      candidate_appointment_id: input.candidate.candidateAppointmentId,
       patient_id: input.candidate.patientId,
       status: "pending",
-      smart_score: input.candidate.smartScore.total,
-      smart_score_breakdown: input.candidate.smartScore,
+      smart_score: input.candidate.candidateScore.total,
+      smart_score_breakdown: input.candidate.candidateScore,
       token_hash: acceptToken.tokenHash,
       expires_at: acceptToken.expiresAt.toISOString(),
     });
@@ -180,26 +182,6 @@ export async function sendOffer(
       .from("message_threads")
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", offerThreadId);
-  }
-
-  // Atomic increment of offers_sent using RPC-style pattern
-  // Supabase doesn't support raw SQL expressions in .update(), so we use a select + update
-  // with the value computed at query time to minimize race window
-  const { data: entry } = await supabase
-    .from("waitlist_entries")
-    .select("offers_sent")
-    .eq("id", input.candidate.waitlistEntryId)
-    .single();
-
-  const newCount = (entry?.offers_sent ?? 0) + 1;
-  const { error: updateError } = await supabase
-    .from("waitlist_entries")
-    .update({ status: "offer_pending", offers_sent: newCount })
-    .eq("id", input.candidate.waitlistEntryId)
-    .eq("offers_sent", entry?.offers_sent ?? 0); // CAS guard: only update if count hasn't changed
-
-  if (updateError) {
-    console.error("[Backfill] Failed to update waitlist entry:", updateError);
   }
 
   return { offerId, status: "sent" };
