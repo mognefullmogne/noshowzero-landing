@@ -95,14 +95,8 @@ export async function POST(request: NextRequest) {
     }
 
     const signature = request.headers.get("x-twilio-signature") ?? "";
-    console.log(
-      `[Webhook] Verifying signature\n` +
-      `  TWILIO_WEBHOOK_URL: ${webhookUrl}\n` +
-      `  Request URL       : ${request.url}\n` +
-      `  Signature present : ${signature.length > 0}`
-    );
     if (!verifyTwilioSignature(webhookUrl, params, signature)) {
-      console.error("[Webhook] Invalid Twilio signature — 403");
+      console.error("[Webhook] Invalid Twilio signature");
       return new NextResponse("Forbidden", { status: 403 });
     }
 
