@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/escalate-confirmations",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/check-timeouts",
@@ -34,7 +34,7 @@
     },
     {
       "path": "/api/cron/detect-no-shows",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 11 * * *"
     }
   ]
 }
