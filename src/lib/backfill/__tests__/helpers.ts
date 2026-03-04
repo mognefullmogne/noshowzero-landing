@@ -4,137 +4,122 @@
  * Provides a chainable query builder that resolves to { data, error }.
  * Configure return data per table via the initialData map.
  *
+ * Each call to .from() returns a fresh builder instance so concurrent
+ * queries do not share state (which mirrors the real Supabase client).
+ *
  * Usage:
  *   const supabase = createMockSupabase({ appointments: [appt1, appt2] });
  *   const { data } = await supabase.from("appointments").select("*");
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 type TableData = Record<string, unknown[]>;
+type MockResult = { data: unknown[] | null; error: null | { message: string; code: string } };
 
-interface MockQueryBuilder {
-  data: unknown[] | null;
-  error: null | { message: string; code: string };
+class MockQueryBuilder implements PromiseLike<MockResult> {
+  private _data: unknown[];
+  private readonly _error: null | { message: string; code: string };
 
-  from(table: string): this;
-  select(columns?: string): this;
-  insert(rows: unknown): this;
-  update(values: unknown): this;
-  delete(): this;
-  eq(column: string, value: unknown): this;
-  neq(column: string, value: unknown): this;
-  gt(column: string, value: unknown): this;
-  gte(column: string, value: unknown): this;
-  lt(column: string, value: unknown): this;
-  lte(column: string, value: unknown): this;
-  in(column: string, values: unknown[]): this;
-  not(column: string, operator: string, value: unknown): this;
-  is(column: string, value: unknown): this;
-  limit(count: number): this;
-  order(column: string, options?: { ascending?: boolean }): this;
-  single(): Promise<{ data: unknown | null; error: null | { message: string; code: string } }>;
-  maybeSingle(): Promise<{ data: unknown | null; error: null | { message: string; code: string } }>;
-  then(
-    resolve: (result: { data: unknown[] | null; error: null | { message: string; code: string } }) => void,
-  ): Promise<void>;
-}
-
-export function createMockSupabase(initialData: TableData = {}): {
-  from: (table: string) => MockQueryBuilder;
-} {
-  function createBuilder(tableData: unknown[] | null): MockQueryBuilder {
-    const builder: MockQueryBuilder = {
-      data: tableData,
-      error: null,
-
-      from(table: string) {
-        const rows = initialData[table] ?? null;
-        this.data = rows;
-        return this;
-      },
-
-      select(_columns?: string) {
-        return this;
-      },
-
-      insert(_rows: unknown) {
-        return this;
-      },
-
-      update(_values: unknown) {
-        return this;
-      },
-
-      delete() {
-        return this;
-      },
-
-      eq(_column: string, _value: unknown) {
-        return this;
-      },
-
-      neq(_column: string, _value: unknown) {
-        return this;
-      },
-
-      gt(_column: string, _value: unknown) {
-        return this;
-      },
-
-      gte(_column: string, _value: unknown) {
-        return this;
-      },
-
-      lt(_column: string, _value: unknown) {
-        return this;
-      },
-
-      lte(_column: string, _value: unknown) {
-        return this;
-      },
-
-      in(_column: string, _values: unknown[]) {
-        return this;
-      },
-
-      not(_column: string, _operator: string, _value: unknown) {
-        return this;
-      },
-
-      is(_column: string, _value: unknown) {
-        return this;
-      },
-
-      limit(_count: number) {
-        return this;
-      },
-
-      order(_column: string, _options?: { ascending?: boolean }) {
-        return this;
-      },
-
-      async single() {
-        const row = Array.isArray(this.data) ? (this.data[0] ?? null) : null;
-        return { data: row, error: this.error };
-      },
-
-      async maybeSingle() {
-        const row = Array.isArray(this.data) ? (this.data[0] ?? null) : null;
-        return { data: row, error: this.error };
-      },
-
-      async then(resolve) {
-        resolve({ data: this.data, error: this.error });
-      },
-    };
-
-    return builder;
+  constructor(data: unknown[], error: null | { message: string; code: string } = null) {
+    this._data = [...data];
+    this._error = error;
   }
 
-  const rootBuilder = createBuilder(null);
+  select(_columns?: string): this {
+    return this;
+  }
 
-  return {
-    from(table: string) {
-      return rootBuilder.from(table);
+  insert(_rows: unknown): this {
+    return this;
+  }
+
+  update(_values: unknown): this {
+    return this;
+  }
+
+  delete(): this {
+    return this;
+  }
+
+  eq(_column: string, _value: unknown): this {
+    return this;
+  }
+
+  neq(_column: string, _value: unknown): this {
+    return this;
+  }
+
+  gt(_column: string, _value: unknown): this {
+    return this;
+  }
+
+  gte(_column: string, _value: unknown): this {
+    return this;
+  }
+
+  lt(_column: string, _value: unknown): this {
+    return this;
+  }
+
+  lte(_column: string, _value: unknown): this {
+    return this;
+  }
+
+  in(_column: string, _values: unknown[]): this {
+    return this;
+  }
+
+  not(_column: string, _operator: string, _value: unknown): this {
+    return this;
+  }
+
+  is(_column: string, _value: unknown): this {
+    return this;
+  }
+
+  limit(count: number): this {
+    this._data = this._data.slice(0, count);
+    return this;
+  }
+
+  order(_column: string, _options?: { ascending?: boolean }): this {
+    return this;
+  }
+
+  async single(): Promise<{ data: unknown | null; error: null | { message: string; code: string } }> {
+    const row = this._data[0] ?? null;
+    return { data: row, error: this._error };
+  }
+
+  async maybeSingle(): Promise<{ data: unknown | null; error: null | { message: string; code: string } }> {
+    const row = this._data[0] ?? null;
+    return { data: row, error: this._error };
+  }
+
+  then<TResult1 = MockResult, TResult2 = never>(
+    onfulfilled?: ((value: MockResult) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): Promise<TResult1 | TResult2> {
+    const result: MockResult = { data: this._data, error: this._error };
+    return Promise.resolve(result).then(onfulfilled, onrejected);
+  }
+}
+
+/**
+ * Creates a minimal Supabase client mock for unit testing.
+ * Each call to .from() returns a fresh, independent builder so multiple
+ * awaited queries within one function call do not interfere.
+ *
+ * @param tableData - Map of table name to array of rows
+ */
+export function createMockSupabase(tableData: TableData = {}): SupabaseClient {
+  const mock = {
+    from(table: string): MockQueryBuilder {
+      const data = tableData[table] ?? [];
+      return new MockQueryBuilder(data);
     },
   };
+
+  return mock as unknown as SupabaseClient;
 }
