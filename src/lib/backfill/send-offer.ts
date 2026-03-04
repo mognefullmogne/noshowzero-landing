@@ -70,7 +70,7 @@ export async function sendOffer(
   const declineUrl = `${APP_URL}/api/offers/${offerId}/decline?token=${encodeURIComponent(declineToken.token)}`;
   const statusUrl = `${APP_URL}/api/offers/${offerId}?token=${encodeURIComponent(acceptToken.token)}`;
 
-  // Format date/time
+  // Format offered slot date/time
   const dateStr = input.scheduledAt.toLocaleDateString("it-IT", {
     weekday: "long",
     day: "numeric",
@@ -86,6 +86,18 @@ export async function sendOffer(
     minute: "2-digit",
   });
 
+  // Format candidate's current appointment date/time for comparison
+  const currentApptDate = input.candidate.currentAppointmentAt.toLocaleDateString("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const currentApptTime = input.candidate.currentAppointmentAt.toLocaleTimeString("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   const templateVars = {
     patient_name: input.candidate.patientName,
     service_name: input.serviceName,
@@ -97,6 +109,8 @@ export async function sendOffer(
     decline_url: declineUrl,
     status_url: statusUrl,
     expires_at: expiresStr,
+    current_appointment_date: currentApptDate,
+    current_appointment_time: currentApptTime,
   };
 
   // Determine channel, message content, and recipient

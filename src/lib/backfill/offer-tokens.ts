@@ -5,7 +5,7 @@
 
 import { createHmac, createHash, timingSafeEqual } from "crypto";
 
-const OFFER_EXPIRY_HOURS = 2;
+const OFFER_EXPIRY_HOURS = 1;
 
 function getSecret(): string {
   const secret = process.env.OFFER_TOKEN_SECRET;

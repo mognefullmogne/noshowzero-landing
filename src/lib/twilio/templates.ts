@@ -1,6 +1,7 @@
 /**
  * Message templates for waitlist offer notifications.
- * Matches the template system from the NestJS local version.
+ * WhatsApp uses Italian reply-based format (SI/NO).
+ * SMS/email fallback still uses URL-based accept/decline links.
  */
 
 export interface TemplateVars {
@@ -14,6 +15,8 @@ export interface TemplateVars {
   readonly decline_url: string;
   readonly status_url: string;
   readonly expires_at: string;
+  readonly current_appointment_date?: string;
+  readonly current_appointment_time?: string;
   readonly [key: string]: string | undefined;
 }
 
@@ -22,14 +25,13 @@ function render(template: string, vars: TemplateVars): string {
 }
 
 const TEMPLATES = {
-  waitlist_offer_whatsapp: `Gentile {{patient_name}}, si è liberato uno slot per {{service_name}} il {{date}} alle {{time}}{{location_suffix}}.
+  waitlist_offer_whatsapp: `Ciao {{patient_name}}! Si e' liberato un posto per {{service_name}} il {{date}} alle {{time}}{{location_suffix}}{{provider_suffix}}.
 
-Desidera prenotarlo? Ha 2 ore per rispondere.
+Il tuo appuntamento attuale e' il {{current_appointment_date}} alle {{current_appointment_time}}.
 
-✅ Accettare: {{accept_url}}
-❌ Rifiutare: {{decline_url}}
+Hai 1 ora per rispondere (scade alle {{expires_at}}).
 
-Lo slot scade alle {{expires_at}}.`,
+Rispondi SI per accettare o NO per rifiutare.`,
 
   waitlist_offer_sms: `NoShowZero: Slot disponibile per {{service_name}} il {{date}} {{time}}. Accetta: {{accept_url}} | Rifiuta: {{decline_url}} (scade {{expires_at}})`,
 
@@ -57,7 +59,12 @@ Il team NoShowZero`,
 
 export function renderOfferWhatsApp(vars: TemplateVars): string {
   const locationSuffix = vars.location_name ? ` presso ${vars.location_name}` : "";
-  return render(TEMPLATES.waitlist_offer_whatsapp, { ...vars, location_suffix: locationSuffix });
+  const providerSuffix = vars.provider_name ? ` con ${vars.provider_name}` : "";
+  return render(TEMPLATES.waitlist_offer_whatsapp, {
+    ...vars,
+    location_suffix: locationSuffix,
+    provider_suffix: providerSuffix,
+  });
 }
 
 export function renderOfferSms(vars: TemplateVars): string {
