@@ -8,6 +8,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { markMessageSent } from "@/lib/confirmation/workflow";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
+import { personalizeConfirmationMessage } from "@/lib/scoring/ai-confirmation-personalizer";
 import type { MessageChannel } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     .select(`
       id, tenant_id, appointment_id,
       appointment:appointments(
-        id, service_name, provider_name, location_name, scheduled_at,
+        id, service_name, provider_name, location_name, scheduled_at, risk_score, patient_id,
         patient:patients(id, first_name, last_name, phone, preferred_channel)
       )
     `)
@@ -73,10 +74,45 @@ export async function GET(request: NextRequest) {
       };
 
       const channel = (patient.preferred_channel as MessageChannel) ?? "whatsapp";
-      const body =
-        channel === "whatsapp"
-          ? renderConfirmationWhatsApp(vars)
-          : renderConfirmationSms(vars);
+      const riskScore = typeof appt.risk_score === "number" ? appt.risk_score : null;
+
+      // Try AI-personalized message if risk_score is available
+      let body: string;
+      if (riskScore !== null && process.env.ANTHROPIC_API_KEY) {
+        const { count: noShowCount } = await supabase
+          .from("appointments")
+          .select("id", { count: "exact", head: true })
+          .eq("patient_id", appt.patient_id as string)
+          .eq("tenant_id", wf.tenant_id)
+          .eq("status", "no_show");
+
+        const { count: totalCount } = await supabase
+          .from("appointments")
+          .select("id", { count: "exact", head: true })
+          .eq("patient_id", appt.patient_id as string)
+          .eq("tenant_id", wf.tenant_id);
+
+        const personalizeResult = await personalizeConfirmationMessage(
+          {
+            patientName: `${patient.first_name} ${patient.last_name}`,
+            serviceName: appt.service_name as string,
+            providerName: (appt.provider_name as string) ?? null,
+            locationName: (appt.location_name as string) ?? null,
+            scheduledAt,
+            riskScore,
+            previousNoShows: noShowCount ?? 0,
+            totalAppointments: totalCount ?? 0,
+          },
+          channel === "whatsapp" ? "whatsapp" : "sms"
+        );
+
+        body = personalizeResult.message;
+      } else {
+        body =
+          channel === "whatsapp"
+            ? renderConfirmationWhatsApp(vars)
+            : renderConfirmationSms(vars);
+      }
 
       const result = await sendMessage(supabase, {
         tenantId: wf.tenant_id,
