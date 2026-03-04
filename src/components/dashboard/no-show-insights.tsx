@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { AlertTriangle, BarChart2, Loader2, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MarkdownBlock } from "@/lib/render-markdown";
 import type { NoShowAggregates } from "@/lib/ai/no-show-analysis";
 
 // ---------------------------------------------------------------------------
@@ -179,7 +180,7 @@ export function NoShowInsights({ className }: NoShowInsightsProps) {
       {/* Collapsible analysis body */}
       {state && expanded && (
         <div className="p-5">
-          <MarkdownAnalysis text={state.analysis} />
+          <MarkdownBlock text={state.analysis} />
         </div>
       )}
 
@@ -216,74 +217,6 @@ function KpiCell({
       <p className={cn("text-xl font-bold", highlight ? "text-amber-600" : "text-gray-900")}>{value}</p>
       <p className="text-[10px] text-gray-400">{sub}</p>
     </div>
-  );
-}
-
-/**
- * Minimal markdown renderer — supports ## headings, **bold**, and bullet lists.
- * Avoids bringing in a heavy markdown library.
- */
-function MarkdownAnalysis({ text }: { readonly text: string }) {
-  const lines = text.split("\n");
-
-  return (
-    <div className="space-y-1 text-sm text-gray-700">
-      {lines.map((line, i) => {
-        if (line.startsWith("## ")) {
-          return (
-            <h3 key={i} className="text-sm font-semibold text-gray-900 mt-4 mb-1 first:mt-0">
-              {line.slice(3)}
-            </h3>
-          );
-        }
-        if (line.startsWith("### ")) {
-          return (
-            <h4 key={i} className="text-xs font-semibold text-gray-800 mt-3 mb-0.5">
-              {line.slice(4)}
-            </h4>
-          );
-        }
-        if (line.startsWith("- ") || line.startsWith("* ")) {
-          return (
-            <div key={i} className="flex gap-2 text-xs text-gray-600">
-              <span className="shrink-0 text-gray-400 mt-0.5">•</span>
-              <span>{renderBold(line.slice(2))}</span>
-            </div>
-          );
-        }
-        if (line.match(/^\d+\. /)) {
-          return (
-            <div key={i} className="flex gap-2 text-xs text-gray-600">
-              <span className="shrink-0 text-gray-500 font-medium">{line.match(/^\d+/)?.[0]}.</span>
-              <span>{renderBold(line.replace(/^\d+\. /, ""))}</span>
-            </div>
-          );
-        }
-        if (line.trim() === "") {
-          return <div key={i} className="h-1" />;
-        }
-        return (
-          <p key={i} className="text-xs text-gray-600 leading-relaxed">
-            {renderBold(line)}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Render **bold** segments as <strong> inline. */
-function renderBold(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (part.startsWith("**") && part.endsWith("**")) {
-          return <strong key={i} className="font-semibold text-gray-800">{part.slice(2, -2)}</strong>;
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </>
   );
 }
 

@@ -20,7 +20,7 @@ const PATTERNS: readonly { intent: MessageIntent; exact: RegExp; partial: RegExp
   {
     intent: "cancel",
     exact: /^(no|annull[oa]|cancell[oa]|disdic[oa])$/i,
-    partial: /\b(no|annull|cancel|disdic|non\s+veng[oa])\b/i,
+    partial: /\b(no|annull|cancel|disdic|non\s+veng[oa]|non\s+riesc[oa]|non\s+posso|non\s+ce\s+la\s+faccio|non\s+vengo\s+pi[uù]|devo\s+disdire|devo\s+cancellare|non\s+posso\s+venire|non\s+riesco\s+a\s+venire)\b/i,
   },
   {
     intent: "accept_offer",
@@ -41,6 +41,11 @@ const PATTERNS: readonly { intent: MessageIntent; exact: RegExp; partial: RegExp
     intent: "book_appointment",
     exact: /^(prenotare|prenota|prenotazione|appuntamento)$/i,
     partial: /\b(prenot[aeio]|appuntamento|fissare|vorrei\s+(un\s+)?appuntamento|prenotare\s+una?\s+visita|nuov[oa]\s+visita)\b/i,
+  },
+  {
+    intent: "join_waitlist",
+    exact: /^(lista|lista\s+d[ie]?\s*attesa|attesa)$/i,
+    partial: /\b(lista\s*d[ie']?\s*attesa|mett[aeio]\w*\s+in\s+lista|lista\s+attesa)\b/i,
   },
 ];
 

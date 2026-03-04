@@ -10,7 +10,6 @@ import type { MessageIntent } from "@/lib/types";
 import { processAccept, processDecline } from "@/lib/backfill/process-response";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
 import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
-import { sendNotification } from "@/lib/twilio/send-notification";
 
 // AI input sanitization
 const MAX_AI_INPUT_CHARS = 500;
@@ -49,6 +48,8 @@ export async function routeIntent(
       return handleDeclineOffer(supabase, input);
     case "slot_select":
       return handleSlotSelect(supabase, input);
+    case "join_waitlist":
+      return handleJoinWaitlist(supabase, input);
     case "book_appointment":
       return {
         reply: "Per prenotare, scrivi: vorrei prenotare un appuntamento",
@@ -160,30 +161,17 @@ async function handleCancel(
   triggerBackfill(supabase, input.appointmentId, input.tenantId, { triggerEvent: "cancellation" })
     .catch((err) => console.error("[Router] Backfill cascade after cancel failed:", err));
 
-  // Fire-and-forget: send smart rebooking suggestion via WhatsApp
+  // Fire-and-forget: send smart rebooking proposals via WhatsApp
+  // (generateRebookingSuggestions now creates slot_proposals + sends the message itself)
   const cancelledAppt = data[0];
-  const patientPhone = ((cancelledAppt.patient as unknown) as { phone: string | null } | null)?.phone;
-  if (patientPhone) {
-    const tenantId = input.tenantId;
-    const patientId = cancelledAppt.patient_id as string;
-    generateRebookingSuggestions(supabase, tenantId, patientId, {
-      id: cancelledAppt.id,
-      service_name: cancelledAppt.service_name as string,
-      provider_name: (cancelledAppt.provider_name as string | null) ?? null,
-      location_name: (cancelledAppt.location_name as string | null) ?? null,
-      scheduled_at: cancelledAppt.scheduled_at as string,
-      duration_min: cancelledAppt.duration_min as number,
-    })
-      .then((suggestions) =>
-        sendNotification({
-          to: patientPhone,
-          body: suggestions.message,
-          channel: "whatsapp",
-          tenantId,
-        })
-      )
-      .catch((err) => console.error("[SmartRebook] WhatsApp cancel rebook failed:", err));
-  }
+  generateRebookingSuggestions(supabase, input.tenantId, cancelledAppt.patient_id as string, {
+    id: cancelledAppt.id,
+    service_name: cancelledAppt.service_name as string,
+    provider_name: (cancelledAppt.provider_name as string | null) ?? null,
+    location_name: (cancelledAppt.location_name as string | null) ?? null,
+    scheduled_at: cancelledAppt.scheduled_at as string,
+    duration_min: cancelledAppt.duration_min as number,
+  }).catch((err) => console.error("[SmartRebook] Rebook flow failed:", err));
 
   return {
     reply: "Il tuo appuntamento è stato cancellato. Riceverai a breve alcune proposte per riprogrammare.",
@@ -261,13 +249,14 @@ async function handleSlotSelect(
       return { reply: "Non ho trovato una proposta attiva. Contatta la segreteria." };
     }
 
-    const slots = proposal.proposed_slots as Array<{ index: number; slot_id: string; start_at: string }>;
+    const slots = proposal.proposed_slots as Array<{ index: number; slot_id: string; start_at: string; end_at: string }>;
     const selected = slots.find((s) => s.index === selectedIndex);
     if (!selected) {
       return { reply: "Opzione non valida. Per favore scegli 1, 2 o 3." };
     }
 
-    const { error: updateError } = await supabase
+    // Mark proposal as selected
+    await supabase
       .from("slot_proposals")
       .update({
         selected_index: selectedIndex,
@@ -277,17 +266,87 @@ async function handleSlotSelect(
       .eq("id", proposal.id)
       .eq("tenant_id", input.tenantId);
 
-    if (updateError) {
-      console.error("[Router] Slot proposal update failed:", updateError);
-      return { reply: "Si è verificato un errore. Contatta la segreteria." };
+    // Create the new appointment from the selected slot
+    const origApptId = proposal.appointment_id as string;
+    const { data: origAppt } = await supabase
+      .from("appointments")
+      .select("service_code, service_name, provider_name, location_name, duration_min")
+      .eq("id", origApptId)
+      .maybeSingle();
+
+    const duration = origAppt?.duration_min ?? 30;
+    const { error: createErr } = await supabase
+      .from("appointments")
+      .insert({
+        tenant_id: input.tenantId,
+        patient_id: input.patientId,
+        service_code: origAppt?.service_code ?? null,
+        service_name: origAppt?.service_name ?? "Visita",
+        provider_name: origAppt?.provider_name ?? null,
+        location_name: origAppt?.location_name ?? null,
+        scheduled_at: selected.start_at,
+        duration_min: duration,
+        status: "confirmed",
+        confirmed_at: new Date().toISOString(),
+      });
+
+    if (createErr) {
+      console.error("[Router] Create appointment from slot failed:", createErr);
+      return { reply: "Si è verificato un errore nella prenotazione. Contatta la segreteria." };
     }
-  } catch {
+
+    const date = new Date(selected.start_at);
+    const dateStr = date.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+    const timeStr = date.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+
+    return {
+      reply: `Perfetto! Il tuo appuntamento e' confermato per ${dateStr} alle ${timeStr}. Ti aspettiamo!`,
+      action: "slot_selected",
+    };
+  } catch (err) {
+    console.error("[Router] Slot select error:", err);
     return { reply: "Non ho trovato una proposta attiva. Contatta la segreteria." };
+  }
+}
+
+async function handleJoinWaitlist(
+  supabase: SupabaseClient,
+  input: RouteInput
+): Promise<RouteResult> {
+  // Find the most recent cancelled appointment for service context
+  const { data: recentAppt } = await supabase
+    .from("appointments")
+    .select("service_name, provider_name")
+    .eq("tenant_id", input.tenantId)
+    .eq("patient_id", input.patientId)
+    .eq("status", "cancelled")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const serviceName = recentAppt?.service_name ?? "Visita";
+
+  const { error } = await supabase
+    .from("waitlist_entries")
+    .insert({
+      tenant_id: input.tenantId,
+      patient_id: input.patientId,
+      service_name: serviceName,
+      preferred_provider: recentAppt?.provider_name ?? null,
+      clinical_urgency: "none",
+      status: "waiting",
+      priority_score: 50,
+      flexible_time: true,
+    });
+
+  if (error) {
+    console.error("[Router] Waitlist insert failed:", error);
+    return { reply: "Si è verificato un errore. Contatta la segreteria." };
   }
 
   return {
-    reply: `Perfetto! Hai selezionato l'opzione ${selectedIndex}. Il tuo appuntamento è confermato.`,
-    action: "slot_selected",
+    reply: `Sei stato inserito in lista d'attesa per ${serviceName}. Ti contatteremo appena si libera un posto adatto a te!`,
+    action: "joined_waitlist",
   };
 }
 

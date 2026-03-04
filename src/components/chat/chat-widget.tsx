@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Bot, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { renderInlineMarkdown } from "@/lib/render-markdown";
 
 interface Message {
   readonly id: string;
@@ -166,7 +167,7 @@ export function ChatWidget() {
                         : "bg-slate-100 text-slate-700",
                     )}
                   >
-                    {message.content}
+                    {renderInlineMarkdown(message.content)}
                   </div>
                   {message.role === "user" && (
                     <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">

@@ -40,7 +40,7 @@ const MAX_AI_INPUT_CHARS = 500;
 // Valid intents for AI classification validation
 const VALID_INTENTS = new Set<string>([
   "confirm", "cancel", "accept_offer", "decline_offer",
-  "slot_select", "book_appointment", "question", "unknown",
+  "slot_select", "book_appointment", "join_waitlist", "question", "unknown",
 ]);
 
 function checkPhoneRateLimit(phone: string): boolean {
@@ -368,7 +368,7 @@ async function loadPatientContext(
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("patient_id", patientId)
-    .in("status", ["scheduled", "reminder_sent", "reminder_pending"])
+    .in("status", ["scheduled", "reminder_sent", "reminder_pending", "confirmed"])
     .gte("scheduled_at", sevenDaysAgo)
     .order("scheduled_at", { ascending: true })
     .limit(1)

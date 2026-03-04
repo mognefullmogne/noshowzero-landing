@@ -300,10 +300,10 @@ TREND SETTIMANA:
 
 FORMATO RISPOSTA (segui esattamente questa struttura, max 300 parole):
 1. **Buongiorno** — una frase con i numeri chiave del giorno
-2. **Attenzione** — pazienti ad alto rischio e cosa fare (se ce ne sono)
+2. **Attenzione** — pazienti ad alto rischio che il sistema sta monitorando (se ce ne sono)
 3. **Cascade** — situazione offerte attive (se applicabile)
 4. **Ieri** — performance di ieri in una frase
-5. **Suggerimenti** — 1-2 azioni specifiche da fare oggi
+5. **Azioni AI** — cosa il sistema sta facendo o farà automaticamente (es. invio promemoria, contatto pazienti in attesa, attivazione offerte cascade). NON suggerire mai azioni manuali all'operatore: il sistema è autonomo.
 
 Rispondi SOLO con il briefing in italiano. Nessun JSON, nessun markdown oltre al grassetto per i titoli delle sezioni.`;
 

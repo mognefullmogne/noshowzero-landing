@@ -5,6 +5,7 @@ import { Bot, Send, Wrench, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import type { ChatMessage, ChatToolCall } from "@/lib/types";
+import { renderInlineMarkdown } from "@/lib/render-markdown";
 
 const SUGGESTED_PROMPTS = [
   "Mostrami gli appuntamenti di oggi",
@@ -110,7 +111,7 @@ export default function AiChatPage() {
                       : "bg-gray-50 text-gray-900 border border-gray-100"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <p className="whitespace-pre-wrap">{renderInlineMarkdown(msg.content)}</p>
                 </div>
                 {/* Tool calls */}
                 {msg.tool_calls && msg.tool_calls.length > 0 && (

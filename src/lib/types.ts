@@ -240,6 +240,7 @@ export type MessageIntent =
   | "decline_offer"
   | "slot_select"
   | "book_appointment"
+  | "join_waitlist"
   | "question"
   | "unknown";
 

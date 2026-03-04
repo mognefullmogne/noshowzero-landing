@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Pagination } from "@/components/shared/pagination";
 import type { OptimizationDecision } from "@/lib/types";
+import { renderInlineMarkdown } from "@/lib/render-markdown";
 
 const TYPE_LABELS: Record<string, string> = {
   gap_fill: "Gap Fill",
@@ -112,9 +113,9 @@ export default function OptimizationPage() {
                       Score: {d.score}/100
                     </span>
                   </div>
-                  <p className="text-sm font-medium text-gray-900">{d.description}</p>
+                  <p className="text-sm font-medium text-gray-900">{renderInlineMarkdown(d.description)}</p>
                   {d.reasoning && (
-                    <p className="mt-1 text-xs text-gray-500">{d.reasoning}</p>
+                    <p className="mt-1 text-xs text-gray-500">{renderInlineMarkdown(d.reasoning)}</p>
                   )}
                   <p className="mt-2 text-xs text-gray-400">
                     {new Date(d.created_at).toLocaleString("it-IT")}

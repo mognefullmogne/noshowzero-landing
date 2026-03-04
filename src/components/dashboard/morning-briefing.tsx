@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Sparkles, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MarkdownBlock } from "@/lib/render-markdown";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,9 +134,10 @@ export function MorningBriefing() {
 
           {result && (
             <>
-              <div className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap">
-                {result.briefing}
-              </div>
+              <MarkdownBlock
+                text={result.briefing}
+                className="space-y-1 text-sm text-indigo-900 leading-relaxed"
+              />
               {result.generatedAt && (
                 <p className="mt-3 text-[10px] text-indigo-400">
                   Generato alle{" "}

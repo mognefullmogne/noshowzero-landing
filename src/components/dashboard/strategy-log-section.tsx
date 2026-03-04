@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { renderInlineMarkdown } from "@/lib/render-markdown";
 import {
   type StrategyEntry,
   getStrategyBadge,
@@ -174,7 +175,7 @@ export function StrategyLogSection({ className }: StrategyLogSectionProps) {
                           AI Reasoning
                         </p>
                         <p className="text-xs text-gray-700 leading-relaxed">
-                          {entry.metadata.reasoning}
+                          {renderInlineMarkdown(entry.metadata.reasoning)}
                         </p>
                       </div>
                     )}

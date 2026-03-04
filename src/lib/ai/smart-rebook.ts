@@ -1,14 +1,15 @@
 /**
- * Smart Rebooking Suggestion Generator
+ * Smart Rebooking Flow
  *
- * When a patient cancels, analyze their history and available slots to
- * propose 2-3 personalised rebooking options in Italian via WhatsApp.
- *
- * Uses Claude Haiku for cost-efficiency.
- * Falls back to a generic rebooking invite if AI fails.
+ * When a patient cancels:
+ * 1. Find available slots from calendar gaps (next 7 business days)
+ * 2. Create a slot_proposals entry in DB so patient can respond 1/2/3
+ * 3. Send WhatsApp message with options + waitlist option
+ * 4. If no slots, offer waitlist only
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sendMessage } from "@/lib/messaging/send-message";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,216 +24,204 @@ export interface CancelledAppointment {
   readonly duration_min: number;
 }
 
-export interface RebookingSlot {
+interface GapSlot {
   readonly startAt: string;
   readonly endAt: string;
-  readonly providerName: string;
-  readonly dayLabel: string;  // e.g. "Mercoledì 12 marzo"
-  readonly timeLabel: string; // e.g. "10:00"
-  readonly attendanceNote: string; // e.g. "il tuo orario preferito!"
-}
-
-export interface RebookingSuggestions {
-  readonly message: string;
-  readonly suggestedSlots: readonly RebookingSlot[];
+  readonly dayLabel: string;
+  readonly timeLabel: string;
 }
 
 // ---------------------------------------------------------------------------
-// Data gathering
+// Calendar gap finder
 // ---------------------------------------------------------------------------
 
-interface PatientHistory {
-  readonly firstName: string;
-  readonly preferredHours: readonly number[];   // hours of day they usually book
-  readonly preferredDays: readonly number[];    // days of week (0=Sun)
-  readonly avgNoShowRate: number;               // 0.0 - 1.0 from their own history
-  readonly phone: string | null;
-}
+/** Business hours: 9:00 - 18:00 */
+const BIZ_START_HOUR = 9;
+const BIZ_END_HOUR = 18;
+const MAX_DAYS_AHEAD = 7;
+const MAX_SLOTS = 3;
 
-async function loadPatientHistory(
+/**
+ * Find gaps in the tenant's calendar for the next 7 business days.
+ * A "gap" is a period during business hours where no appointment is scheduled.
+ */
+async function findCalendarGaps(
   supabase: SupabaseClient,
   tenantId: string,
-  patientId: string
-): Promise<PatientHistory> {
-  const [patientRes, historyRes] = await Promise.all([
-    supabase
-      .from("patients")
-      .select("first_name, phone, response_patterns, preferred_channel")
-      .eq("id", patientId)
-      .eq("tenant_id", tenantId)
-      .maybeSingle(),
-    supabase
-      .from("appointments")
-      .select("scheduled_at, status")
-      .eq("tenant_id", tenantId)
-      .eq("patient_id", patientId)
-      .in("status", ["completed", "no_show", "confirmed", "cancelled"])
-      .lt("scheduled_at", new Date().toISOString())
-      .order("scheduled_at", { ascending: false })
-      .limit(50),
-  ]);
-
-  const patient = patientRes.data;
-  const appointments = historyRes.data ?? [];
-
-  const firstName = patient?.first_name ?? "Paziente";
-  const phone = patient?.phone ?? null;
-
-  // Compute preferred hours/days from past appointments
-  const hourCounts = new Map<number, number>();
-  const dayCounts = new Map<number, number>();
-  let noShows = 0;
-  let total = 0;
-
-  for (const appt of appointments) {
-    const d = new Date(appt.scheduled_at);
-    const hour = d.getUTCHours();
-    const day = d.getUTCDay();
-    hourCounts.set(hour, (hourCounts.get(hour) ?? 0) + 1);
-    dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
-    total++;
-    if (appt.status === "no_show") noShows++;
-  }
-
-  // Top 3 preferred hours and days by frequency
-  const preferredHours = [...hourCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([h]) => h);
-
-  const preferredDays = [...dayCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([d]) => d);
-
-  const avgNoShowRate = total > 0 ? noShows / total : 0;
-
-  return { firstName, preferredHours, preferredDays, avgNoShowRate, phone };
-}
-
-/** Fetch available slots from appointment_slots table for the next 14 days. */
-async function fetchAvailableSlots(
-  supabase: SupabaseClient,
-  tenantId: string,
-  serviceName: string,
   durationMin: number
-): Promise<readonly RebookingSlot[]> {
+): Promise<readonly GapSlot[]> {
   const now = new Date();
-  const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 3600 * 1000);
+  const gaps: GapSlot[] = [];
 
-  // Try appointment_slots table first; gracefully skip if absent
-  try {
-    const { data: slots, error } = await supabase
-      .from("appointment_slots")
-      .select("id, start_at, end_at, provider_name")
+  for (let dayOffset = 1; dayOffset <= MAX_DAYS_AHEAD && gaps.length < MAX_SLOTS; dayOffset++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() + dayOffset);
+
+    // Skip weekends (0=Sun, 6=Sat)
+    const dow = date.getDay();
+    if (dow === 0 || dow === 6) continue;
+
+    const dayStr = date.toISOString().slice(0, 10);
+    const dayStart = `${dayStr}T${String(BIZ_START_HOUR).padStart(2, "0")}:00:00`;
+    const dayEnd = `${dayStr}T${String(BIZ_END_HOUR).padStart(2, "0")}:00:00`;
+
+    // Fetch existing appointments for this day
+    const { data: appts } = await supabase
+      .from("appointments")
+      .select("scheduled_at, duration_min")
       .eq("tenant_id", tenantId)
-      .eq("status", "available")
-      .gte("start_at", now.toISOString())
-      .lte("start_at", twoWeeksOut.toISOString())
-      .order("start_at", { ascending: true })
-      .limit(20);
+      .gte("scheduled_at", dayStart)
+      .lt("scheduled_at", dayEnd)
+      .not("status", "in", "(cancelled,declined,no_show)")
+      .order("scheduled_at", { ascending: true });
 
-    if (error) throw error;
-    if (!slots || slots.length === 0) return [];
+    // Build occupied intervals
+    const occupied = (appts ?? []).map((a) => {
+      const start = new Date(a.scheduled_at).getTime();
+      const end = start + (a.duration_min ?? 30) * 60_000;
+      return { start, end };
+    });
 
-    return slots
-      .filter((s) => {
-        const slotDuration =
-          (new Date(s.end_at).getTime() - new Date(s.start_at).getTime()) / 60_000;
-        return slotDuration >= durationMin;
-      })
-      .map((s) => buildSlot(s.start_at, s.end_at, s.provider_name ?? ""));
-  } catch {
-    // Slots table may not exist — return empty list for fallback path
-    return [];
+    // Find gaps between occupied intervals during business hours
+    const bizStart = new Date(dayStart).getTime();
+    const bizEnd = new Date(dayEnd).getTime();
+    let cursor = bizStart;
+
+    for (const interval of occupied) {
+      if (interval.start > cursor) {
+        const gapDuration = (interval.start - cursor) / 60_000;
+        if (gapDuration >= durationMin) {
+          gaps.push(buildGapSlot(new Date(cursor), durationMin));
+          if (gaps.length >= MAX_SLOTS) break;
+        }
+      }
+      cursor = Math.max(cursor, interval.end);
+    }
+
+    // Check gap after last appointment until end of business hours
+    if (gaps.length < MAX_SLOTS && cursor < bizEnd) {
+      const gapDuration = (bizEnd - cursor) / 60_000;
+      if (gapDuration >= durationMin) {
+        gaps.push(buildGapSlot(new Date(cursor), durationMin));
+      }
+    }
   }
+
+  return gaps;
 }
 
-function buildSlot(startAt: string, endAt: string, providerName: string): RebookingSlot {
-  const d = new Date(startAt);
+function buildGapSlot(startDate: Date, durationMin: number): GapSlot {
+  const endDate = new Date(startDate.getTime() + durationMin * 60_000);
   return {
-    startAt,
-    endAt,
-    providerName,
-    dayLabel: d.toLocaleDateString("it-IT", {
+    startAt: startDate.toISOString(),
+    endAt: endDate.toISOString(),
+    dayLabel: startDate.toLocaleDateString("it-IT", {
       weekday: "long",
       day: "numeric",
       month: "long",
     }),
-    timeLabel: d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
-    attendanceNote: "",
+    timeLabel: startDate.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
   };
 }
 
 // ---------------------------------------------------------------------------
-// AI message generation
+// Slot proposal creation + message send
 // ---------------------------------------------------------------------------
 
-function buildFallbackMessage(firstName: string, serviceName: string): string {
-  return `Ciao ${firstName}! Hai cancellato il tuo appuntamento per ${serviceName}. Vorresti riprogrammarlo? Contatta la segreteria o rispondi a questo messaggio per scegliere un nuovo orario.`;
-}
-
-async function generateAISuggestions(
+/**
+ * Create a slot_proposals entry and send WhatsApp message with options.
+ * Returns the proposal ID if slots were found, or null if waitlist-only.
+ */
+async function createProposalAndNotify(
+  supabase: SupabaseClient,
+  tenantId: string,
+  appointmentId: string,
+  patientId: string,
+  patientPhone: string,
   firstName: string,
   serviceName: string,
-  cancelledAt: string,
-  slots: readonly RebookingSlot[],
-  history: PatientHistory
-): Promise<string> {
-  if (!process.env.ANTHROPIC_API_KEY || slots.length === 0) {
-    return buildFallbackMessage(firstName, serviceName);
-  }
+  slots: readonly GapSlot[]
+): Promise<string | null> {
+  if (slots.length === 0) {
+    // No slots available — offer waitlist only
+    const waitlistMsg = [
+      `Ciao ${firstName}!`,
+      `Al momento non ci sono slot disponibili per ${serviceName} nei prossimi giorni.`,
+      "",
+      `Rispondi LISTA per essere inserito in lista d'attesa: ti contatteremo appena si libera un posto.`,
+    ].join("\n");
 
-  const cancelledDate = new Date(cancelledAt).toLocaleDateString("it-IT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-
-  const slotLines = slots.slice(0, 3).map((s, i) => {
-    const isPreferredHour = history.preferredHours.includes(new Date(s.startAt).getUTCHours());
-    const isPreferredDay = history.preferredDays.includes(new Date(s.startAt).getUTCDay());
-    let note = "";
-    if (isPreferredHour && isPreferredDay) note = "il tuo orario preferito!";
-    else if (isPreferredHour) note = "orario che preferisci";
-    else if (isPreferredDay) note = "giorno che preferisci";
-    return `${i + 1}. ${s.dayLabel} alle ${s.timeLabel}${note ? ` — ${note}` : ""}`;
-  });
-
-  const prompt = `Genera un breve messaggio WhatsApp in italiano per un paziente che ha appena cancellato un appuntamento.
-Il messaggio deve:
-- Iniziare con "Ciao ${firstName}!"
-- Menzionare la cancellazione dell'appuntamento di ${cancelledDate} per ${serviceName}
-- Proporre massimo 3 slot disponibili in modo amichevole
-- Chiedere di rispondere con 1, 2 o 3 per prenotare subito
-- Essere massimo 250 caratteri totali
-- Essere in italiano informale
-
-Slot disponibili:
-${slotLines.join("\n")}
-
-Rispondi SOLO con il messaggio WhatsApp. Niente JSON, niente spiegazioni.`;
-
-  try {
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    const client = new Anthropic({ timeout: 10_000 });
-
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
-      messages: [{ role: "user", content: prompt }],
+    await sendMessage(supabase, {
+      tenantId,
+      patientId,
+      patientPhone,
+      channel: "whatsapp",
+      body: waitlistMsg,
+      contextAppointmentId: appointmentId,
     });
 
-    const content = response.content[0];
-    if (content.type !== "text" || !content.text.trim()) {
-      return buildFallbackMessage(firstName, serviceName);
-    }
-
-    return content.text.trim();
-  } catch (err) {
-    console.error("[SmartRebook] AI generation failed:", err);
-    return buildFallbackMessage(firstName, serviceName);
+    return null;
   }
+
+  // Build proposed_slots in the format expected by slot_proposals table
+  const proposedSlots = slots.map((s, i) => ({
+    index: i + 1,
+    slot_id: `gap_${s.startAt}`, // synthetic ID for calendar gap slots
+    start_at: s.startAt,
+    end_at: s.endAt,
+  }));
+
+  const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+
+  const { data: proposal, error } = await supabase
+    .from("slot_proposals")
+    .insert({
+      tenant_id: tenantId,
+      appointment_id: appointmentId,
+      patient_id: patientId,
+      proposed_slots: proposedSlots,
+      status: "pending",
+      expires_at: expiresAt.toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("[SmartRebook] Failed to create slot proposal:", error);
+    return null;
+  }
+
+  // Build WhatsApp message
+  const lines = [
+    `Ciao ${firstName}! Ecco alcune opzioni per riprogrammare il tuo appuntamento per ${serviceName}:`,
+    "",
+  ];
+
+  for (const slot of slots) {
+    const idx = slots.indexOf(slot) + 1;
+    lines.push(`*${idx}* - ${slot.dayLabel} alle ${slot.timeLabel}`);
+  }
+
+  lines.push(
+    "",
+    "Rispondi con 1, 2 o 3 per scegliere.",
+    "",
+    "Se nessun orario va bene, rispondi LISTA per essere messo in lista d'attesa e ti contatteremo appena si libera un posto."
+  );
+
+  await sendMessage(supabase, {
+    tenantId,
+    patientId,
+    patientPhone,
+    channel: "whatsapp",
+    body: lines.join("\n"),
+    contextAppointmentId: appointmentId,
+  });
+
+  return proposal.id;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,51 +229,51 @@ Rispondi SOLO con il messaggio WhatsApp. Niente JSON, niente spiegazioni.`;
 // ---------------------------------------------------------------------------
 
 /**
- * Generate smart rebooking suggestions when a patient cancels.
- *
- * @param supabase              Supabase client
- * @param tenantId              Tenant ID
- * @param patientId             Patient who cancelled
- * @param cancelledAppointment  The appointment that was cancelled
- * @returns                     Italian WhatsApp message + suggested slots
+ * Execute the full rebooking flow when a patient cancels:
+ * 1. Find available calendar gaps
+ * 2. Create slot_proposals entry
+ * 3. Send WhatsApp with options + waitlist fallback
  */
 export async function generateRebookingSuggestions(
   supabase: SupabaseClient,
   tenantId: string,
   patientId: string,
   cancelledAppointment: CancelledAppointment
-): Promise<RebookingSuggestions> {
-  const [history, availableSlots] = await Promise.all([
-    loadPatientHistory(supabase, tenantId, patientId),
-    fetchAvailableSlots(
-      supabase,
-      tenantId,
-      cancelledAppointment.service_name,
-      cancelledAppointment.duration_min
-    ),
-  ]);
+): Promise<{ message: string; suggestedSlots: readonly GapSlot[] }> {
+  // Load patient info
+  const { data: patient } = await supabase
+    .from("patients")
+    .select("first_name, phone")
+    .eq("id", patientId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
 
-  // Sort available slots: prefer patient's preferred days/hours
-  const scoredSlots = availableSlots.map((slot) => {
-    const d = new Date(slot.startAt);
-    const dayScore = history.preferredDays.indexOf(d.getUTCDay());
-    const hourScore = history.preferredHours.indexOf(d.getUTCHours());
-    const score =
-      (dayScore !== -1 ? 3 - dayScore : 0) +
-      (hourScore !== -1 ? 3 - hourScore : 0);
-    return { slot, score };
-  });
+  const firstName = patient?.first_name ?? "Paziente";
+  const phone = patient?.phone ?? null;
 
-  scoredSlots.sort((a, b) => b.score - a.score);
-  const topSlots = scoredSlots.slice(0, 3).map((s) => s.slot);
+  if (!phone) {
+    console.error("[SmartRebook] No phone for patient:", patientId.slice(0, 8));
+    return { message: "", suggestedSlots: [] };
+  }
 
-  const message = await generateAISuggestions(
-    history.firstName,
-    cancelledAppointment.service_name,
-    cancelledAppointment.scheduled_at,
-    topSlots,
-    history
+  // Find calendar gaps
+  const gaps = await findCalendarGaps(
+    supabase,
+    tenantId,
+    cancelledAppointment.duration_min
   );
 
-  return { message, suggestedSlots: topSlots };
+  // Create proposal + send message
+  await createProposalAndNotify(
+    supabase,
+    tenantId,
+    cancelledAppointment.id,
+    patientId,
+    phone,
+    firstName,
+    cancelledAppointment.service_name,
+    gaps
+  );
+
+  return { message: "sent", suggestedSlots: gaps };
 }
