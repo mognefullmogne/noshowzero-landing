@@ -10,6 +10,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { findCandidates } from "./find-candidates";
 import { sendOffer } from "./send-offer";
 
+/** Maximum offers per slot to prevent runaway cascades. */
+const MAX_OFFERS_PER_SLOT = 10;
+
 /**
  * Find the best waitlist candidate for a cancelled slot and send them an offer.
  * Returns the offer ID if successful, null if no candidates found or send failed.
@@ -56,6 +59,22 @@ export async function triggerBackfill(
     return null;
   }
 
+  // Guard: cap total offers per slot to prevent runaway cascades
+  const { count: totalOffers } = await supabase
+    .from("waitlist_offers")
+    .select("id", { count: "exact", head: true })
+    .eq("original_appointment_id", appointmentId)
+    .in("status", ["pending", "accepted", "declined", "expired"]);
+
+  if (totalOffers !== null && totalOffers >= MAX_OFFERS_PER_SLOT) {
+    console.warn(
+      "[Backfill] MAX_OFFERS_PER_SLOT reached for appointment:",
+      appointmentId,
+      `(${totalOffers}/${MAX_OFFERS_PER_SLOT})`
+    );
+    return null;
+  }
+
   // Find candidates — appointment-based detection (SLOT-01)
   const candidates = await findCandidates(supabase, {
     appointmentId,
@@ -66,7 +85,32 @@ export async function triggerBackfill(
   });
 
   if (candidates.length === 0) {
-    console.info("[Backfill] No matching candidates for appointment:", appointmentId);
+    // Check if any offers were previously sent — if so, cascade is exhausted
+    const { count: previousOffers } = await supabase
+      .from("waitlist_offers")
+      .select("id", { count: "exact", head: true })
+      .eq("original_appointment_id", appointmentId);
+
+    if (previousOffers && previousOffers > 0) {
+      console.warn(
+        "[Backfill] CASCADE EXHAUSTED: No more candidates for appointment:",
+        appointmentId,
+        `(${previousOffers} offers sent)`
+      );
+
+      // Record cascade exhaustion in audit_log for dashboard visibility
+      await supabase.from("audit_log").insert({
+        tenant_id: tenantId,
+        actor_type: "system",
+        entity_type: "appointment",
+        entity_id: appointmentId,
+        action: "cascade_exhausted",
+        metadata: { offers_sent: previousOffers },
+      });
+    } else {
+      console.info("[Backfill] No matching candidates for appointment:", appointmentId);
+    }
+
     return null;
   }
 
@@ -83,19 +127,6 @@ export async function triggerBackfill(
 
   if (result.status === "failed") {
     console.error("[Backfill] Failed to send offer:", result.errorMessage);
-    // Try next candidate if first one failed
-    if (candidates.length > 1) {
-      const retry = await sendOffer(supabase, {
-        candidate: candidates[1],
-        originalAppointmentId: appointmentId,
-        tenantId,
-        serviceName: appointment.service_name,
-        providerName: appointment.provider_name,
-        locationName: appointment.location_name,
-        scheduledAt: new Date(appointment.scheduled_at),
-      });
-      return retry.status === "sent" ? retry.offerId : null;
-    }
     return null;
   }
 

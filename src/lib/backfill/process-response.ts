@@ -95,12 +95,6 @@ export async function processAccept(
     .update({ new_appointment_id: newAppt.id })
     .eq("id", offerId);
 
-  // Mark waitlist entry as fulfilled
-  await supabase
-    .from("waitlist_entries")
-    .update({ status: "fulfilled" })
-    .eq("id", offer.waitlist_entry_id);
-
   // Cancel any other pending offers for the same original appointment
   await supabase
     .from("waitlist_offers")
@@ -143,26 +137,11 @@ export async function processDecline(
     })
     .eq("id", offerId)
     .eq("status", "pending")
-    .select("*, waitlist_entry:waitlist_entries(*), original_appointment:appointments!waitlist_offers_original_appointment_id_fkey(*)")
+    .select("*, original_appointment:appointments!waitlist_offers_original_appointment_id_fkey(*)")
     .single();
 
   if (claimError || !offer) {
     return { success: false, error: "Offer is no longer available" };
-  }
-
-  const entry = offer.waitlist_entry;
-  if (entry && entry.offers_sent < entry.max_offers) {
-    // Reset to waiting so they can receive future offers
-    await supabase
-      .from("waitlist_entries")
-      .update({ status: "waiting" })
-      .eq("id", entry.id);
-  } else if (entry) {
-    // Max offers exhausted
-    await supabase
-      .from("waitlist_entries")
-      .update({ status: "offer_declined" })
-      .eq("id", entry.id);
   }
 
   // Cascade: try next candidate for the same slot
