@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { AnalyticsFiltersSchema } from "@/lib/validations";
 import { computeRecoveryMetrics } from "@/lib/metrics/recovery-metrics";
+import { maybeProcessPending } from "@/lib/engine/process-pending";
 
 export async function GET(request: Request) {
   try {
@@ -21,6 +22,9 @@ export async function GET(request: Request) {
 
     const supabase = await createClient();
     const tenantId = auth.data.tenantId;
+
+    // Fire-and-forget: viewing analytics is a strong signal staff are active.
+    maybeProcessPending(supabase, tenantId);
 
     // Build base appointment query with optional date range
     const buildQuery = (status?: string) => {

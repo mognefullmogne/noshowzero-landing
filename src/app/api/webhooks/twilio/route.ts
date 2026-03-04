@@ -19,7 +19,7 @@ import { routeIntent } from "@/lib/webhooks/message-router";
 import { handleBookingMessage } from "@/lib/booking/booking-orchestrator";
 import { findActiveSession } from "@/lib/booking/session-manager";
 import { resolveTenantFromPhone } from "@/lib/booking/tenant-resolver";
-import { checkExpiredOffers } from "@/lib/backfill/check-expired-offers";
+import { maybeProcessPending } from "@/lib/engine/process-pending";
 import { recordResponsePattern } from "@/lib/intelligence/response-patterns";
 import type { MessageChannel, MessageIntent } from "@/lib/types";
 
@@ -280,10 +280,9 @@ export async function POST(request: NextRequest) {
       `[Webhook] patient=${patient.id.slice(0, 8)}... intent=${intent} (${confidence.toFixed(2)}) → ${result.action ?? "no_action"}`
     );
 
-    // 5a. Opportunistically expire stale offers for this tenant (fire-and-forget, don't block)
-    checkExpiredOffers(supabase, patient.tenant_id).catch((err) => {
-      console.error("[Webhook] checkExpiredOffers failed:", err);
-    });
+    // 5a. Run the full opportunistic processing engine for this tenant (fire-and-forget).
+    // This replaces the previous checkExpiredOffers call with the complete engine.
+    maybeProcessPending(supabase, patient.tenant_id);
 
     // 5b. Record response pattern for actionable intents (learn from patient behavior).
     //     Fire-and-forget — do not block the TwiML reply.

@@ -4,6 +4,7 @@ import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { UpdateAppointmentSchema } from "@/lib/validations";
 import { VALID_TRANSITIONS, type AppointmentStatus } from "@/lib/types";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
+import { maybeProcessPending } from "@/lib/engine/process-pending";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -149,6 +150,9 @@ export async function PATCH(
         .then((serviceClient) => triggerBackfill(serviceClient, id, auth.data.tenantId))
         .catch((err) => console.error("[Backfill] Trigger failed:", err));
     }
+
+    // After any appointment status change, run the full engine to catch any cascading work.
+    maybeProcessPending(supabase, auth.data.tenantId);
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {
