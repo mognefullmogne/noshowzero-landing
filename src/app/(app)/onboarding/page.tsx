@@ -59,15 +59,12 @@ export default function OnboardingPage() {
   const [selectedPlan, setSelectedPlan] = useState("growth");
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("monthly");
 
-  // If tenant already exists, pre-fill and start at step 2
+  // If tenant already exists with a name, onboarding is complete — redirect to dashboard
   useEffect(() => {
-    if (tenant) {
-      setBusinessName(tenant.name);
-      setIndustry(tenant.industry ?? "");
-      setSize(tenant.business_size ?? "");
-      setStep(2);
+    if (tenant && tenant.name) {
+      router.push("/dashboard");
     }
-  }, [tenant]);
+  }, [tenant, router]);
 
   async function handleStep1() {
     if (!businessName.trim()) return;
