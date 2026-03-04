@@ -122,11 +122,12 @@ describe("triggerBackfill", () => {
     // The cancelling patient's ID must be passed so findCandidates can exclude them
     expect(slot.cancellingPatientId).toBe(customPatientId);
     // Old fields must NOT be passed to findCandidates (they don't exist on OpenSlotDetails)
-    expect((slot as Record<string, unknown>).serviceName).toBeUndefined();
-    expect((slot as Record<string, unknown>).serviceCode).toBeUndefined();
-    expect((slot as Record<string, unknown>).providerName).toBeUndefined();
-    expect((slot as Record<string, unknown>).locationName).toBeUndefined();
-    expect((slot as Record<string, unknown>).paymentCategory).toBeUndefined();
+    const slotAsAny = slot as unknown as Record<string, unknown>;
+    expect(slotAsAny.serviceName).toBeUndefined();
+    expect(slotAsAny.serviceCode).toBeUndefined();
+    expect(slotAsAny.providerName).toBeUndefined();
+    expect(slotAsAny.locationName).toBeUndefined();
+    expect(slotAsAny.paymentCategory).toBeUndefined();
   });
 
   // ---------------------------------------------------------------------------
