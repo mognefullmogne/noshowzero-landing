@@ -9,30 +9,17 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { getOverbookingRecommendations } from "@/lib/intelligence/overbooking";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request: NextRequest) {
+  const auth = await getAuthenticatedTenant();
+  if (!auth.ok) return auth.response;
+  const { tenantId } = auth.data;
+
   const supabase = await createClient();
-
-  // Auth check
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json(
-      { success: false, error: { code: "UNAUTHORIZED", message: "Non autenticato" } },
-      { status: 401 }
-    );
-  }
-
-  // Get tenant_id from user metadata
-  const tenantId = user.user_metadata?.tenant_id as string | undefined;
-  if (!tenantId) {
-    return NextResponse.json(
-      { success: false, error: { code: "NO_TENANT", message: "Tenant non trovato" } },
-      { status: 403 }
-    );
-  }
 
   // Validate date parameter
   const dateParam = request.nextUrl.searchParams.get("date");

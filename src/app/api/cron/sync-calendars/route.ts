@@ -8,18 +8,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { syncIntegration } from "@/lib/integrations/sync-engine";
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
-  // Validate cron secret
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json(
-      { success: false, error: { code: "UNAUTHORIZED", message: "Invalid cron secret" } },
-      { status: 401 }
-    );
-  }
+  const authError = verifyCronSecret(request);
+  if (authError) return authError;
 
   const supabase = await createServiceClient();
 

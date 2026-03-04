@@ -8,12 +8,11 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { runOptimization } from "@/lib/optimization/calendar-optimizer";
 import { flagHighRiskAppointments } from "@/lib/optimization/proactive-reschedule";
 import { prequalifyForCriticalRisk } from "@/lib/backfill/preemptive-cascade";
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronSecret(request);
+  if (authError) return authError;
 
   const supabase = await createServiceClient();
 

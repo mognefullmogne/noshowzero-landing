@@ -4,28 +4,14 @@
  * Triggers cascade backfill for each detected no-show.
  */
 
-import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { detectNoShowsAllTenants } from "@/lib/intelligence/no-show-detector";
-
-function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization") ?? "";
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret) {
-    console.error("CRON_SECRET is not set — refusing to run cron endpoint");
-    return NextResponse.json({ error: "Service misconfigured" }, { status: 500 });
-  }
-
-  if (!safeCompare(authHeader, `Bearer ${cronSecret}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronSecret(request);
+  if (authError) return authError;
 
   try {
     const supabase = await createServiceClient();

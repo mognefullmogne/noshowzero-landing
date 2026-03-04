@@ -490,6 +490,7 @@ async function lookupLastOutboundTime(
     .from("message_events")
     .select("created_at")
     .eq("tenant_id", tenantId)
+    .eq("patient_id", patientId)
     .eq("direction", "outbound")
     .order("created_at", { ascending: false })
     .limit(1)
