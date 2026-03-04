@@ -106,11 +106,11 @@ Plans:
   3. When a candidate accepts, a new appointment is created in the cancelled slot's time and the candidate's original (later) appointment is freed for other patients
   4. The cascade stops immediately when a candidate accepts (slot filled) or when all viable candidates have been contacted (slot unfilled)
   5. No two candidates ever hold an active offer for the same slot simultaneously
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- Cascade engine: Italian reply-based offer messages, 1-hour expiry, clean cascade plumbing, max offers cap, exhaustion notification
+- [ ] 05-02-PLAN.md -- Accept flow with chain cascade, Italian confirmation messages, AI fallback for offer responses
 
 ### Phase 6: Revenue Metrics
 **Goal**: Dashboard metrics reflect honest, real recovery performance -- only counting slots that were actually filled after cancellation and no-shows that were saved
@@ -151,7 +151,7 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 1. Infrastructure | v1.0 | 2/2 | Complete | 2026-03-03 |
 | 2. Core Realtime | v1.0 | 3/3 | Complete | 2026-03-03 |
 | 3. Resilience | v1.0 | 2/2 | Complete | 2026-03-03 |
-| 4. Candidate Detection | 3/3 | Complete   | 2026-03-04 | - |
-| 5. WhatsApp Cascade | v1.1 | 0/? | Not started | - |
+| 4. Candidate Detection | v1.1 | 3/3 | Complete | 2026-03-04 |
+| 5. WhatsApp Cascade | v1.1 | 0/2 | Not started | - |
 | 6. Revenue Metrics | v1.1 | 0/? | Not started | - |
 | 7. Recovery Dashboard | v1.1 | 0/? | Not started | - |
