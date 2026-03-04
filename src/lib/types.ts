@@ -164,6 +164,17 @@ export interface ContactScheduleEntry {
   readonly messageTone: "standard" | "urgent" | "friendly";
 }
 
+// --- Recovery metric types ---
+
+export interface RecoveryMetrics {
+  readonly slotsRecovered: number;        // accepted offers with new_appointment_id
+  readonly slotsLost: number;             // cancelled + no-show slots that were NOT filled
+  readonly totalCancelledOrNoShow: number; // denominator for fill rate
+  readonly fillRatePercent: number;       // METR-04 formula
+  readonly revenueRecovered: number;      // slotsRecovered * tenant's avg_appointment_value
+  readonly activeOffers: number;          // pending offers count
+}
+
 // --- API response types ---
 
 export interface ApiResponse<T> {
