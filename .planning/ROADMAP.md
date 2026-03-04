@@ -121,11 +121,11 @@ Plans:
   2. Each tenant can set their average appointment value in a settings page, and this value is used for all revenue calculations for that tenant
   3. Fill rate percentage is calculated as (slots filled via recovery / total slots cancelled or no-showed) and displays correctly on the dashboard
   4. All metrics update in real-time as slots are recovered (leveraging existing Supabase Realtime from v1.0)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md -- DB migration, pure recovery metric functions (TDD), fix analytics API, tenant settings endpoint
+- [ ] 06-02-PLAN.md -- Settings page appointment value config, dashboard KPI cards with honest recovery metrics
 
 ### Phase 7: Recovery Dashboard
 **Goal**: Clinic staff can see at a glance which slots have active offers, what happened recently, and how well slot recovery is performing -- all updating live
@@ -153,5 +153,5 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 3. Resilience | v1.0 | 2/2 | Complete | 2026-03-03 |
 | 4. Candidate Detection | v1.1 | 3/3 | Complete | 2026-03-04 |
 | 5. WhatsApp Cascade | 2/2 | Complete   | 2026-03-04 | - |
-| 6. Revenue Metrics | v1.1 | 0/? | Not started | - |
+| 6. Revenue Metrics | v1.1 | 0/2 | Not started | - |
 | 7. Recovery Dashboard | v1.1 | 0/? | Not started | - |
