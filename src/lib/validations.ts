@@ -198,6 +198,12 @@ export const AnalyticsFiltersSchema = z.object({
   to: z.string().datetime().optional(),
 });
 
+// --- Tenant Settings ---
+
+export const TenantSettingsUpdateSchema = z.object({
+  avg_appointment_value: z.number().positive("Must be a positive number").max(10000, "Maximum value is 10000"),
+});
+
 // --- Messaging ---
 
 export const SendMessageSchema = z.object({

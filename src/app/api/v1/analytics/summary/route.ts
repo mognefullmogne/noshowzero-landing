@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { authenticateApiKey } from "@/lib/api-key-auth";
-
-const AVG_APPOINTMENT_VALUE = 150;
+import { computeRecoveryMetrics } from "@/lib/metrics/recovery-metrics";
 
 export async function GET(request: Request) {
   try {
@@ -26,24 +25,40 @@ export async function GET(request: Request) {
       return q;
     };
 
-    const [totalRes, noShowRes, completedRes, confirmedRes, waitlistRes] = await Promise.all([
+    const [totalRes, noShowRes, completedRes, confirmedRes, recoveryRes, tenantDataRes] = await Promise.all([
       buildQuery(),
       buildQuery("no_show"),
       buildQuery("completed"),
       buildQuery("confirmed"),
       supabase
-        .from("waitlist_entries")
+        .from("waitlist_offers")
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenantId)
-        .eq("status", "fulfilled"),
+        .eq("status", "accepted")
+        .not("new_appointment_id", "is", null),
+      supabase
+        .from("tenants")
+        .select("avg_appointment_value")
+        .eq("id", tenantId)
+        .single(),
     ]);
 
     const total = totalRes.count ?? 0;
     const noShowCount = noShowRes.count ?? 0;
     const completedCount = completedRes.count ?? 0;
     const confirmedCount = confirmedRes.count ?? 0;
-    const waitlistFills = waitlistRes.count ?? 0;
+    const cancelledCount = 0; // v1 summary does not track cancelled separately
+    const slotsRecoveredCount = recoveryRes.count ?? 0;
+    const avgAppointmentValue = tenantDataRes.data?.avg_appointment_value ?? 80;
     const noShowRate = total > 0 ? Math.round((noShowCount / total) * 100) : 0;
+
+    const recovery = computeRecoveryMetrics({
+      cancelledCount,
+      noShowCount,
+      acceptedOffersWithNewAppt: slotsRecoveredCount,
+      pendingOffersCount: 0,
+      avgAppointmentValue,
+    });
 
     return NextResponse.json({
       success: true,
@@ -53,8 +68,8 @@ export async function GET(request: Request) {
         no_show_count: noShowCount,
         completed_count: completedCount,
         confirmed_count: confirmedCount,
-        waitlist_fills: waitlistFills,
-        revenue_saved: (confirmedCount + completedCount + waitlistFills) * AVG_APPOINTMENT_VALUE,
+        waitlist_fills: recovery.slotsRecovered,
+        revenue_saved: recovery.revenueRecovered,
       },
     });
   } catch (err) {
