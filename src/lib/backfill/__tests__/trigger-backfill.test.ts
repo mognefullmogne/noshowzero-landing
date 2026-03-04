@@ -64,7 +64,7 @@ function makeCandidate(overrides: Partial<RankedCandidate> = {}): RankedCandidat
     patientPhone: "+391234567890",
     patientEmail: null,
     preferredChannel: "whatsapp",
-    candidateScore: { total: 80, appointmentDistance: 60, reliability: 20 },
+    candidateScore: { total: 80, appointmentDistance: 60, reliability: 20, urgencyBonus: 0, responsiveness: 0 },
     currentAppointmentAt: new Date(Date.now() + 30 * 24 * 3_600_000),
     ...overrides,
   };
@@ -180,12 +180,12 @@ describe("triggerBackfill", () => {
     const topCandidate = makeCandidate({
       candidateAppointmentId: "appt-top",
       patientId: "pat-top",
-      candidateScore: { total: 100, appointmentDistance: 60, reliability: 40 },
+      candidateScore: { total: 100, appointmentDistance: 60, reliability: 40, urgencyBonus: 0, responsiveness: 0 },
     });
     const secondCandidate = makeCandidate({
       candidateAppointmentId: "appt-second",
       patientId: "pat-second",
-      candidateScore: { total: 60, appointmentDistance: 40, reliability: 20 },
+      candidateScore: { total: 60, appointmentDistance: 40, reliability: 20, urgencyBonus: 0, responsiveness: 0 },
     });
 
     const supabase = createMockSupabase({

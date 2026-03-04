@@ -238,6 +238,8 @@ export async function getPrequalifiedCandidates(
           total: totalScore,
           appointmentDistance: Math.round(totalScore * 0.6),
           reliability: Math.round(totalScore * 0.4),
+          urgencyBonus: 0,
+          responsiveness: 0,
         },
         currentAppointmentAt: new Date(appt.scheduled_at),
       } satisfies RankedCandidate;

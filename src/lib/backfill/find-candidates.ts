@@ -3,7 +3,8 @@
  *
  * Queries the appointments table (not waitlist_entries) for scheduled patients
  * who could move to an earlier slot. Applies filtering, deduplication, and
- * scoring via the 2-factor computeCandidateScore algorithm.
+ * scoring via the 4-factor computeCandidateScore algorithm
+ * (appointmentDistance + reliability + urgencyBonus + responsiveness).
  *
  * SLOT-01: Appointment-based candidate detection
  * SLOT-02: Candidate scoring and ranking
@@ -51,6 +52,9 @@ interface AppointmentRow {
     readonly phone: string | null;
     readonly email: string | null;
     readonly preferred_channel: string;
+    readonly response_patterns: {
+      readonly records: ReadonlyArray<{ readonly responseMinutes: number }>;
+    } | null;
   } | null;
 }
 
@@ -87,7 +91,7 @@ export async function findCandidates(
   // Fetch candidate appointments: scheduled AFTER the open slot, active statuses
   const { data: appointments, error: apptError } = await supabase
     .from("appointments")
-    .select("*, patient:patients(id, first_name, last_name, phone, email, preferred_channel)")
+    .select("*, patient:patients(id, first_name, last_name, phone, email, preferred_channel, response_patterns)")
     .eq("tenant_id", slot.tenantId)
     .in("status", ACTIVE_STATUSES)
     .gt("scheduled_at", slot.scheduledAt.toISOString())
@@ -157,11 +161,17 @@ export async function findCandidates(
     if (!patient) return null;
 
     const stats = statsMap.get(appt.patient_id) ?? { total: 0, noShows: 0 };
+
+    // Extract avg response minutes from stored patterns (inline, no extra DB call)
+    const avgResponseMinutes = extractAvgResponseMinutes(patient.response_patterns);
+
     const candidateScore = computeCandidateScore({
       appointmentScheduledAt: new Date(appt.scheduled_at),
       openSlotAt: slot.scheduledAt,
       patientNoShows: stats.noShows,
       patientTotal: stats.total,
+      now,
+      avgResponseMinutes,
     });
 
     const candidate: RankedCandidate = {
@@ -234,4 +244,20 @@ function buildStatsMap(
   }
 
   return map;
+}
+
+/**
+ * Extract average response minutes from patient's stored response patterns.
+ * Returns null if insufficient data (< 3 records).
+ */
+function extractAvgResponseMinutes(
+  patterns: { readonly records: ReadonlyArray<{ readonly responseMinutes: number }> } | null
+): number | null {
+  if (!patterns?.records || patterns.records.length < 3) return null;
+
+  const totalMinutes = patterns.records.reduce(
+    (sum, r) => sum + r.responseMinutes,
+    0
+  );
+  return Math.round(totalMinutes / patterns.records.length);
 }

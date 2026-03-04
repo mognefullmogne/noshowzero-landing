@@ -20,6 +20,7 @@ import { handleBookingMessage } from "@/lib/booking/booking-orchestrator";
 import { findActiveSession } from "@/lib/booking/session-manager";
 import { resolveTenantFromPhone } from "@/lib/booking/tenant-resolver";
 import { checkExpiredOffers } from "@/lib/backfill/check-expired-offers";
+import { recordResponsePattern } from "@/lib/intelligence/response-patterns";
 import type { MessageChannel, MessageIntent } from "@/lib/types";
 
 // Phone number validation (E.164 format)
@@ -279,10 +280,24 @@ export async function POST(request: NextRequest) {
       `[Webhook] patient=${patient.id.slice(0, 8)}... intent=${intent} (${confidence.toFixed(2)}) → ${result.action ?? "no_action"}`
     );
 
-    // 5. Opportunistically expire stale offers for this tenant (fire-and-forget, don't block)
+    // 5a. Opportunistically expire stale offers for this tenant (fire-and-forget, don't block)
     checkExpiredOffers(supabase, patient.tenant_id).catch((err) => {
       console.error("[Webhook] checkExpiredOffers failed:", err);
     });
+
+    // 5b. Record response pattern for actionable intents (learn from patient behavior).
+    //     Fire-and-forget — do not block the TwiML reply.
+    const ACTIONABLE_INTENTS = new Set(["confirm", "cancel", "accept_offer", "decline_offer"]);
+    if (ACTIONABLE_INTENTS.has(intent) && result.action) {
+      const respondedAt = new Date();
+      lookupLastOutboundTime(supabase, patient.tenant_id, patient.id)
+        .then((sentAt) => {
+          if (sentAt) {
+            return recordResponsePattern(supabase, patient.id, channel, sentAt, respondedAt);
+          }
+        })
+        .catch((err) => console.error("[Webhook] Response pattern recording failed:", err));
+    }
 
     // 6. Return reply directly via TwiML
     return twimlResponse(result.reply);
@@ -461,6 +476,44 @@ async function classifyOfferResponse(
   } catch {
     return { intent: "unknown", confidence: 0.0 };
   }
+}
+
+/**
+ * Look up the most recent outbound message time to a patient.
+ * Used to compute response latency for pattern learning.
+ */
+async function lookupLastOutboundTime(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  tenantId: string,
+  patientId: string
+): Promise<Date | null> {
+  const { data } = await supabase
+    .from("message_events")
+    .select("created_at")
+    .eq("tenant_id", tenantId)
+    .eq("direction", "outbound")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // Also check via thread for this patient
+  if (!data) {
+    const { data: threadData } = await supabase
+      .from("message_threads")
+      .select("last_message_at")
+      .eq("tenant_id", tenantId)
+      .eq("patient_id", patientId)
+      .order("last_message_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (threadData?.last_message_at) {
+      return new Date(threadData.last_message_at);
+    }
+    return null;
+  }
+
+  return new Date(data.created_at);
 }
 
 function twimlResponse(message: string): NextResponse {

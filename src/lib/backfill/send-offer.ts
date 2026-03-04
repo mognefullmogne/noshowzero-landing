@@ -12,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RankedCandidate } from "./find-candidates";
 import { generateOfferToken } from "./offer-tokens";
 import { sendNotification } from "@/lib/twilio/send-notification";
+import { getOptimalContactTime } from "@/lib/intelligence/response-patterns";
 import {
   renderOfferWhatsApp,
   renderOfferSms,
@@ -128,8 +129,11 @@ export async function sendOffer(
     expiry_description: expiryDesc,
   };
 
-  // Determine channel, message content, and recipient
-  const channel = input.candidate.preferredChannel;
+  // Determine channel using learned response patterns, falling back to patient preference
+  const optimalTiming = await getOptimalContactTime(supabase, input.candidate.patientId);
+  const channel = optimalTiming.dataPoints >= 3
+    ? optimalTiming.channel
+    : input.candidate.preferredChannel;
   let body: string;
   let subject: string | undefined;
   let to: string;
