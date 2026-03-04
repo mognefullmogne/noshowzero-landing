@@ -6,7 +6,7 @@
 import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { expirePendingOffers } from "@/lib/backfill/expire-offers";
+import { checkExpiredOffers } from "@/lib/backfill/check-expired-offers";
 
 function safeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
   try {
     const supabase = await createServiceClient();
-    const result = await expirePendingOffers(supabase);
+    const result = await checkExpiredOffers(supabase);
 
     console.info(`[Cron] expire-offers: expired=${result.expired}, cascaded=${result.cascaded}`);
     return NextResponse.json({ success: true });

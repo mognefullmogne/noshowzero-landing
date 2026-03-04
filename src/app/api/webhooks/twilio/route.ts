@@ -19,6 +19,7 @@ import { routeIntent } from "@/lib/webhooks/message-router";
 import { handleBookingMessage } from "@/lib/booking/booking-orchestrator";
 import { findActiveSession } from "@/lib/booking/session-manager";
 import { resolveTenantFromPhone } from "@/lib/booking/tenant-resolver";
+import { checkExpiredOffers } from "@/lib/backfill/check-expired-offers";
 import type { MessageChannel, MessageIntent } from "@/lib/types";
 
 // Phone number validation (E.164 format)
@@ -278,7 +279,12 @@ export async function POST(request: NextRequest) {
       `[Webhook] patient=${patient.id.slice(0, 8)}... intent=${intent} (${confidence.toFixed(2)}) → ${result.action ?? "no_action"}`
     );
 
-    // 5. Return reply directly via TwiML
+    // 5. Opportunistically expire stale offers for this tenant (fire-and-forget, don't block)
+    checkExpiredOffers(supabase, patient.tenant_id).catch((err) => {
+      console.error("[Webhook] checkExpiredOffers failed:", err);
+    });
+
+    // 6. Return reply directly via TwiML
     return twimlResponse(result.reply);
   } catch (err) {
     console.error("[Webhook] Unhandled error:", err);

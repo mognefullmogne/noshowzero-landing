@@ -48,9 +48,9 @@ export async function triggerBackfill(
     return null;
   }
 
-  // Only backfill for cancelled/no_show appointments with future slots
-  if (!["cancelled", "no_show"].includes(appointment.status)) {
-    console.warn("[Backfill] Appointment is not cancelled/no_show:", appointment.status);
+  // Only backfill for cancelled/no_show/timeout appointments with future slots
+  if (!["cancelled", "no_show", "timeout"].includes(appointment.status)) {
+    console.warn("[Backfill] Appointment is not cancelled/no_show/timeout:", appointment.status);
     return null;
   }
 
@@ -124,8 +124,8 @@ export async function triggerBackfill(
         `(${previousOffers} offers sent)`
       );
 
-      // Record cascade exhaustion in audit_log for dashboard visibility
-      await supabase.from("audit_log").insert({
+      // Record cascade exhaustion in audit_events for dashboard visibility
+      await supabase.from("audit_events").insert({
         tenant_id: tenantId,
         actor_type: "system",
         entity_type: "appointment",
