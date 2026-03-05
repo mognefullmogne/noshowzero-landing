@@ -15,6 +15,14 @@ import type { OptimizationDecision } from "@/lib/types";
 import { renderInlineMarkdown } from "@/lib/render-markdown";
 import { toast } from "sonner";
 
+const FILTER_LABELS: Record<string, string> = {
+  "": "Tutti",
+  proposed: "Proposte",
+  approved: "Approvate",
+  executed: "Completate",
+  rejected: "Rifiutate",
+};
+
 const TYPE_LABELS: Record<string, string> = {
   gap_fill: "Gap Fill",
   proactive_reschedule: "Proactive Reschedule",
@@ -111,7 +119,7 @@ export default function OptimizationPage() {
 
       {/* Filters */}
       <div className="mb-6 flex gap-2">
-        {["", "proposed", "approved", "rejected"].map((s) => (
+        {["", "proposed", "approved", "executed", "rejected"].map((s) => (
           <button
             key={s}
             onClick={() => { setStatusFilter(s); setPage(1); }}
@@ -121,7 +129,7 @@ export default function OptimizationPage() {
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
-            {s || "All"}
+            {FILTER_LABELS[s] ?? s}
           </button>
         ))}
       </div>
