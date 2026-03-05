@@ -182,27 +182,6 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
   }
 
   const [cancelling, setCancelling] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  async function handleDeleteAppointment() {
-    if (!window.confirm("Eliminare DEFINITIVAMENTE questo appuntamento? Questa azione è irreversibile.")) return;
-    setDeleting(true);
-    setActionError(null);
-    try {
-      const res = await fetch(`/api/appointments/${appointment.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        setActionError(data?.error?.message ?? "Errore durante l'eliminazione");
-        return;
-      }
-      onClose();
-      onUpdated();
-    } catch {
-      setActionError("Errore di rete — riprova");
-    } finally {
-      setDeleting(false);
-    }
-  }
 
   async function handleCancelAppointment() {
     if (!window.confirm("Sei sicuro di voler cancellare questo appuntamento? Lo slot verrà liberato e l'AI cercherà un sostituto dalla lista d'attesa.")) return;
@@ -561,20 +540,7 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
             </>
           )}
 
-          {/* Delete permanently */}
-          <Separator />
-          <div className="pt-1">
-            <Button
-              variant="outline"
-              onClick={handleDeleteAppointment}
-              disabled={deleting}
-              className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            >
-              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Elimina Definitivamente
-            </Button>
-            <p className="text-[11px] text-gray-400 text-center mt-1">Questa azione è irreversibile</p>
-          </div>
+          {/* Hard delete removed — all removals go through cancel (triggers AI backfill) */}
         </div>
       </DialogContent>
     </Dialog>

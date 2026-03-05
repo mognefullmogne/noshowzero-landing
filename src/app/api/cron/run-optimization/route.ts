@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
 
   for (const tenant of tenants ?? []) {
     try {
-      const [opt, risk, preq] = await Promise.all([
-        runOptimization(supabase, tenant.id),
-        flagHighRiskAppointments(supabase, tenant.id),
-        prequalifyForCriticalRisk(supabase, tenant.id),
-      ]);
+      // Sequential: runOptimization deletes old proposals before flagHighRisk
+      // re-inserts them. prequalifyForCriticalRisk depends on current risk flags.
+      const opt = await runOptimization(supabase, tenant.id);
+      const risk = await flagHighRiskAppointments(supabase, tenant.id);
+      const preq = await prequalifyForCriticalRisk(supabase, tenant.id);
       totalDecisions += opt.decisions;
       totalFlags += risk.flagged;
       totalPrequalified += preq.prequalified;

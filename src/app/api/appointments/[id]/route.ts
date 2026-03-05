@@ -199,58 +199,22 @@ export async function PATCH(
   }
 }
 
+// DELETE removed — all removals go through PATCH → status: "cancelled"
+// which triggers backfill correctly without race conditions.
+// The old DELETE had a race: triggerBackfill fire-and-forget, then row deleted
+// before backfill could read the appointment data.
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const auth = await getAuthenticatedTenant();
-    if (!auth.ok) return auth.response;
-
-    const { id } = await params;
-    if (!UUID_RE.test(id)) {
-      return NextResponse.json(
-        { success: false, error: { code: "VALIDATION_ERROR", message: "Invalid appointment ID" } },
-        { status: 400 }
-      );
-    }
-
-    const supabase = await createClient();
-
-    logAuditEvent({
-      tenantId: auth.data.tenantId,
-      actorType: "user",
-      actorId: auth.data.userId,
-      entityType: "appointment",
-      entityId: id,
-      action: "appointment.deleted",
-    });
-
-    // Trigger backfill before deleting so the backfill can read appointment data
-    const serviceClient = await createServiceClient();
-    triggerBackfill(serviceClient, id, auth.data.tenantId)
-      .catch((err) => console.error("[Backfill] Trigger failed:", err));
-
-    const { error } = await supabase
-      .from("appointments")
-      .delete()
-      .eq("id", id)
-      .eq("tenant_id", auth.data.tenantId);
-
-    if (error) {
-      console.error("Appointment DELETE error:", error);
-      return NextResponse.json(
-        { success: false, error: { code: "DB_ERROR", message: "Failed to delete appointment" } },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("Appointment DELETE error:", err);
-    return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: "Internal server error" } },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code: "METHOD_NOT_ALLOWED",
+        message: "DELETE is disabled. Use PATCH with { status: 'cancelled' } instead.",
+      },
+    },
+    { status: 405 }
+  );
 }

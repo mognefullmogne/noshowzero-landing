@@ -14,6 +14,7 @@ import { fetchOutlookEvents } from "./outlook-calendar";
 import { parseICalFeed } from "./ical-parser";
 import { ensureValidGoogleToken } from "./token-refresh";
 import { ensureValidOutlookToken } from "./token-refresh";
+import { maybeProcessPending } from "@/lib/engine/process-pending";
 
 /**
  * Run a full sync for one integration. Returns import stats.
@@ -60,6 +61,11 @@ export async function syncIntegration(
         error_message: null,
       })
       .eq("id", integration.id);
+
+    // Wake up the AI engine to evaluate newly imported/cancelled appointments
+    if (result.imported > 0) {
+      maybeProcessPending(supabase, integration.tenant_id);
+    }
 
     // Complete import log
     if (importLog) {

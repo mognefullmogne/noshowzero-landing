@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServiceClient();
 
-    const [optimizationResult, rescheduleResult] = await Promise.all([
-      runOptimization(supabase, auth.data.tenantId),
-      flagHighRiskAppointments(supabase, auth.data.tenantId),
-    ]);
+    // Sequential: runOptimization deletes old proposals, then flagHighRisk
+    // re-inserts — running in parallel caused duplicates.
+    const optimizationResult = await runOptimization(supabase, auth.data.tenantId);
+    const rescheduleResult = await flagHighRiskAppointments(supabase, auth.data.tenantId);
 
     logAuditEvent({
       tenantId: auth.data.tenantId,

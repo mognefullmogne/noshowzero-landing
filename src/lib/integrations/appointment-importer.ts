@@ -6,10 +6,11 @@
  * Reuses existing risk scoring, reminder scheduling, and confirmation workflows.
  *
  * For each event:
- * 1. Skip cancelled / past events
- * 2. Dedup by external_id
- * 3. Find or create patient from attendees
- * 4. Create appointment with risk scoring + reminders + confirmation
+ * 1. Cancelled events → cancel existing appointment + trigger backfill
+ * 2. Skip past events
+ * 3. Dedup by external_id
+ * 4. Find or create patient from attendees
+ * 5. Create appointment with risk scoring + reminders + confirmation
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -18,6 +19,7 @@ import type {
   ImportResult,
   ImportError,
 } from "./types";
+import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
 import { computeRiskScore } from "@/lib/scoring/risk-score";
 import {
   generateContactSchedule,
@@ -41,8 +43,20 @@ export async function importCalendarEvents(
 
   for (const event of events) {
     try {
-      // 1. Skip cancelled events
+      // 1. Cancelled events: if we previously imported this event, cancel the
+      //    appointment and trigger backfill so the AI fills the freed slot.
       if (event.status === "cancelled") {
+        if (event.externalId) {
+          const cancelled = await handleExternalCancellation(
+            supabase,
+            tenantId,
+            event.externalId
+          );
+          if (cancelled) {
+            imported++; // counts as a meaningful sync action
+            continue;
+          }
+        }
         skipped++;
         continue;
       }
@@ -263,6 +277,56 @@ function parseName(fullName: string): {
     firstName: trimmed.slice(0, spaceIdx),
     lastName: trimmed.slice(spaceIdx + 1),
   };
+}
+
+/**
+ * When an external calendar event is cancelled, find the matching appointment
+ * and cancel it — then trigger backfill so the AI fills the freed slot.
+ * Returns true if an appointment was actually cancelled.
+ */
+async function handleExternalCancellation(
+  supabase: SupabaseClient,
+  tenantId: string,
+  externalId: string
+): Promise<boolean> {
+  const { data: existing } = await supabase
+    .from("appointments")
+    .select("id, status")
+    .eq("tenant_id", tenantId)
+    .eq("external_id", externalId)
+    .maybeSingle();
+
+  if (!existing) return false;
+
+  // Already cancelled/completed — nothing to do
+  if (["cancelled", "no_show", "completed"].includes(existing.status)) {
+    return false;
+  }
+
+  const { error } = await supabase
+    .from("appointments")
+    .update({
+      status: "cancelled",
+      declined_at: new Date().toISOString(),
+    })
+    .eq("id", existing.id)
+    .eq("tenant_id", tenantId);
+
+  if (error) {
+    console.error("[Importer] Failed to cancel synced appointment:", existing.id, error);
+    return false;
+  }
+
+  console.info(
+    `[Importer] External cancellation → appointment ${existing.id} cancelled, triggering backfill`
+  );
+
+  // Trigger backfill to fill the freed slot (fire-and-forget)
+  triggerBackfill(supabase, existing.id, tenantId, { triggerEvent: "cancellation" }).catch(
+    (err) => console.error("[Importer] Backfill after external cancel failed:", err)
+  );
+
+  return true;
 }
 
 /** Strip control characters from event summary for use as service_name */
