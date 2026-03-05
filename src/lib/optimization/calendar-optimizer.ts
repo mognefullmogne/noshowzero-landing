@@ -7,6 +7,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logAuditEvent } from "@/lib/audit/log-event";
 
 interface GapInfo {
   readonly startAt: string;
@@ -56,10 +57,11 @@ export async function runOptimization(
       const best = candidates[0];
 
       // Create optimization decision
-      const { error } = await supabase.from("optimization_decisions").insert({
+      const isAutoApproved = best.score >= AUTO_APPLY_THRESHOLD;
+      const { data: inserted, error } = await supabase.from("optimization_decisions").insert({
         tenant_id: tenantId,
         type: "gap_fill",
-        status: best.score >= AUTO_APPLY_THRESHOLD ? "approved" : "proposed",
+        status: isAutoApproved ? "approved" : "proposed",
         description: `Riempire gap ${gap.providerName} ${new Date(gap.startAt).toLocaleString("it-IT")} con ${best.patientName}`,
         reasoning: `Score: ${best.score}/100. Service match: ${best.breakdown.serviceMatch}, Gap reduction: ${best.breakdown.gapReduction}, Time pref: ${best.breakdown.timePreference}`,
         score: best.score,
@@ -70,12 +72,20 @@ export async function runOptimization(
           action: "fill_gap",
         },
         expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
-      });
+      }).select("id").single();
 
       if (error) {
         errors.push(`Gap fill error: ${error.message}`);
       } else {
         decisionsCreated++;
+
+        // Auto-execute approved decisions (books slot + audit log)
+        if (isAutoApproved && inserted) {
+          const execResult = await executeDecision(supabase, tenantId, inserted.id);
+          if (!execResult.success) {
+            errors.push(`Auto-execute failed for ${inserted.id}: ${execResult.error}`);
+          }
+        }
 
         // Log to audit_events so it appears in the strategy log dashboard
         await supabase.from("audit_events").insert({
@@ -88,6 +98,7 @@ export async function runOptimization(
             strategy: "gap_fill",
             reasoning: `Riempire gap ${gap.providerName} con ${best.patientName} (score: ${best.score}/100)`,
             ai_generated: false,
+            auto_executed: isAutoApproved,
           },
         });
       }
@@ -209,6 +220,62 @@ export async function executeDecision(
     .maybeSingle();
 
   if (!decision) return { success: false, error: "Decision not found or not approved" };
+
+  // Mark the target slot as booked if this is a gap_fill decision
+  const changes = decision.proposed_changes as Record<string, unknown> | null;
+  const gap = changes?.gap as { startAt?: string; endAt?: string; providerName?: string } | undefined;
+  if (decision.type === "gap_fill" && gap?.startAt && gap?.providerName) {
+    await supabase
+      .from("appointment_slots")
+      .update({ status: "booked" })
+      .eq("tenant_id", tenantId)
+      .eq("provider_name", gap.providerName)
+      .eq("start_at", gap.startAt)
+      .eq("status", "available");
+  }
+
+  // Create an appointment from the gap + waitlist entry so it appears on the calendar
+  if (decision.type === "gap_fill" && decision.target_waitlist_entry_id && gap?.startAt) {
+    const { data: entry } = await supabase
+      .from("waitlist_entries")
+      .select("patient_id, service_name")
+      .eq("id", decision.target_waitlist_entry_id)
+      .maybeSingle();
+
+    if (entry) {
+      const durationMin = gap.endAt
+        ? Math.round((new Date(gap.endAt).getTime() - new Date(gap.startAt).getTime()) / 60000)
+        : 30;
+
+      await supabase.from("appointments").insert({
+        tenant_id: tenantId,
+        patient_id: entry.patient_id,
+        service_name: entry.service_name,
+        provider_name: gap.providerName ?? null,
+        scheduled_at: gap.startAt,
+        duration_min: durationMin,
+        status: "scheduled",
+      });
+
+      await supabase
+        .from("waitlist_entries")
+        .update({ status: "fulfilled" })
+        .eq("id", decision.target_waitlist_entry_id);
+    }
+  }
+
+  logAuditEvent({
+    tenantId,
+    actorType: "system",
+    entityType: "optimization",
+    entityId: decisionId,
+    action: "optimization.decision_executed",
+    metadata: {
+      type: decision.type,
+      score: decision.score,
+      slot_booked: !!(decision.type === "gap_fill" && gap?.startAt),
+    },
+  });
 
   // Mark as executed
   const { error } = await supabase

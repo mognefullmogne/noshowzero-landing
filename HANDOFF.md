@@ -130,16 +130,44 @@ vercel logs --follow  # check function logs after deploy
 
 ## Parallel Agent Workflow (cmux + claude instances)
 
-The user prefers splitting work into parallel claude instances via cmux split panes. Skill: `/cmux-delegate`.
+The user prefers splitting work into parallel claude instances via cmux split panes.
 
+### BOSS RULES (THIS INSTANCE)
+- **YOU ARE THE BOSS. You DO NOT write code. You DO NOT run subagents/Agent tool.**
+- You ONLY delegate by sending prompts to worker panes via cmux, read their output, and re-delegate if needed.
+- **DO NOT sleep/wait for workers to finish. The user will tell you when a worker is done.** Then you read the output and decide next steps. Sleeping wastes tokens.
+- When delegating, write clear specific prompts with file paths and expected outcomes.
+- After each completed round of work, commit + push to deploy (Vercel auto-deploys from main).
+
+### HOW TO SEND PROMPTS TO WORKERS
+1. First time: start claude in the pane, THEN send the prompt separately:
+   ```bash
+   cmux send --surface surface:N 'claude'
+   cmux send-key --surface surface:N Enter
+   # WAIT for user to confirm claude is running
+   cmux send --surface surface:N 'your prompt here'
+   cmux send-key --surface surface:N Enter
+   ```
+2. If claude is already running in the pane (check status bar for "Opus 4.6"):
+   ```bash
+   cmux send --surface surface:N 'your prompt here'
+   cmux send-key --surface surface:N Enter
+   ```
+3. To read output: `cmux read-screen --surface surface:N --lines 100 --scrollback`
+4. Use `cmux notify` + `cmux trigger-flash` to alert user when a round is complete.
+
+### CURRENT WORKER PANES
+| Pane | Role | Surface |
+|------|------|---------|
+| INVESTIGATOR 🔍 | Read-only code auditor | surface:14 |
+| FRONTEND 🎨 | React/UI fixer | surface:15 |
+| BACKEND ⚙️ | API/DB fixer | surface:16 |
+| AI ENGINE 🧠 | AI/backfill/optimization | surface:17 |
+| QA ✅ | Build verification | surface:18 |
+
+### DEPLOY PROTOCOL
+After QA passes, commit and push:
 ```bash
-cmux new-split right           # create pane
-cmux send --surface surface:N 'claude'
-cmux send-key --surface surface:N Enter
-sleep 10                        # wait for boot
-cmux send --surface surface:N "Your task. When done say DONE."
-cmux send-key --surface surface:N Enter
-cmux read-screen --surface surface:N --lines 50 --scrollback  # monitor
+git add -A && git commit -m "fix: description" && git push origin main
 ```
-
-Max 3 parallel instances. After all complete, verify build + resolve conflicts.
+Vercel auto-deploys from main.

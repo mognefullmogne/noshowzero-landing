@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Pagination } from "@/components/shared/pagination";
 import type { OptimizationDecision } from "@/lib/types";
 import { renderInlineMarkdown } from "@/lib/render-markdown";
+import { toast } from "sonner";
 
 const TYPE_LABELS: Record<string, string> = {
   gap_fill: "Gap Fill",
@@ -66,13 +67,26 @@ export default function OptimizationPage() {
   }, [fetchDecisions]);
 
   const handleDecision = useCallback(async (id: string, status: "approved" | "rejected") => {
-    await fetch(`/api/optimization/decisions/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    fetchDecisions();
-  }, [fetchDecisions]);
+    const previous = decisions;
+    setDecisions((prev) => prev.filter((d) => d.id !== id));
+    try {
+      const res = await fetch(`/api/optimization/decisions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        setDecisions(previous);
+        toast.error("Errore nell'aggiornamento della proposta");
+        return;
+      }
+      toast.success(status === "approved" ? "Proposta approvata" : "Proposta rifiutata");
+      fetchDecisions();
+    } catch {
+      setDecisions(previous);
+      toast.error("Errore di rete — riprova");
+    }
+  }, [decisions, fetchDecisions]);
 
   if (loading) return <LoadingSpinner />;
 
