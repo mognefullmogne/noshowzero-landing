@@ -565,30 +565,21 @@ export default function CalendarPage() {
                                 </div>
                               )}
                             </>
-                          ) : appt.height < 32 ? (
-                            /* Very short card: single compact line */
-                            <div className={`flex items-center gap-1 text-[10px] font-medium ${text} min-w-0 h-full`}>
-                              <span className="tabular-nums font-semibold flex-shrink-0">{timeStr}</span>
-                              <span className="truncate">{appt.patient_name}</span>
-                            </div>
                           ) : (
                             <>
-                              {/* Time — always first line */}
-                              <div className={`text-[10px] font-semibold tabular-nums ${text} opacity-80 leading-snug`}>
-                                {timeStr}
-                              </div>
-                              {/* Patient name — always shown on multi-line cards */}
-                              <div className={`truncate text-[11px] font-medium ${text} leading-snug`}>
-                                {appt.patient_name}
+                              {/* Line 1: Time + Patient name — always on same line */}
+                              <div className={`flex items-center gap-1 text-[11px] font-medium ${text} min-w-0 leading-snug`}>
+                                <span className="tabular-nums font-semibold flex-shrink-0 opacity-80">{timeStr}</span>
+                                <span className="truncate">{appt.patient_name}</span>
                               </div>
                               {/* Service — medium+ cards */}
-                              {appt.height >= 56 && (
+                              {appt.height >= 44 && (
                                 <div className={`truncate text-[10px] ${text} opacity-60`}>
                                   {appt.service_name}
                                 </div>
                               )}
                               {/* Duration — tall cards */}
-                              {appt.height >= 76 && (
+                              {appt.height >= 66 && (
                                 <div className={`mt-auto text-[10px] ${text} opacity-40`}>
                                   {appt.duration_min} min
                                 </div>
