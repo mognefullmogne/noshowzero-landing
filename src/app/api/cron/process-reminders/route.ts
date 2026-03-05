@@ -4,6 +4,7 @@ import { ensureRemindersScheduled } from "@/lib/reminders/schedule-reminders";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { renderReminderWhatsApp, renderReminderSms } from "@/lib/reminders/templates";
 import { verifyCronSecret } from "@/lib/cron-auth";
+import { autoScoreAppointments, autoScoreWaitlistEntries } from "@/lib/scoring/auto-score";
 import type { MessageChannel } from "@/lib/types";
 
 /**
@@ -165,7 +166,21 @@ export async function GET(request: Request) {
       }
     }
 
-    // 2. Safety net — find appointments in next 72h without any reminders
+    // 2. Auto-score unscored records across all tenants with upcoming appointments
+    const { data: tenantIds } = await supabase
+      .from("appointments")
+      .select("tenant_id")
+      .is("risk_score", null)
+      .in("status", ["scheduled", "reminder_pending", "reminder_sent", "confirmed"])
+      .limit(10);
+
+    const uniqueTenants = [...new Set((tenantIds ?? []).map((r: { tenant_id: string }) => r.tenant_id))];
+    for (const tid of uniqueTenants) {
+      await autoScoreAppointments(supabase, tid);
+      await autoScoreWaitlistEntries(supabase, tid);
+    }
+
+    // 3. Safety net — find appointments in next 72h without any reminders
     const cutoff = new Date(now.getTime() + 72 * 3_600_000);
     const { data: appointments } = await supabase
       .from("appointments")

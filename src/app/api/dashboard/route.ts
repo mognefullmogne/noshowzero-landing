@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { maybeProcessPending } from "@/lib/engine/process-pending";
+import { autoScoreAppointments, autoScoreWaitlistEntries } from "@/lib/scoring/auto-score";
 
 export async function GET() {
   try {
@@ -80,8 +81,9 @@ export async function GET() {
         .limit(15),
     ]);
 
-    // Fire-and-forget: run the opportunistic processing engine in the background.
-    // Staff load the dashboard multiple times per day — this gives near-real-time processing.
+    // Fire-and-forget: auto-score + opportunistic processing engine
+    autoScoreAppointments(supabase, tenantId);
+    autoScoreWaitlistEntries(supabase, tenantId);
     maybeProcessPending(supabase, tenantId);
 
     return NextResponse.json({

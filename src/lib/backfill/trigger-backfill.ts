@@ -20,6 +20,7 @@ import { aiRerankCandidates } from "@/lib/scoring/ai-candidate-ranker";
 import { decideStrategy, type TriggerEvent } from "@/lib/ai/decision-engine";
 import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
 import { sendNotification } from "@/lib/twilio/send-notification";
+import { autoScoreAppointments } from "@/lib/scoring/auto-score";
 
 /** Maximum offers per slot to prevent runaway cascades. */
 const MAX_OFFERS_PER_SLOT = 10;
@@ -94,6 +95,9 @@ export async function triggerBackfill(
     );
     return null;
   }
+
+  // Ensure candidates have risk scores before ranking
+  await autoScoreAppointments(supabase, tenantId);
 
   // Determine time-aware cascade configuration
   const timeConfig = getTimeAwareConfig(scheduledAt);

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { CreateWaitlistEntrySchema, WaitlistFiltersSchema } from "@/lib/validations";
 import { calculateInitialPriority, computeWaitlistScore } from "@/lib/scoring/waitlist-score";
+import { autoScoreWaitlistEntries } from "@/lib/scoring/auto-score";
 
 export async function GET(request: Request) {
   try {
@@ -38,6 +39,9 @@ export async function GET(request: Request) {
         { status: 500 }
       );
     }
+
+    // Fire-and-forget: score any unscored entries
+    autoScoreWaitlistEntries(supabase, auth.data.tenantId);
 
     const total = count ?? 0;
     return NextResponse.json({

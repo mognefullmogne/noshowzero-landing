@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { OffersFiltersSchema } from "@/lib/validations";
 import { maybeProcessPending } from "@/lib/engine/process-pending";
+import { autoScoreAppointments, autoScoreWaitlistEntries } from "@/lib/scoring/auto-score";
 
 export async function GET(request: Request) {
   try {
@@ -45,7 +46,9 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fire-and-forget: expire stale offers and run pending checks opportunistically.
+    // Fire-and-forget: score unscored records + expire stale offers
+    autoScoreAppointments(supabase, auth.data.tenantId);
+    autoScoreWaitlistEntries(supabase, auth.data.tenantId);
     maybeProcessPending(supabase, auth.data.tenantId);
 
     const total = count ?? 0;

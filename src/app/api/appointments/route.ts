@@ -14,6 +14,7 @@ import { sendMessage } from "@/lib/messaging/send-message";
 import { markMessageSent } from "@/lib/confirmation/workflow";
 import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
 import { maybeProcessPending } from "@/lib/engine/process-pending";
+import { autoScoreAppointments } from "@/lib/scoring/auto-score";
 import type { Patient, MessageChannel } from "@/lib/types";
 import { checkProviderConflict } from "@/lib/booking/provider-conflict";
 
@@ -55,7 +56,8 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fire-and-forget: opportunistic engine keeps confirmations/escalations current.
+    // Fire-and-forget: opportunistic scoring + engine
+    autoScoreAppointments(supabase, auth.data.tenantId);
     maybeProcessPending(supabase, auth.data.tenantId);
 
     const total = count ?? 0;
