@@ -184,3 +184,45 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await getAuthenticatedTenant();
+    if (!auth.ok) return auth.response;
+
+    const { id } = await params;
+    if (!UUID_RE.test(id)) {
+      return NextResponse.json(
+        { success: false, error: { code: "VALIDATION_ERROR", message: "Invalid appointment ID" } },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("id", id)
+      .eq("tenant_id", auth.data.tenantId);
+
+    if (error) {
+      console.error("Appointment DELETE error:", error);
+      return NextResponse.json(
+        { success: false, error: { code: "DB_ERROR", message: "Failed to delete appointment" } },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Appointment DELETE error:", err);
+    return NextResponse.json(
+      { success: false, error: { code: "INTERNAL_ERROR", message: "Internal server error" } },
+      { status: 500 }
+    );
+  }
+}

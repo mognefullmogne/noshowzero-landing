@@ -24,7 +24,7 @@ import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
 const DAY_START = 7; // 7:00 AM
 const DAY_END = 19; // 7:00 PM
 const TOTAL_HOURS = DAY_END - DAY_START; // 12 hours
-const HOUR_HEIGHT = 64; // px per hour — compact but readable
+const HOUR_HEIGHT = 80; // px per hour — 30-min slots = 40px, enough for 2 lines
 const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT;
 const HOURS = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => i + DAY_START);
 const DAYS = ["Lun", "Mar", "Mer", "Gio", "Ven"];
@@ -110,7 +110,7 @@ function layoutAppointments(appts: readonly CalendarAppointment[]): LayoutAppt[]
     const totalCols = maxCol + 1;
 
     const top = ((startMin - DAY_START * 60) / 60) * HOUR_HEIGHT;
-    const height = Math.max((appt.duration_min / 60) * HOUR_HEIGHT, 24);
+    const height = Math.max((appt.duration_min / 60) * HOUR_HEIGHT, 22);
 
     return { ...appt, top, height, colIndex: col, totalCols };
   });
@@ -552,39 +552,43 @@ export default function CalendarPage() {
                           width: `calc(${widthPct}% - ${COL_GAP * 2}px)`,
                         }}
                       >
-                        <div className="flex h-full flex-col px-1.5 py-1">
+                        <div className="flex h-full flex-col overflow-hidden px-1.5 py-0.5">
                           {isCancelled ? (
                             <>
-                              <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-600">
+                              <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 min-w-0">
                                 <Zap className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">Libero</span>
+                                <span className="truncate">{timeStr} · Libero</span>
                               </div>
-                              {appt.height > 40 && (
-                                <div className="truncate text-[10px] text-purple-400 mt-0.5">
-                                  {timeStr} · {appt.duration_min}min
+                              {appt.height > 36 && (
+                                <div className="truncate text-[10px] text-purple-400">
+                                  AI backfill · {appt.duration_min}min
                                 </div>
                               )}
                             </>
+                          ) : appt.height < 32 ? (
+                            /* Very short card: single compact line */
+                            <div className={`flex items-center gap-1 text-[10px] font-medium ${text} min-w-0 h-full`}>
+                              <span className="tabular-nums font-semibold flex-shrink-0">{timeStr}</span>
+                              <span className="truncate">{appt.patient_name}</span>
+                            </div>
                           ) : (
                             <>
-                              {/* Time — always visible at top */}
-                              <div className={`text-[10px] font-semibold tabular-nums ${text} opacity-80`}>
+                              {/* Time — always first line */}
+                              <div className={`text-[10px] font-semibold tabular-nums ${text} opacity-80 leading-snug`}>
                                 {timeStr}
                               </div>
-                              {/* Patient name */}
-                              {appt.height > 28 && (
-                                <div className={`truncate text-[11px] font-medium ${text} leading-tight`}>
-                                  {appt.patient_name}
-                                </div>
-                              )}
-                              {/* Service */}
-                              {appt.height > 48 && (
-                                <div className={`truncate text-[10px] ${text} opacity-60 mt-0.5`}>
+                              {/* Patient name — always shown on multi-line cards */}
+                              <div className={`truncate text-[11px] font-medium ${text} leading-snug`}>
+                                {appt.patient_name}
+                              </div>
+                              {/* Service — medium+ cards */}
+                              {appt.height >= 56 && (
+                                <div className={`truncate text-[10px] ${text} opacity-60`}>
                                   {appt.service_name}
                                 </div>
                               )}
-                              {/* Duration at bottom for tall cards */}
-                              {appt.height > 64 && (
+                              {/* Duration — tall cards */}
+                              {appt.height >= 76 && (
                                 <div className={`mt-auto text-[10px] ${text} opacity-40`}>
                                   {appt.duration_min} min
                                 </div>
