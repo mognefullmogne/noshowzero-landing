@@ -24,10 +24,11 @@ import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
 const DAY_START = 7; // 7:00 AM
 const DAY_END = 19; // 7:00 PM
 const TOTAL_HOURS = DAY_END - DAY_START; // 12 hours
-const HOUR_HEIGHT = 72; // px per hour
-const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT; // 864px
+const HOUR_HEIGHT = 64; // px per hour — compact but readable
+const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT;
 const HOURS = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => i + DAY_START);
 const DAYS = ["Lun", "Mar", "Mer", "Gio", "Ven"];
+const COL_GAP = 3; // px gap between overlapping appointment columns
 
 interface CalendarAppointment {
   readonly id: string;
@@ -115,17 +116,49 @@ function layoutAppointments(appts: readonly CalendarAppointment[]): LayoutAppt[]
   });
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: "bg-indigo-100/90 text-indigo-800 border-indigo-300",
-  reminder_pending: "bg-indigo-100/90 text-indigo-800 border-indigo-300",
-  reminder_sent: "bg-yellow-100/90 text-yellow-800 border-yellow-300",
-  confirmed: "bg-emerald-100/90 text-emerald-800 border-emerald-300",
-  completed: "bg-gray-100/90 text-gray-500 border-gray-300",
-  no_show: "bg-red-100/90 text-red-800 border-red-300",
-  cancelled: "bg-purple-50/90 text-purple-600 border-purple-300",
-  declined: "bg-orange-100/90 text-orange-800 border-orange-300",
-  timeout: "bg-orange-100/90 text-orange-700 border-orange-300",
+/** Accent color on the left edge of each appointment card. */
+const STATUS_ACCENT: Record<string, string> = {
+  scheduled: "border-l-indigo-500",
+  reminder_pending: "border-l-indigo-500",
+  reminder_sent: "border-l-amber-500",
+  confirmed: "border-l-emerald-500",
+  completed: "border-l-gray-400",
+  no_show: "border-l-red-500",
+  cancelled: "border-l-purple-400",
+  declined: "border-l-orange-500",
+  timeout: "border-l-orange-500",
 };
+
+/** Background tint for the card body. */
+const STATUS_BG: Record<string, string> = {
+  scheduled: "bg-indigo-50 hover:bg-indigo-100/80",
+  reminder_pending: "bg-indigo-50 hover:bg-indigo-100/80",
+  reminder_sent: "bg-amber-50 hover:bg-amber-100/80",
+  confirmed: "bg-emerald-50 hover:bg-emerald-100/80",
+  completed: "bg-gray-50 hover:bg-gray-100/80",
+  no_show: "bg-red-50 hover:bg-red-100/80",
+  cancelled: "bg-purple-50/80 hover:bg-purple-100/60",
+  declined: "bg-orange-50 hover:bg-orange-100/80",
+  timeout: "bg-orange-50 hover:bg-orange-100/80",
+};
+
+const STATUS_TEXT: Record<string, string> = {
+  scheduled: "text-indigo-700",
+  reminder_pending: "text-indigo-700",
+  reminder_sent: "text-amber-700",
+  confirmed: "text-emerald-700",
+  completed: "text-gray-500",
+  no_show: "text-red-700",
+  cancelled: "text-purple-600",
+  declined: "text-orange-700",
+  timeout: "text-orange-700",
+};
+
+/** Format minutes-from-midnight as "HH:MM". */
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+}
 
 export default function CalendarPage() {
   const { tenant } = useTenant();
@@ -364,27 +397,20 @@ export default function CalendarPage() {
       )}
 
       {/* Legend */}
-      <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-indigo-100 border border-indigo-300" />
-          Prenotato
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-emerald-100 border border-emerald-300" />
-          Confermato
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-red-100 border border-red-300" />
-          No-show
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-purple-100 border-2 border-dashed border-purple-300" />
-          AI Backfill
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-gray-100 border border-gray-200" />
-          Completato
-        </div>
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-gray-500">
+        {[
+          ["bg-indigo-500", "Prenotato"],
+          ["bg-emerald-500", "Confermato"],
+          ["bg-amber-500", "Promemoria"],
+          ["bg-red-500", "No-show"],
+          ["bg-purple-400", "AI Backfill"],
+          ["bg-gray-400", "Completato"],
+        ].map(([color, label]) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <span className={`inline-block h-2.5 w-2.5 rounded-sm ${color}`} />
+            {label}
+          </div>
+        ))}
       </div>
 
       {loading ? (
@@ -401,29 +427,30 @@ export default function CalendarPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          {/* Calendar grid using CSS grid: time-col + 5 day-cols */}
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
           <div
-            className="grid min-w-[700px]"
-            style={{ gridTemplateColumns: "56px repeat(5, 1fr)" }}
+            className="grid min-w-[720px]"
+            style={{ gridTemplateColumns: "60px repeat(5, 1fr)" }}
           >
             {/* ---- HEADER ROW ---- */}
-            <div className="sticky top-0 z-10 border-b border-r border-gray-200 bg-gray-50 p-2 text-center text-xs font-medium text-gray-500">
-              Ora
-            </div>
+            <div className="sticky top-0 z-20 border-b border-r border-gray-200 bg-gray-50/95 backdrop-blur-sm p-2 text-center text-[11px] font-medium text-gray-400 uppercase tracking-wider" />
             {weekDates.map((d, i) => {
               const isToday = d.toDateString() === new Date().toDateString();
               return (
                 <div
                   key={i}
-                  className={`sticky top-0 z-10 border-b border-gray-200 p-2 text-center ${
-                    isToday ? "bg-blue-50" : "bg-gray-50"
+                  className={`sticky top-0 z-20 border-b border-gray-200 backdrop-blur-sm py-2 px-1 text-center ${
+                    isToday ? "bg-blue-50/95" : "bg-gray-50/95"
                   }`}
                 >
-                  <div className="text-xs font-medium text-gray-500">{DAYS[i]}</div>
+                  <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">
+                    {DAYS[i]}
+                  </div>
                   <div
-                    className={`text-sm font-semibold ${
-                      isToday ? "text-blue-600" : "text-gray-900"
+                    className={`text-base font-bold leading-tight ${
+                      isToday
+                        ? "mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white"
+                        : "text-gray-800"
                     }`}
                   >
                     {d.getDate()}
@@ -433,110 +460,143 @@ export default function CalendarPage() {
             })}
 
             {/* ---- BODY: time labels column ---- */}
-            <div className="relative border-r border-gray-200" style={{ height: TOTAL_HEIGHT }}>
+            <div className="relative border-r border-gray-200 bg-gray-50/30" style={{ height: TOTAL_HEIGHT }}>
               {HOURS.map((hour) => (
                 <div
                   key={hour}
-                  className="absolute right-0 left-0 flex items-start justify-center border-b border-gray-100 text-[11px] font-medium text-gray-400"
+                  className="absolute right-0 left-0 flex justify-end pr-2"
                   style={{
                     top: (hour - DAY_START) * HOUR_HEIGHT,
-                    height: hour < DAY_END ? HOUR_HEIGHT : 0,
+                    transform: "translateY(-50%)",
                   }}
                 >
-                  <span className="-mt-[7px] bg-white px-1">
+                  <span className="text-[11px] tabular-nums font-medium text-gray-400">
                     {String(hour).padStart(2, "0")}:00
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* ---- BODY: day columns with positioned appointments ---- */}
+            {/* ---- BODY: day columns ---- */}
             {DAYS.map((_, dayIdx) => {
               const dayAppts = layoutByDay[dayIdx] ?? [];
               const isToday = weekDates[dayIdx].toDateString() === new Date().toDateString();
 
+              // Current-time indicator position (only for today)
+              const now = new Date();
+              const nowMin = now.getHours() * 60 + now.getMinutes();
+              const showNowLine =
+                isToday && nowMin >= DAY_START * 60 && nowMin <= DAY_END * 60;
+              const nowTop = ((nowMin - DAY_START * 60) / 60) * HOUR_HEIGHT;
+
               return (
                 <div
                   key={dayIdx}
-                  className={`relative border-r border-gray-100 ${isToday ? "bg-blue-50/20" : ""}`}
+                  className={`relative ${isToday ? "bg-blue-50/30" : ""}`}
                   style={{ height: TOTAL_HEIGHT }}
                 >
                   {/* Hour grid lines */}
-                  {HOURS.slice(0, -1).map((hour) => (
+                  {HOURS.map((hour) => (
                     <div
                       key={hour}
-                      className="absolute right-0 left-0 border-b border-gray-100"
-                      style={{ top: (hour - DAY_START) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
-                    >
-                      {/* Half-hour dashed line */}
-                      <div
-                        className="absolute right-0 left-0 border-b border-dashed border-gray-50"
-                        style={{ top: HOUR_HEIGHT / 2 }}
-                      />
-                    </div>
+                      className="absolute right-0 left-0 border-t border-gray-100"
+                      style={{ top: (hour - DAY_START) * HOUR_HEIGHT }}
+                    />
                   ))}
 
-                  {/* Appointments — absolutely positioned by time */}
+                  {/* Half-hour dashed lines */}
+                  {HOURS.slice(0, -1).map((hour) => (
+                    <div
+                      key={`half-${hour}`}
+                      className="absolute right-0 left-0 border-t border-dashed border-gray-100/60"
+                      style={{ top: (hour - DAY_START) * HOUR_HEIGHT + HOUR_HEIGHT / 2 }}
+                    />
+                  ))}
+
+                  {/* Current-time red line */}
+                  {showNowLine && (
+                    <div
+                      className="absolute left-0 right-0 z-10 flex items-center"
+                      style={{ top: nowTop }}
+                    >
+                      <div className="h-2 w-2 -ml-1 rounded-full bg-red-500" />
+                      <div className="h-[2px] flex-1 bg-red-500" />
+                    </div>
+                  )}
+
+                  {/* Appointments */}
                   {dayAppts.map((appt) => {
                     const widthPct = 100 / appt.totalCols;
                     const leftPct = appt.colIndex * widthPct;
                     const isCancelled = appt.status === "cancelled";
+                    const accent = STATUS_ACCENT[appt.status] ?? "border-l-gray-400";
+                    const bg = STATUS_BG[appt.status] ?? "bg-gray-50 hover:bg-gray-100/80";
+                    const text = STATUS_TEXT[appt.status] ?? "text-gray-700";
+                    const timeStr = formatTime(appt.scheduled_at);
 
                     return (
                       <button
                         key={appt.id}
                         onClick={() => openAppointmentDetail(appt.id)}
                         disabled={loadingAppointment}
-                        className={`absolute overflow-hidden rounded-lg border text-left text-[11px] leading-tight transition-all cursor-pointer
+                        className={`group absolute overflow-hidden rounded-md text-left transition-all cursor-pointer
                           ${isCancelled
-                            ? "border-2 border-dashed border-purple-300 bg-purple-50/80 hover:ring-2 hover:ring-purple-300"
-                            : `${STATUS_COLORS[appt.status] ?? "bg-gray-100/90 text-gray-600 border-gray-300"} hover:ring-2 hover:ring-blue-300 hover:ring-offset-1 shadow-sm`
-                          }`}
+                            ? "border border-dashed border-purple-300 bg-purple-50/60 hover:bg-purple-100/60"
+                            : `border-l-[3px] ${accent} ${bg} shadow-[0_1px_2px_rgba(0,0,0,0.06)]`
+                          }
+                          hover:z-20 hover:shadow-md`}
                         style={{
-                          top: appt.top,
-                          height: appt.height,
-                          left: `calc(${leftPct}% + 2px)`,
-                          width: `calc(${widthPct}% - 4px)`,
+                          top: appt.top + 1,
+                          height: Math.max(appt.height - 2, 20),
+                          left: `calc(${leftPct}% + ${COL_GAP}px)`,
+                          width: `calc(${widthPct}% - ${COL_GAP * 2}px)`,
                         }}
                       >
-                        <div className="flex h-full flex-col p-1.5">
+                        <div className="flex h-full flex-col px-1.5 py-1">
                           {isCancelled ? (
                             <>
-                              <div className="flex items-center gap-1 font-semibold text-purple-600">
+                              <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-600">
                                 <Zap className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">Slot libero</span>
+                                <span className="truncate">Libero</span>
                               </div>
-                              {appt.height > 36 && (
+                              {appt.height > 40 && (
                                 <div className="truncate text-[10px] text-purple-400 mt-0.5">
-                                  AI backfill attivo
+                                  {timeStr} · {appt.duration_min}min
                                 </div>
                               )}
                             </>
                           ) : (
                             <>
-                              <div className="flex items-center gap-1">
-                                <User className="h-3 w-3 flex-shrink-0 opacity-70" />
-                                <span className="truncate font-semibold">
-                                  {appt.patient_name}
-                                </span>
+                              {/* Time — always visible at top */}
+                              <div className={`text-[10px] font-semibold tabular-nums ${text} opacity-80`}>
+                                {timeStr}
                               </div>
-                              {appt.height > 36 && (
-                                <div className="truncate text-[10px] opacity-75 mt-0.5">
+                              {/* Patient name */}
+                              {appt.height > 28 && (
+                                <div className={`truncate text-[11px] font-medium ${text} leading-tight`}>
+                                  {appt.patient_name}
+                                </div>
+                              )}
+                              {/* Service */}
+                              {appt.height > 48 && (
+                                <div className={`truncate text-[10px] ${text} opacity-60 mt-0.5`}>
                                   {appt.service_name}
                                 </div>
                               )}
-                              {appt.height > 52 && appt.provider_name && (
-                                <div className="truncate text-[10px] opacity-60">
-                                  {appt.provider_name}
+                              {/* Duration at bottom for tall cards */}
+                              {appt.height > 64 && (
+                                <div className={`mt-auto text-[10px] ${text} opacity-40`}>
+                                  {appt.duration_min} min
                                 </div>
                               )}
-                              {/* Cancel button */}
+
+                              {/* Cancel button — appears on hover */}
                               {appt.status !== "completed" && appt.status !== "no_show" && (
                                 <button
                                   onClick={(e) => cancelAppointment(e, appt.id)}
                                   disabled={cancellingId === appt.id}
                                   title="Cancella appuntamento"
-                                  className="absolute top-1 right-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:!opacity-100 hover:bg-red-200 hover:text-red-700 transition-all"
+                                  className="absolute top-0.5 right-0.5 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600 transition-opacity"
                                   style={{ opacity: cancellingId === appt.id ? 1 : undefined }}
                                 >
                                   {cancellingId === appt.id ? (
@@ -547,18 +607,6 @@ export default function CalendarPage() {
                                 </button>
                               )}
                             </>
-                          )}
-
-                          {/* Time label at bottom when tall enough */}
-                          {appt.height > 48 && (
-                            <div className="mt-auto text-[10px] opacity-50">
-                              {new Date(appt.scheduled_at).toLocaleTimeString("it-IT", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                              {" · "}
-                              {appt.duration_min}min
-                            </div>
                           )}
                         </div>
                       </button>
