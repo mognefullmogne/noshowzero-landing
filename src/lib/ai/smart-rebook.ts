@@ -9,7 +9,6 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendMessage } from "@/lib/messaging/send-message";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -132,38 +131,27 @@ function buildGapSlot(startDate: Date, durationMin: number): GapSlot {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a slot_proposals entry and send WhatsApp message with options.
- * Returns the proposal ID if slots were found, or null if waitlist-only.
+ * Create a slot_proposals entry and build the message text.
+ * Does NOT send the message — the caller includes it in the TwiML reply.
+ * Returns the message body text for the patient.
  */
-async function createProposalAndNotify(
+async function createProposalAndBuildMessage(
   supabase: SupabaseClient,
   tenantId: string,
   appointmentId: string,
   patientId: string,
-  patientPhone: string,
   firstName: string,
   serviceName: string,
   slots: readonly GapSlot[]
-): Promise<string | null> {
+): Promise<string> {
   if (slots.length === 0) {
     // No slots available — offer waitlist only
-    const waitlistMsg = [
+    return [
       `Ciao ${firstName}!`,
       `Al momento non ci sono slot disponibili per ${serviceName} nei prossimi giorni.`,
       "",
       `Rispondi LISTA per essere inserito in lista d'attesa: ti contatteremo appena si libera un posto.`,
     ].join("\n");
-
-    await sendMessage(supabase, {
-      tenantId,
-      patientId,
-      patientPhone,
-      channel: "whatsapp",
-      body: waitlistMsg,
-      contextAppointmentId: appointmentId,
-    });
-
-    return null;
   }
 
   // Build proposed_slots in the format expected by slot_proposals table
@@ -176,7 +164,7 @@ async function createProposalAndNotify(
 
   const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
 
-  const { data: proposal, error } = await supabase
+  const { error } = await supabase
     .from("slot_proposals")
     .insert({
       tenant_id: tenantId,
@@ -191,10 +179,14 @@ async function createProposalAndNotify(
 
   if (error) {
     console.error("[SmartRebook] Failed to create slot proposal:", error);
-    return null;
+    return [
+      `Ciao ${firstName}!`,
+      `Si è verificato un errore nel cercare nuovi orari per ${serviceName}.`,
+      `Contatta la segreteria per riprogrammare.`,
+    ].join("\n");
   }
 
-  // Build WhatsApp message
+  // Build message text
   const lines = [
     `Ciao ${firstName}! Ecco alcune opzioni per riprogrammare il tuo appuntamento per ${serviceName}:`,
     "",
@@ -212,16 +204,7 @@ async function createProposalAndNotify(
     "Se nessun orario va bene, rispondi LISTA per essere messo in lista d'attesa e ti contatteremo appena si libera un posto."
   );
 
-  await sendMessage(supabase, {
-    tenantId,
-    patientId,
-    patientPhone,
-    channel: "whatsapp",
-    body: lines.join("\n"),
-    contextAppointmentId: appointmentId,
-  });
-
-  return proposal.id;
+  return lines.join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -263,17 +246,16 @@ export async function generateRebookingSuggestions(
     cancelledAppointment.duration_min
   );
 
-  // Create proposal + send message
-  await createProposalAndNotify(
+  // Create proposal + build message (does NOT send — caller includes in TwiML reply)
+  const messageBody = await createProposalAndBuildMessage(
     supabase,
     tenantId,
     cancelledAppointment.id,
     patientId,
-    phone,
     firstName,
     cancelledAppointment.service_name,
     gaps
   );
 
-  return { message: "sent", suggestedSlots: gaps };
+  return { message: messageBody, suggestedSlots: gaps };
 }

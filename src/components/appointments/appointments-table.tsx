@@ -13,7 +13,7 @@ import { RiskBadge } from "./risk-badge";
 import { StatusBadge } from "./status-badge";
 import { AppointmentDetail } from "./appointment-detail";
 import type { Appointment, Reminder } from "@/lib/types";
-import { CalendarDays, User, Loader2, Zap } from "lucide-react";
+import { CalendarDays, User, Loader2, Zap, X } from "lucide-react";
 
 interface AppointmentsTableProps {
   readonly appointments: readonly Appointment[];
@@ -24,6 +24,24 @@ interface AppointmentsTableProps {
 export function AppointmentsTable({ appointments, loading, onRefresh }: AppointmentsTableProps) {
   const [selected, setSelected] = useState<(Appointment & { reminders?: Reminder[] }) | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  async function cancelAppointment(e: React.MouseEvent, apptId: string) {
+    e.stopPropagation();
+    if (!window.confirm("Sei sicuro? L'appuntamento verrà cancellato e lo slot sarà disponibile per il backfill AI.")) return;
+    setCancellingId(apptId);
+    try {
+      const res = await fetch(`/api/appointments/${apptId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (res.ok) {
+        onRefresh();
+      }
+    } catch { /* ignore */ }
+    setCancellingId(null);
+  }
 
   async function openDetail(appt: Appointment) {
     setDetailLoading(true);
@@ -67,6 +85,7 @@ export function AppointmentsTable({ appointments, loading, onRefresh }: Appointm
               <TableHead className="font-semibold">Status</TableHead>
               <TableHead className="font-semibold">Backfill</TableHead>
               <TableHead className="font-semibold">Risk</TableHead>
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -121,6 +140,22 @@ export function AppointmentsTable({ appointments, loading, onRefresh }: Appointm
                 </TableCell>
                 <TableCell>
                   <RiskBadge score={appt.risk_score} />
+                </TableCell>
+                <TableCell>
+                  {appt.status !== "cancelled" && appt.status !== "completed" && appt.status !== "no_show" && (
+                    <button
+                      onClick={(e) => cancelAppointment(e, appt.id)}
+                      disabled={cancellingId === appt.id}
+                      title="Cancella appuntamento"
+                      className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
+                    >
+                      {cancellingId === appt.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

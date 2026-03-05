@@ -241,6 +241,7 @@ export type MessageIntent =
   | "slot_select"
   | "book_appointment"
   | "join_waitlist"
+  | "reschedule"
   | "question"
   | "unknown";
 

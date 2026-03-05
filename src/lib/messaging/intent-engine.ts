@@ -47,6 +47,11 @@ const PATTERNS: readonly { intent: MessageIntent; exact: RegExp; partial: RegExp
     exact: /^(lista|lista\s+d[ie]?\s*attesa|attesa)$/i,
     partial: /\b(lista\s*d[ie']?\s*attesa|mett[aeio]\w*\s+in\s+lista|lista\s+attesa)\b/i,
   },
+  {
+    intent: "reschedule",
+    exact: /^(riprogrammare|riprogramma|spostare|cambiare\s+orario|cambiare\s+data)$/i,
+    partial: /\b(riprogramm[aeo]\w*|spostare\s+(l[a']?\s*)?(?:appuntamento|visita)|cambiare\s+(?:orario|data)|nuovo\s+orario|altra\s+data)\b/i,
+  },
 ];
 
 export function classifyIntent(text: string): IntentResult {

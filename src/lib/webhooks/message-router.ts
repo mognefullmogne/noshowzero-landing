@@ -50,6 +50,8 @@ export async function routeIntent(
       return handleSlotSelect(supabase, input);
     case "join_waitlist":
       return handleJoinWaitlist(supabase, input);
+    case "reschedule":
+      return handleReschedule(supabase, input);
     case "book_appointment":
       return {
         reply: "Per prenotare, scrivi: vorrei prenotare un appuntamento",
@@ -161,21 +163,76 @@ async function handleCancel(
   triggerBackfill(supabase, input.appointmentId, input.tenantId, { triggerEvent: "cancellation" })
     .catch((err) => console.error("[Router] Backfill cascade after cancel failed:", err));
 
-  // Fire-and-forget: send smart rebooking proposals via WhatsApp
-  // (generateRebookingSuggestions now creates slot_proposals + sends the message itself)
+  // Await smart rebooking — combine cancel confirmation + slot options in a single reply
   const cancelledAppt = data[0];
-  generateRebookingSuggestions(supabase, input.tenantId, cancelledAppt.patient_id as string, {
-    id: cancelledAppt.id,
-    service_name: cancelledAppt.service_name as string,
-    provider_name: (cancelledAppt.provider_name as string | null) ?? null,
-    location_name: (cancelledAppt.location_name as string | null) ?? null,
-    scheduled_at: cancelledAppt.scheduled_at as string,
-    duration_min: cancelledAppt.duration_min as number,
-  }).catch((err) => console.error("[SmartRebook] Rebook flow failed:", err));
+  let rebookMessage = "";
+  try {
+    const result = await generateRebookingSuggestions(supabase, input.tenantId, cancelledAppt.patient_id as string, {
+      id: cancelledAppt.id,
+      service_name: cancelledAppt.service_name as string,
+      provider_name: (cancelledAppt.provider_name as string | null) ?? null,
+      location_name: (cancelledAppt.location_name as string | null) ?? null,
+      scheduled_at: cancelledAppt.scheduled_at as string,
+      duration_min: cancelledAppt.duration_min as number,
+    });
+    rebookMessage = result.message;
+  } catch (err) {
+    console.error("[SmartRebook] Rebook flow failed:", err);
+  }
+
+  const cancelConfirmation = "Il tuo appuntamento è stato cancellato.";
+  const combinedReply = rebookMessage
+    ? `${cancelConfirmation}\n\n${rebookMessage}`
+    : `${cancelConfirmation} Contatta la segreteria per riprogrammare.`;
 
   return {
-    reply: "Il tuo appuntamento è stato cancellato. Riceverai a breve alcune proposte per riprogrammare.",
+    reply: combinedReply,
     action: "appointment_cancelled",
+  };
+}
+
+async function handleReschedule(
+  supabase: SupabaseClient,
+  input: RouteInput
+): Promise<RouteResult> {
+  // Find the most recent cancelled appointment for this patient
+  const { data: cancelledAppt } = await supabase
+    .from("appointments")
+    .select("id, patient_id, service_name, provider_name, location_name, scheduled_at, duration_min")
+    .eq("tenant_id", input.tenantId)
+    .eq("patient_id", input.patientId)
+    .eq("status", "cancelled")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!cancelledAppt) {
+    return {
+      reply: "Non ho trovato un appuntamento cancellato da riprogrammare. Contatta la segreteria per assistenza.",
+    };
+  }
+
+  // Await rebooking to return slot options directly in the reply
+  try {
+    const result = await generateRebookingSuggestions(supabase, input.tenantId, input.patientId, {
+      id: cancelledAppt.id,
+      service_name: cancelledAppt.service_name,
+      provider_name: cancelledAppt.provider_name ?? null,
+      location_name: cancelledAppt.location_name ?? null,
+      scheduled_at: cancelledAppt.scheduled_at,
+      duration_min: cancelledAppt.duration_min,
+    });
+
+    if (result.message) {
+      return { reply: result.message, action: "reschedule_initiated" };
+    }
+  } catch (err) {
+    console.error("[SmartRebook] Reschedule flow failed:", err);
+  }
+
+  return {
+    reply: "Non siamo riusciti a trovare orari disponibili. Contatta la segreteria per riprogrammare.",
+    action: "reschedule_failed",
   };
 }
 

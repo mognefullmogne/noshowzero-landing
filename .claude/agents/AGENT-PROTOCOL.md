@@ -7,9 +7,8 @@
 ```
 1. Read THIS file: .claude/agents/AGENT-PROTOCOL.md
 2. Read YOUR state file: .claude/agents/[your-name]-state.md
-3. Read the board: .claude/BOARD.md
-4. Read the handoff: HANDOFF.md
-5. Resume exactly where your state file says you left off
+3. Read the handoff: HANDOFF.md
+4. Resume exactly where your state file says you left off
 ```
 
 ## 2. Checkpoint Protocol (MANDATORY)
@@ -41,10 +40,10 @@ Your state file format:
 - [what to do after current task]
 
 ## Key Context
-[Anything you need to remember that isn't in BOARD.md or HANDOFF.md]
+[Anything you need to remember that isn't in HANDOFF.md]
 [File paths, decisions made, gotchas discovered]
 
-## Files I Own (locked in BOARD.md)
+## Files I Own
 - [file paths you claimed]
 ```
 
@@ -54,15 +53,14 @@ When you notice your context was compacted (conversation feels shorter, earlier 
 1. **STOP** whatever you're doing
 2. Read `.claude/agents/AGENT-PROTOCOL.md` (this file)
 3. Read `.claude/agents/[your-name]-state.md`
-4. Read `.claude/BOARD.md`
-5. **Resume from your state file** — don't restart from scratch
+4. **Resume from your state file** — don't restart from scratch
 
 ## 4. Rules for All Agents
 
-- BOARD.md is the single source of truth for task assignment
+- HANDOFF.md is the source of truth for project context and next steps
 - Your state file is YOUR personal memory — only you write to it
 - Never edit another agent's state file
-- If you don't know what to do, re-read BOARD.md "Current Sprint" table
-- If your task is done, update BOARD.md and your state file, then check for next task
+- If you don't know what to do, re-read HANDOFF.md "What To Do Next" section
+- If your task is done, update your state file, then check for next task
 - Always run `npx next build && npx vitest run` after code changes
 - Project path: /Users/aiassistant/products/noshowzero-landing

@@ -7,8 +7,10 @@ import {
   ChevronRight,
   Plus,
   Lock,
+  Loader2,
   Unlock,
   User,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
@@ -65,6 +67,7 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [loadingAppointment, setLoadingAppointment] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const isFetchingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -216,6 +219,23 @@ export default function CalendarPage() {
       setLoadingAppointment(false);
     }
   }, []);
+
+  const cancelAppointment = useCallback(async (e: React.MouseEvent, apptId: string) => {
+    e.stopPropagation();
+    if (!window.confirm("Sei sicuro? L'appuntamento verrà cancellato e lo slot sarà disponibile per il backfill AI.")) return;
+    setCancellingId(apptId);
+    try {
+      const res = await fetch(`/api/appointments/${apptId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch { /* ignore */ }
+    setCancellingId(null);
+  }, [fetchData]);
 
   const prevWeek = () =>
     setWeekStart(new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000));
@@ -404,6 +424,20 @@ export default function CalendarPage() {
                                   {appt.provider_name ? ` · ${appt.provider_name}` : ""}
                                 </div>
                               </div>
+                              {appt.status !== "completed" && appt.status !== "no_show" && (
+                                <button
+                                  onClick={(e) => cancelAppointment(e, appt.id)}
+                                  disabled={cancellingId === appt.id}
+                                  title="Cancella appuntamento"
+                                  className="ml-auto flex-shrink-0 rounded p-0.5 text-current opacity-40 hover:opacity-100 hover:bg-red-100 hover:text-red-600 transition-all"
+                                >
+                                  {cancellingId === appt.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <X className="h-3 w-3" />
+                                  )}
+                                </button>
+                              )}
                             </button>
                           ))}
                           {/* Available/blocked slots */}
