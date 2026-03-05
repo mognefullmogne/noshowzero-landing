@@ -117,6 +117,8 @@ export async function triggerBackfill(
       cancellingPatientId: appointment.patient_id,
       scheduledAt,
       durationMin: appointment.duration_min,
+      serviceName: appointment.service_name,
+      providerName: appointment.provider_name,
     });
   } else {
     console.info(

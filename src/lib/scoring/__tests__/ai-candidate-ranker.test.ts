@@ -17,6 +17,8 @@ import type { RankedCandidate } from "@/lib/backfill/find-candidates";
 function makeCandidate(overrides: Partial<RankedCandidate> = {}): RankedCandidate {
   return {
     candidateAppointmentId: `appt-${overrides.patientId ?? "default"}`,
+    waitlistEntryId: null,
+    source: "appointment" as const,
     patientId: "pat-default",
     patientName: "Test Patient",
     patientPhone: "+391234567890",

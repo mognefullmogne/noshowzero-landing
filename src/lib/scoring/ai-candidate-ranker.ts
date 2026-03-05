@@ -155,7 +155,7 @@ function buildRerankPrompt(
       `Candidate ${i + 1} (ID: ${c.patientId}):`,
       `  - Name: ${c.patientName}`,
       `  - Math score: ${c.candidateScore.total}/130`,
-      `  - Current appointment: ${c.currentAppointmentAt.toISOString()}`,
+      `  - Current appointment: ${c.currentAppointmentAt ? c.currentAppointmentAt.toISOString() : "N/A (waitlist candidate)"}`,
       `  - Score breakdown: distance=${c.candidateScore.appointmentDistance}, reliability=${c.candidateScore.reliability}, urgency=${c.candidateScore.urgencyBonus}, responsiveness=${c.candidateScore.responsiveness}`,
     ];
 

@@ -21,7 +21,7 @@
 import { CandidateScoreBreakdown } from "@/lib/types";
 
 export interface CandidateScoreInput {
-  readonly appointmentScheduledAt: Date; // candidate's current appointment
+  readonly appointmentScheduledAt: Date | null; // null for waitlist candidates (no existing appointment)
   readonly openSlotAt: Date;             // the cancelled slot time
   readonly patientNoShows: number;
   readonly patientTotal: number;
@@ -50,7 +50,11 @@ export function computeCandidateScore(input: CandidateScoreInput): CandidateScor
   });
 }
 
-function computeAppointmentDistance(appointmentAt: Date, openSlotAt: Date): number {
+function computeAppointmentDistance(appointmentAt: Date | null, openSlotAt: Date): number {
+  // Waitlist candidates have no existing appointment — give mid-high distance score
+  // (equivalent to 14-30 day range: they benefit significantly from any slot)
+  if (appointmentAt === null) return 45;
+
   const diffMs = appointmentAt.getTime() - openSlotAt.getTime();
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
 

@@ -127,6 +127,19 @@ export async function processAccept(
       .catch((err) => console.error("[Backfill] Chain cascade failed:", err));
   }
 
+  // Mark waitlist entry as fulfilled (if offer was sourced from waitlist)
+  const waitlistEntryId: string | null = offer.waitlist_entry_id ?? null;
+  if (waitlistEntryId) {
+    await supabase
+      .from("waitlist_entries")
+      .update({
+        status: "fulfilled",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", waitlistEntryId)
+      .eq("tenant_id", offer.tenant_id);
+  }
+
   // Use patient's actual preferred channel for reminders
   const patientData = offer.patient as unknown as { preferred_channel?: string } | null;
   const preferredChannel = (patientData?.preferred_channel ?? "sms") as "email" | "sms" | "whatsapp";

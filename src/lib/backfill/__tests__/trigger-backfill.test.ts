@@ -84,6 +84,8 @@ function makeAppointment(overrides: Partial<{
 function makeCandidate(overrides: Partial<RankedCandidate> = {}): RankedCandidate {
   return {
     candidateAppointmentId: "appt-candidate-001",
+    waitlistEntryId: null,
+    source: "appointment" as const,
     patientId: "pat-candidate",
     patientName: "Maria Bianchi",
     patientPhone: "+391234567890",

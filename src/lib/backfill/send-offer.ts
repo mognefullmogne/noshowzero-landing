@@ -64,8 +64,8 @@ export async function sendOffer(
       id: offerId,
       tenant_id: input.tenantId,
       original_appointment_id: input.originalAppointmentId,
-      waitlist_entry_id: null,
-      candidate_appointment_id: input.candidate.candidateAppointmentId,
+      waitlist_entry_id: input.candidate.waitlistEntryId ?? null,
+      candidate_appointment_id: input.candidate.candidateAppointmentId ?? null,
       patient_id: input.candidate.patientId,
       status: "pending",
       smart_score: input.candidate.candidateScore.total,
@@ -100,17 +100,21 @@ export async function sendOffer(
     minute: "2-digit",
   });
 
-  // Format candidate's current appointment date/time for comparison
-  const currentApptDate = input.candidate.currentAppointmentAt.toLocaleDateString("it-IT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const currentApptTime = input.candidate.currentAppointmentAt.toLocaleTimeString("it-IT", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  // Format candidate's current appointment date/time for comparison (null for waitlist candidates)
+  const currentApptDate = input.candidate.currentAppointmentAt
+    ? input.candidate.currentAppointmentAt.toLocaleDateString("it-IT", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : undefined;
+  const currentApptTime = input.candidate.currentAppointmentAt
+    ? input.candidate.currentAppointmentAt.toLocaleTimeString("it-IT", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : undefined;
 
   // Format expiry description for messages
   const expiryDesc = effectiveExpiry >= 60

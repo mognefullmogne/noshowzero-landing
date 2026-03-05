@@ -216,7 +216,7 @@ export async function getPrequalifiedCandidates(
   );
 
   const ranked: RankedCandidate[] = appointments
-    .map((appt) => {
+    .map((appt): RankedCandidate | null => {
       const patient = appt.patient as {
         id: string;
         first_name: string;
@@ -232,6 +232,8 @@ export async function getPrequalifiedCandidates(
 
       return {
         candidateAppointmentId: appt.id,
+        waitlistEntryId: null,
+        source: "appointment",
         patientId: patient.id,
         patientName: `${patient.first_name} ${patient.last_name}`,
         patientPhone: patient.phone,
@@ -245,7 +247,7 @@ export async function getPrequalifiedCandidates(
           responsiveness: 0,
         },
         currentAppointmentAt: new Date(appt.scheduled_at),
-      } satisfies RankedCandidate;
+      };
     })
     .filter((c): c is RankedCandidate => c !== null)
     .sort((a, b) => b.candidateScore.total - a.candidateScore.total);

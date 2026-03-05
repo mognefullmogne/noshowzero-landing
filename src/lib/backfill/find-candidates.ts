@@ -4,13 +4,15 @@
 /**
  * Find and rank candidate patients for a cancelled appointment slot.
  *
- * Queries the appointments table (not waitlist_entries) for scheduled patients
- * who could move to an earlier slot. Applies filtering, deduplication, and
- * scoring via the 4-factor computeCandidateScore algorithm
- * (appointmentDistance + reliability + urgencyBonus + responsiveness).
+ * Two candidate sources:
+ * 1. Appointments table — scheduled patients who could move to an earlier slot
+ * 2. Waitlist entries — patients waiting for a slot (status=waiting)
+ *
+ * Both are scored, merged, deduplicated by patient, and sorted descending.
  *
  * SLOT-01: Appointment-based candidate detection
  * SLOT-02: Candidate scoring and ranking
+ * SLOT-03: Waitlist-based candidate detection
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -23,17 +25,21 @@ export interface OpenSlotDetails {
   readonly cancellingPatientId: string; // exclude self-referential candidates
   readonly scheduledAt: Date; // the slot's time
   readonly durationMin: number; // for conflict detection
+  readonly serviceName?: string; // for waitlist service matching
+  readonly providerName?: string | null; // for waitlist provider matching
 }
 
 export interface RankedCandidate {
-  readonly candidateAppointmentId: string; // the appointment being moved earlier
+  readonly candidateAppointmentId: string | null; // null for waitlist-sourced candidates
+  readonly waitlistEntryId: string | null; // non-null for waitlist-sourced candidates
+  readonly source: "appointment" | "waitlist";
   readonly patientId: string;
   readonly patientName: string;
   readonly patientPhone: string | null;
   readonly patientEmail: string | null;
   readonly preferredChannel: "whatsapp" | "sms" | "email";
   readonly candidateScore: CandidateScoreBreakdown;
-  readonly currentAppointmentAt: Date;
+  readonly currentAppointmentAt: Date | null; // null for waitlist-sourced candidates
 }
 
 const MIN_LEAD_TIME_MS = 2 * 3_600_000; // 2 hours
@@ -107,9 +113,7 @@ export async function findCandidates(
     return [];
   }
 
-  if (!appointments || appointments.length === 0) return [];
-
-  const typedAppointments = appointments as AppointmentRow[];
+  const typedAppointments = (appointments ?? []) as AppointmentRow[];
 
   // Fetch patients in 24-hour decline cooldown
   const cooldownCutoff = new Date(now.getTime() - 24 * 3_600_000);
@@ -143,59 +147,140 @@ export async function findCandidates(
     return true;
   });
 
-  if (filtered.length === 0) return [];
+  // --- Appointment-based candidates ---
+  let apptCandidates: RankedCandidate[] = [];
 
-  // Deduplicate by patient_id — keep the farthest-out appointment per patient
-  const deduped = deduplicateByPatient(filtered);
+  if (filtered.length > 0) {
+    const deduped = deduplicateByPatient(filtered);
+    const patientIds = deduped.map((a) => a.patient_id);
+    const { data: apptStats } = await supabase
+      .from("appointments")
+      .select("patient_id, status")
+      .eq("tenant_id", slot.tenantId)
+      .in("patient_id", patientIds);
 
-  // Fetch no-show stats for remaining patient IDs
-  const patientIds = deduped.map((a) => a.patient_id);
-  const { data: apptStats } = await supabase
-    .from("appointments")
-    .select("patient_id, status")
-    .eq("tenant_id", slot.tenantId)
-    .in("patient_id", patientIds);
+    const statsMap = buildStatsMap(apptStats ?? []);
 
-  const statsMap = buildStatsMap(apptStats ?? []);
+    apptCandidates = deduped.map((appt): RankedCandidate | null => {
+      const patient = appt.patient;
+      if (!patient) return null;
 
-  // Score, sort, and cap
-  const scored = deduped.map((appt) => {
-    const patient = appt.patient;
+      const stats = statsMap.get(appt.patient_id) ?? { total: 0, noShows: 0 };
+      const avgResponseMinutes = extractAvgResponseMinutes(patient.response_patterns);
 
-    if (!patient) return null;
+      const candidateScore = computeCandidateScore({
+        appointmentScheduledAt: new Date(appt.scheduled_at),
+        openSlotAt: slot.scheduledAt,
+        patientNoShows: stats.noShows,
+        patientTotal: stats.total,
+        now,
+        avgResponseMinutes,
+      });
 
-    const stats = statsMap.get(appt.patient_id) ?? { total: 0, noShows: 0 };
+      return {
+        candidateAppointmentId: appt.id,
+        waitlistEntryId: null,
+        source: "appointment",
+        patientId: appt.patient_id,
+        patientName: `${patient.first_name} ${patient.last_name}`,
+        patientPhone: patient.phone,
+        patientEmail: patient.email,
+        preferredChannel: patient.preferred_channel as "whatsapp" | "sms" | "email",
+        candidateScore,
+        currentAppointmentAt: new Date(appt.scheduled_at),
+      };
+    }).filter((c): c is RankedCandidate => c !== null);
+  }
 
-    // Extract avg response minutes from stored patterns (inline, no extra DB call)
-    const avgResponseMinutes = extractAvgResponseMinutes(patient.response_patterns);
+  // --- Waitlist-based candidates (only if service info available) ---
+  let waitlistCandidates: RankedCandidate[] = [];
 
-    const candidateScore = computeCandidateScore({
-      appointmentScheduledAt: new Date(appt.scheduled_at),
-      openSlotAt: slot.scheduledAt,
-      patientNoShows: stats.noShows,
-      patientTotal: stats.total,
-      now,
-      avgResponseMinutes,
-    });
+  if (slot.serviceName) {
+    const waitlistQuery = supabase
+      .from("waitlist_entries")
+      .select("id, patient_id, service_name, preferred_provider, clinical_urgency, smart_score, patient:patients(id, first_name, last_name, phone, email, preferred_channel, response_patterns)")
+      .eq("tenant_id", slot.tenantId)
+      .eq("status", "waiting")
+      .eq("service_name", slot.serviceName)
+      .neq("patient_id", slot.cancellingPatientId)
+      .limit(50);
 
-    const candidate: RankedCandidate = {
-      candidateAppointmentId: appt.id,
-      patientId: appt.patient_id,
-      patientName: `${patient.first_name} ${patient.last_name}`,
-      patientPhone: patient.phone,
-      patientEmail: patient.email,
-      preferredChannel: patient.preferred_channel as "whatsapp" | "sms" | "email",
-      candidateScore,
-      currentAppointmentAt: new Date(appt.scheduled_at),
-    };
+    const { data: waitlistEntries } = await waitlistQuery;
 
-    return candidate;
-  }).filter((c): c is RankedCandidate => c !== null);
+    // Fetch no-show stats for waitlist patients
+    const waitlistPatientIds = (waitlistEntries ?? [])
+      .filter((e) => e.patient && !declinedPatientIds.has(e.patient_id))
+      .map((e) => e.patient_id);
 
-  // Sort by total score descending
-  const sorted = [...scored].sort((a, b) => b.candidateScore.total - a.candidateScore.total);
+    const { data: waitlistStats } = waitlistPatientIds.length > 0
+      ? await supabase
+          .from("appointments")
+          .select("patient_id, status")
+          .eq("tenant_id", slot.tenantId)
+          .in("patient_id", waitlistPatientIds)
+      : { data: [] };
 
-  return sorted.slice(0, limit);
+    const waitlistStatsMap = buildStatsMap(waitlistStats ?? []);
+
+    waitlistCandidates = (waitlistEntries ?? [])
+      .filter((entry) => {
+        if (!entry.patient) return false;
+        if (declinedPatientIds.has(entry.patient_id)) return false;
+        return true;
+      })
+      .map((entry) => {
+        const patient = entry.patient as unknown as {
+          id: string; first_name: string; last_name: string;
+          phone: string | null; email: string | null; preferred_channel: string;
+          response_patterns: { records: ReadonlyArray<{ responseMinutes: number }> } | null;
+        };
+        const stats = waitlistStatsMap.get(entry.patient_id) ?? { total: 0, noShows: 0 };
+        const avgResponseMinutes = extractAvgResponseMinutes(patient.response_patterns);
+
+        const candidateScore = computeCandidateScore({
+          appointmentScheduledAt: null, // waitlist candidate has no existing appointment
+          openSlotAt: slot.scheduledAt,
+          patientNoShows: stats.noShows,
+          patientTotal: stats.total,
+          now,
+          avgResponseMinutes,
+        });
+
+        return {
+          candidateAppointmentId: null,
+          waitlistEntryId: entry.id,
+          source: "waitlist" as const,
+          patientId: entry.patient_id,
+          patientName: `${patient.first_name} ${patient.last_name}`,
+          patientPhone: patient.phone,
+          patientEmail: patient.email,
+          preferredChannel: patient.preferred_channel as "whatsapp" | "sms" | "email",
+          candidateScore,
+          currentAppointmentAt: null,
+        } satisfies RankedCandidate;
+      });
+  }
+
+  // --- Merge, deduplicate by patient (appointment-based wins), sort ---
+  const seenPatients = new Set<string>();
+  const merged: RankedCandidate[] = [];
+
+  // Appointment candidates first (they have real distance scores)
+  for (const c of apptCandidates) {
+    if (!seenPatients.has(c.patientId)) {
+      seenPatients.add(c.patientId);
+      merged.push(c);
+    }
+  }
+  for (const c of waitlistCandidates) {
+    if (!seenPatients.has(c.patientId)) {
+      seenPatients.add(c.patientId);
+      merged.push(c);
+    }
+  }
+
+  merged.sort((a, b) => b.candidateScore.total - a.candidateScore.total);
+  return merged.slice(0, limit);
 }
 
 /**

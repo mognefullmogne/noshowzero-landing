@@ -30,7 +30,7 @@ function render(template: string, vars: TemplateVars): string {
 const TEMPLATES = {
   waitlist_offer_whatsapp: `Ciao {{patient_name}}! Si è liberato un posto per {{service_name}} il {{date}} alle {{time}}{{location_suffix}}{{provider_suffix}}.
 
-Il tuo appuntamento attuale è il {{current_appointment_date}} alle {{current_appointment_time}}.
+{{current_appointment_line}}
 
 Hai {{expiry_description}} per rispondere (scade alle {{expires_at}}).
 
@@ -63,10 +63,14 @@ Il team NoShow`,
 export function renderOfferWhatsApp(vars: TemplateVars): string {
   const locationSuffix = vars.location_name ? ` presso ${vars.location_name}` : "";
   const providerSuffix = vars.provider_name ? ` con ${vars.provider_name}` : "";
+  const currentApptLine = vars.current_appointment_date
+    ? "Il tuo appuntamento attuale è il " + vars.current_appointment_date + " alle " + vars.current_appointment_time + "."
+    : "Sei in lista di attesa per questo servizio.";
   return render(TEMPLATES.waitlist_offer_whatsapp, {
     ...vars,
     location_suffix: locationSuffix,
     provider_suffix: providerSuffix,
+    current_appointment_line: currentApptLine,
   });
 }
 
