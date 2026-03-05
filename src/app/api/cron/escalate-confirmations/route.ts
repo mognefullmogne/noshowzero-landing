@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Cron: Escalate confirmation workflows through multi-touch ladder.
  * Runs every 15 minutes to check for workflows needing escalation.

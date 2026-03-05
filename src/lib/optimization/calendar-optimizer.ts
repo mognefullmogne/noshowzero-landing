@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Calendar optimization engine.
  * Detects gaps, scores candidates, creates proposals.
@@ -73,6 +76,20 @@ export async function runOptimization(
         errors.push(`Gap fill error: ${error.message}`);
       } else {
         decisionsCreated++;
+
+        // Log to audit_events so it appears in the strategy log dashboard
+        await supabase.from("audit_events").insert({
+          tenant_id: tenantId,
+          actor_type: "system",
+          entity_type: "optimization",
+          entity_id: best.waitlistEntryId,
+          action: "ai_strategy_applied",
+          metadata: {
+            strategy: "gap_fill",
+            reasoning: `Riempire gap ${gap.providerName} con ${best.patientName} (score: ${best.score}/100)`,
+            ai_generated: false,
+          },
+        });
       }
     } catch (err) {
       errors.push(`Gap ${gap.startAt}: ${err instanceof Error ? err.message : "Unknown error"}`);

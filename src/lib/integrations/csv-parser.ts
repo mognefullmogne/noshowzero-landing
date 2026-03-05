@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * CSV parser for appointment imports.
  * Auto-detects delimiter, date format, and common export formats

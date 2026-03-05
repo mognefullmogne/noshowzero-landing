@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Cron: Run optimization (every 6 hours).
  * Runs optimization for all active tenants.

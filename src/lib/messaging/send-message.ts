@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Send an outbound message to a patient via their preferred channel.
  * Creates or reuses a message_thread, logs message_event + delivery_status.

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * GET    /api/integrations/[id] — Single integration details
  * PATCH  /api/integrations/[id] — Update (pause/resume, change calendar selection)

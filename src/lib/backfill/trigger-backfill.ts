@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Orchestrator: given a cancelled appointment, find the best candidate and send them an offer.
  * This is called from:
@@ -62,8 +65,9 @@ export async function triggerBackfill(
   }
 
   const scheduledAt = new Date(appointment.scheduled_at);
-  if (scheduledAt <= new Date()) {
-    console.warn("[Backfill] Appointment slot is in the past — skipping");
+  const slotEndTime = new Date(scheduledAt.getTime() + (appointment.duration_min ?? 30) * 60_000);
+  if (slotEndTime <= new Date()) {
+    console.warn("[Backfill] Appointment slot has fully elapsed — skipping");
     return null;
   }
 
@@ -283,8 +287,8 @@ export async function triggerBackfill(
 
   const results = await Promise.all(offerPromises);
 
-  // Log AI decision in audit trail
-  if (strategy?.aiGenerated) {
+  // Log strategy decision in audit trail (feeds strategy log dashboard)
+  if (strategy) {
     await supabase.from("audit_events").insert({
       tenant_id: tenantId,
       actor_type: "system",
@@ -297,6 +301,7 @@ export async function triggerBackfill(
         parallel_count: parallelCount,
         expiry_minutes: expiryMinutes,
         rebook_sent: strategy.rebookCancellingPatient,
+        ai_generated: strategy.aiGenerated,
       },
     });
   }

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Validate Twilio X-Twilio-Signature for webhook security.
  * Fails closed — never accepts unsigned requests regardless of environment.

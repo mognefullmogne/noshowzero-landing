@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * POST /api/integrations/[id]/sync
  * Trigger manual sync for a specific integration.

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Cron endpoint — expire timed-out offers every 30 minutes.
  * Protected by CRON_SECRET env var (Vercel Cron Authorization header).

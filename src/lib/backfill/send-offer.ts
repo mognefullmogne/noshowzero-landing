@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Create an offer record, generate HMAC tokens, send notification via Twilio,
  * and update the waitlist entry status to offer_pending.
@@ -19,6 +22,7 @@ import {
   renderOfferEmailSubject,
   renderOfferEmailBody,
 } from "@/lib/twilio/templates";
+import { logAuditEvent } from "@/lib/audit/log-event";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -221,6 +225,19 @@ export async function sendOffer(
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", offerThreadId);
   }
+
+  logAuditEvent({
+    tenantId: input.tenantId,
+    actorType: "system",
+    entityType: "offer",
+    entityId: offerId,
+    action: "offer.sent",
+    metadata: {
+      patient_id: input.candidate.patientId,
+      original_appointment_id: input.originalAppointmentId,
+      channel: effectiveChannel,
+    },
+  });
 
   return { offerId, status: "sent" };
 }

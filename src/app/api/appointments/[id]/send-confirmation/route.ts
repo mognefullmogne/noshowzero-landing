@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * POST /api/appointments/[id]/send-confirmation — Manually send a confirmation message to the patient.
  * Uses the same template and channel as the automated confirmation cron.

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Public GET — offer status page.
  * Secured by HMAC token (passed as query param).
@@ -131,7 +134,7 @@ function htmlResponse(status: number, title: string, body: string): NextResponse
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)} &mdash; NoShowZero</title>
+  <title>${escapeHtml(title)} &mdash; NoShow</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #fff; color: #333; }
     p { margin: 8px 0; font-size: 16px; }

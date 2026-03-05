@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Eager reminder scheduling — creates reminder rows at appointment creation time.
  * Also used by the cron endpoint as a safety net for missed schedules.

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * POST /api/ai/chat — Operator AI chat with tool-use.
  * Accepts { message, history, context? } and returns AI response with tool call details.

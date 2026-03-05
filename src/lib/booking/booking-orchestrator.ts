@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Main orchestrator for the conversational booking flow.
  * Handles incoming messages during an active booking session,

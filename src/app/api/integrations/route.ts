@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * GET  /api/integrations — List tenant's integrations with recent import logs
  * POST /api/integrations — Create new integration (iCal feed or register CSV)

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Find expired pending offers and cascade to next candidate.
  * Called by the cron endpoint every 15 minutes.

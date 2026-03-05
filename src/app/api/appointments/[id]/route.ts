@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
@@ -7,6 +10,7 @@ import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
 import { maybeProcessPending } from "@/lib/engine/process-pending";
 import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
 import { sendNotification } from "@/lib/twilio/send-notification";
+import { logAuditEvent } from "@/lib/audit/log-event";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -146,6 +150,16 @@ export async function PATCH(
       );
     }
 
+    logAuditEvent({
+      tenantId: auth.data.tenantId,
+      actorType: "user",
+      actorId: auth.data.userId,
+      entityType: "appointment",
+      entityId: id,
+      action: "appointment.status_changed",
+      metadata: { from: currentStatus, to: newStatus },
+    });
+
     // Trigger waitlist backfill on cancellation or no-show (non-blocking)
     if (newStatus === "cancelled" || newStatus === "no_show") {
       createServiceClient()
@@ -216,6 +230,15 @@ export async function DELETE(
         { status: 500 }
       );
     }
+
+    logAuditEvent({
+      tenantId: auth.data.tenantId,
+      actorType: "user",
+      actorId: auth.data.userId,
+      entityType: "appointment",
+      entityId: id,
+      action: "appointment.deleted",
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * GET    /api/rules/[id] — Get ruleset with versions.
  * PATCH  /api/rules/[id] — Update ruleset.

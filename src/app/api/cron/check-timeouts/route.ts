@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Cron: Check confirmation timeouts (every 10 min).
  * Picks up workflows in any escalation state past their deadline and marks them timed_out.

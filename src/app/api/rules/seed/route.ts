@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * POST /api/rules/seed — Create default business rules for the tenant.
  * Idempotent: skips rules that already exist (by name).

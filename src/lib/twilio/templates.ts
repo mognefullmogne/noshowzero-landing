@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Message templates for waitlist offer notifications.
  * WhatsApp uses Italian reply-based format (SI/NO).
@@ -33,7 +36,7 @@ Hai {{expiry_description}} per rispondere (scade alle {{expires_at}}).
 
 Rispondi SI per accettare o NO per rifiutare.`,
 
-  waitlist_offer_sms: `NoShowZero: Posto disponibile per {{service_name}} il {{date}} {{time}}. Accetta: {{accept_url}} | Rifiuta: {{decline_url}} (scade {{expires_at}})`,
+  waitlist_offer_sms: `NoShow: Posto disponibile per {{service_name}} il {{date}} {{time}}. Accetta: {{accept_url}} | Rifiuta: {{decline_url}} (scade {{expires_at}})`,
 
   waitlist_offer_email_subject: `Posto disponibile: {{service_name}} il {{date}} alle {{time}}`,
 
@@ -54,7 +57,7 @@ Hai {{expiry_description}} per accettare (scade alle {{expires_at}}).
 Se non rispondi entro la scadenza, il posto verrà offerto al prossimo paziente in lista d'attesa.
 
 A presto!
-Il team NoShowZero`,
+Il team NoShow`,
 } as const;
 
 export function renderOfferWhatsApp(vars: TemplateVars): string {

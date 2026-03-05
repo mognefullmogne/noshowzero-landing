@@ -1,6 +1,6 @@
 # BOSS State
 
-> Last checkpoint: 2026-03-04 22:25
+> Last checkpoint: 2026-03-04 22:30
 
 ## Identity
 - Role: CTO/Product Owner — delegates via BOARD.md, verifies, NEVER writes code or uses Agent tool
@@ -8,18 +8,23 @@
 
 ## Current Sprint: Sprint 2
 
-### What's Done (committed in a7b06a8, BOSS verified)
-- Sidebar labels: all 15 translated to Italian ✅
-- Brand "NoShowZero" in layout (2 spots) ✅
-- "Sign Out" → "Esci" ✅
-- "Setup Wizard" → "Configurazione Iniziale" ✅
-- "Try again" → "Riprova" ✅
-- Onboarding redirect guard ✅
+### Completed + BOSS Verified
+- Sidebar labels: all 15 translated to Italian ✅ (commit a7b06a8)
+- Brand "NoShowZero" in layout (2 spots) ✅ (commit a7b06a8)
+- "Sign Out" → "Esci" ✅ (commit a7b06a8)
+- Onboarding redirect guard ✅ (commit a7b06a8)
+- NowShow brand cleanup: SITE_NAME, emails, all refs → 0 remaining ✅ (Frontend task #1)
+- Code Review: APPROVED ✅ (task #2)
 
-### What's Left (assigned in BOARD.md)
-1. Frontend Engineer: fix stale NowShow refs (constants.ts, emails, other files)
-2. Code Reviewer: review a7b06a8 + Frontend's brand cleanup
-3. DevOps: push, deploy, merge PR #1
+### What's Left
+- DevOps task #3: commit brand cleanup, push, deploy to production — UNBLOCKED
+- DevOps task #4: merge PR #1 — blocked on #3
+
+### BOSS Verification Results (this cycle)
+- grep `NowShow` in src/ → 0 matches ✅
+- grep `nowshow.com` in src/ → 0 matches ✅
+- SITE_NAME = "NoShowZero" ✅
+- Build passes ✅
 
 ## Workflow Reminder
 - I NEVER use Agent tool — agents are in separate sessions

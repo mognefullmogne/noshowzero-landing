@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Sync engine: orchestrates fetching + importing for each integration type.
  * Used by manual sync, cron, and post-connection initial sync.

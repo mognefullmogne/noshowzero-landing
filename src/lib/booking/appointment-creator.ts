@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Create an appointment from a completed booking session.
  * Reuses the same risk scoring, reminder scheduling, and confirmation

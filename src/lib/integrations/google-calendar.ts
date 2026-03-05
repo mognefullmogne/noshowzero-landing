@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Google Calendar integration via Google Calendar API v3.
  * Uses fetch() directly — no SDK dependency.

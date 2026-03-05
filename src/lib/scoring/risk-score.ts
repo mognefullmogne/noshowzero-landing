@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Deterministic risk scoring (0–100).
  * Ported from NestJS AppointmentsService.computeRiskScore()

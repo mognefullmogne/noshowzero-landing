@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Resolve tenant from a Twilio phone number.
  * Used when an unknown caller sends a message — we determine which

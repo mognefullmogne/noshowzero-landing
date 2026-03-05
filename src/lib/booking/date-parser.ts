@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * AI-powered Italian natural language date parser.
  * Uses Claude Haiku to convert expressions like "lunedi prossimo", "domani",

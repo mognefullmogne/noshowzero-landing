@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * GET /api/integrations/google/callback
  * Handle Google OAuth callback: exchange code, encrypt tokens, store integration.

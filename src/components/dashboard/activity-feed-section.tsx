@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import { Activity, CheckCircle, Clock, Send, XCircle } from "lucide-react";

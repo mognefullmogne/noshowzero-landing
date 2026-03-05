@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * POST /api/integrations/csv/upload
  * Accept CSV file (multipart), parse, import appointments, return results.

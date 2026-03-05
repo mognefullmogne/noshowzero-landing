@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Regex-based intent classifier for patient messages.
  * Returns high confidence for exact matches, medium for partial, 0.0 for unknown (AI fallback).

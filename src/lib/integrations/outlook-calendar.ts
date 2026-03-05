@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Outlook Calendar integration via Microsoft Graph API.
  * Uses fetch() directly — no SDK dependency.

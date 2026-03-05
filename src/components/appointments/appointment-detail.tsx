@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import { useState } from "react";
@@ -228,7 +231,6 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
   const reminders = (appointment as Appointment & { reminders?: Reminder[] }).reminders ?? [];
   const offers = (appointment as Appointment & { offers?: OfferSummary[] }).offers ?? [];
   const isCancelledOrNoShow = appointment.status === "cancelled" || appointment.status === "no_show";
-  const canCancel = allowed.includes("cancelled" as AppointmentStatus);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -280,17 +282,15 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
           )}
 
           {/* Prominent cancel button */}
-          {canCancel && (
-            <Button
-              variant="destructive"
-              onClick={handleCancelAppointment}
-              disabled={cancelling}
-              className="w-full"
-            >
-              {cancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Cancella Appuntamento
-            </Button>
-          )}
+          <Button
+            variant="destructive"
+            onClick={handleCancelAppointment}
+            disabled={cancelling}
+            className="w-full"
+          >
+            {cancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+            Cancella Appuntamento
+          </Button>
 
           {/* Patient info */}
           {patient && !editingPatient && (

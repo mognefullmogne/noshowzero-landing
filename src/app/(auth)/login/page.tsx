@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import { useState, Suspense } from "react";
@@ -79,7 +82,7 @@ function LoginForm() {
     <div className="w-full max-w-md">
       <div className="rounded-2xl border border-black/[0.04] bg-white p-8 shadow-xl shadow-black/[0.03]">
         <h1 className="text-2xl font-bold text-gray-900">Bentornato/a</h1>
-        <p className="mt-1 text-sm text-gray-500">Accedi al tuo account NoShowZero.</p>
+        <p className="mt-1 text-sm text-gray-500">Accedi al tuo account NoShow.</p>
 
         {message && (
           <div className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-600">

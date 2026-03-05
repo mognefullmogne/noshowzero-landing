@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
@@ -17,6 +20,7 @@ import { maybeProcessPending } from "@/lib/engine/process-pending";
 import { autoScoreAppointments } from "@/lib/scoring/auto-score";
 import type { Patient, MessageChannel } from "@/lib/types";
 import { checkProviderConflict } from "@/lib/booking/provider-conflict";
+import { logAuditEvent } from "@/lib/audit/log-event";
 
 export async function GET(request: Request) {
   try {
@@ -32,7 +36,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const { status, from, to, patient_id, page, pageSize } = filters.data;
+    const { status, date, from, to, patient_id, page, pageSize } = filters.data;
     const supabase = await createClient();
 
     let query = supabase
@@ -43,8 +47,12 @@ export async function GET(request: Request) {
       .range((page - 1) * pageSize, page * pageSize - 1);
 
     if (status) query = query.eq("status", status);
-    if (from) query = query.gte("scheduled_at", from);
-    if (to) query = query.lte("scheduled_at", to);
+    if (date) {
+      query = query.gte("scheduled_at", `${date}T00:00:00.000Z`).lte("scheduled_at", `${date}T23:59:59.999Z`);
+    } else {
+      if (from) query = query.gte("scheduled_at", from);
+      if (to) query = query.lte("scheduled_at", to);
+    }
     if (patient_id) query = query.eq("patient_id", patient_id);
 
     const { data, count, error } = await query;
@@ -307,6 +315,16 @@ export async function POST(request: Request) {
         location_name: appointmentData.location_name ?? null,
       }
     ).catch((err) => console.error("[Appointments] Confirmation workflow error:", err));
+
+    logAuditEvent({
+      tenantId: auth.data.tenantId,
+      actorType: "user",
+      actorId: auth.data.userId,
+      entityType: "appointment",
+      entityId: appointment.id,
+      action: "appointment.created",
+      metadata: { service_name: appointmentData.service_name, patient_id: patientId },
+    });
 
     return NextResponse.json({ success: true, data: appointment }, { status: 201 });
   } catch (err) {

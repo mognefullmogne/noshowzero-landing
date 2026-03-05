@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import Link from "next/link";
 import { Zap } from "lucide-react";
 
@@ -65,7 +68,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-slate-100 pt-8">
           <p className="text-center text-sm text-slate-400">
-            &copy; {new Date().getFullYear()} NoShowZero. Tutti i diritti riservati.
+            &copy; {new Date().getFullYear()} NoShow. Tutti i diritti riservati.
           </p>
         </div>
       </div>

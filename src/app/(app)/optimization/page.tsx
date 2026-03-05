@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -22,6 +25,7 @@ export default function OptimizationPage() {
   const [decisions, setDecisions] = useState<OptimizationDecision[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
@@ -45,9 +49,20 @@ export default function OptimizationPage() {
 
   const runOptimization = useCallback(async () => {
     setRunning(true);
-    await fetch("/api/optimization/run", { method: "POST" });
-    setRunning(false);
-    fetchDecisions();
+    setRunError(null);
+    try {
+      const res = await fetch("/api/optimization/run", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setRunError(data?.error?.message ?? "Failed to run optimization");
+      } else {
+        fetchDecisions();
+      }
+    } catch {
+      setRunError("Network error — please try again");
+    } finally {
+      setRunning(false);
+    }
   }, [fetchDecisions]);
 
   const handleDecision = useCallback(async (id: string, status: "approved" | "rejected") => {
@@ -73,6 +88,12 @@ export default function OptimizationPage() {
           </Button>
         }
       />
+
+      {runError && (
+        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
+          {runError}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mb-6 flex gap-2">

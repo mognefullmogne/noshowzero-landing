@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Token refresh helpers for Google and Outlook integrations.
  * Decrypts stored tokens, refreshes if expired, re-encrypts and updates DB.

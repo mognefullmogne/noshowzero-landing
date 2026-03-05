@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Cron: Send confirmation messages (every 5 min).
  * Picks up pending_send workflows past their deadline and sends WhatsApp/SMS.

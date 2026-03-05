@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -113,7 +116,7 @@ export default function DashboardPage() {
 
   // Show operational dashboard when business is set up
   if (hasBusinessSetup) {
-    return <OperationalDashboard tenantName={tenant?.name ?? "NoShowZero"} />;
+    return <OperationalDashboard tenantName={tenant?.name ?? "NoShow"} />;
   }
 
   const planStatus = tenant?.plan_status ?? "trialing";
@@ -151,7 +154,7 @@ export default function DashboardPage() {
     },
     {
       title: "Leggi la documentazione API",
-      description: "Scopri come integrare NoShowZero",
+      description: "Scopri come integrare NoShow",
       done: false,
       action: () => router.push("/docs"),
       actionLabel: "Vedi docs",
@@ -175,7 +178,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500">
-            Benvenuto/a su {tenant?.name ?? "NoShowZero"}
+            Benvenuto/a su {tenant?.name ?? "NoShow"}
           </p>
         </div>
         <Badge
@@ -200,7 +203,7 @@ export default function DashboardPage() {
               Il periodo di prova gratuito scade il {trialEnds}
             </p>
             <p className="text-xs text-blue-600">
-              Aggiungi i dettagli di pagamento per continuare a usare NoShowZero.
+              Aggiungi i dettagli di pagamento per continuare a usare NoShow.
             </p>
           </div>
           <Button

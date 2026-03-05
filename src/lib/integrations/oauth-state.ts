@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * HMAC-based OAuth state parameter for CSRF prevention.
  * State = base64(tenantId:timestamp:hmac)

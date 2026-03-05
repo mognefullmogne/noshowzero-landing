@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Proactive reschedule — flag appointments with risk >= 70 for reschedule consideration.
  */

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * AI-enhanced risk scoring using Claude.
  * Falls back to deterministic scoring on any failure.

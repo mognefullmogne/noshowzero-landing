@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -45,7 +48,7 @@ export default function AppointmentsPage() {
       result = result.filter((a) => a.status === (statusFilter as AppointmentStatus));
     }
     if (dateFrom) {
-      const fromDate = new Date(dateFrom);
+      const fromDate = new Date(dateFrom + "T00:00:00");
       result = result.filter((a) => new Date(a.scheduled_at) >= fromDate);
     }
     return result;

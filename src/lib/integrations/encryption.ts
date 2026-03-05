@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 // AES-256-GCM encryption for OAuth tokens at rest
 // Format: iv:authTag:ciphertext (all base64)
 

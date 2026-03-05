@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * HMAC-SHA256 token generation & verification for secure offer email/SMS links.
  * Accept and decline get separate tokens. DB stores only SHA-256 hash.

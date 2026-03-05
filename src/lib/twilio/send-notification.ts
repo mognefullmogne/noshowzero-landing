@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Send notifications via Twilio — supports WhatsApp, SMS, and Email.
  * Matches the provider pattern from the NestJS local version with retry + fallback.

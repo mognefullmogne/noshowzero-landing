@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Confirmation message templates for WhatsApp/SMS.
  * Includes multi-touch escalation templates (Touch 1, 2, 3).

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Contact timing / reminder schedule logic.
  * Ported from NestJS ContactTimingService.

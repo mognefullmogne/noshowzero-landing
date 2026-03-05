@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 // Core product types — ported from NestJS shared package
 
 export type AppointmentStatus =

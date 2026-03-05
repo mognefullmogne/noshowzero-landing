@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import { describe, it, expect } from "vitest";
 import { findCandidates, type OpenSlotDetails } from "@/lib/backfill/find-candidates";
 import { createMockSupabase } from "./helpers";

@@ -1,5 +1,8 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
- * AI Decision Engine — the strategic reasoning brain of NoShowZero.
+ * AI Decision Engine — the strategic reasoning brain of NoShow.
  *
  * When a cancellation, no-show, or timeout occurs, this engine analyzes
  * the FULL situation and decides the optimal strategy:
@@ -307,7 +310,7 @@ async function callAIStrategy(context: DecisionContext): Promise<StrategyDecisio
     model: "claude-sonnet-4-6",
     max_tokens: 600,
     temperature: 0,
-    system: `You are the strategic decision engine for NoShowZero, an Italian medical clinic appointment recovery system. You analyze cancellations, no-shows, and timeouts to decide the OPTIMAL strategy to fill the empty slot as fast as possible.
+    system: `You are the strategic decision engine for NoShow, an Italian medical clinic appointment recovery system. You analyze cancellations, no-shows, and timeouts to decide the OPTIMAL strategy to fill the empty slot as fast as possible.
 
 You must return ONLY valid JSON with this exact schema:
 {

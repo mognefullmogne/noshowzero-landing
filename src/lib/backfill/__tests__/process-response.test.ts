@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockSupabase } from "./helpers";
 

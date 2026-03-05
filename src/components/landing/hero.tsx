@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import Link from "next/link";
@@ -318,7 +321,7 @@ export function Hero() {
                     <div className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
                   </div>
                   <div className="ml-3 flex h-5 flex-1 items-center justify-center rounded-md bg-white border border-slate-200">
-                    <span className="text-[9px] text-slate-400">app.noshowzero.com/calendar</span>
+                    <span className="text-[9px] text-slate-400">app.noshow.com/calendar</span>
                   </div>
                 </div>
 
@@ -330,7 +333,7 @@ export function Hero() {
                       <div className="h-5 w-5 rounded-md bg-gradient-to-br from-teal-600 to-cyan-500 flex items-center justify-center">
                         <Zap className="h-3 w-3 text-white" />
                       </div>
-                      <span className="font-bold text-[11px] text-slate-900">NoShowZero</span>
+                      <span className="font-bold text-[11px] text-slate-900">NoShow</span>
                     </div>
                     <div className="space-y-0.5">
                       {SIDEBAR_NAV.map((item) => (

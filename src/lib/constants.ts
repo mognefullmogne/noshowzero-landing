@@ -1,4 +1,7 @@
-export const SITE_NAME = "NoShowZero";
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
+export const SITE_NAME = "NoShow";
 export const SITE_DESCRIPTION =
   "Elimina i no-show, riempi gli slot vuoti e aumenta il fatturato con la gestione appuntamenti basata sull'IA.";
 export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -124,7 +127,7 @@ export const FAQ_ITEMS = [
   {
     question: "Posso integrarlo con il mio software gestionale?",
     answer:
-      "Sì! Le nostre API REST e i webhooks ti permettono di collegare NoShowZero a qualsiasi sistema di prenotazione. Forniamo SDK, documentazione e codice di esempio per iniziare in pochi minuti.",
+      "Sì! Le nostre API REST e i webhooks ti permettono di collegare NoShow a qualsiasi sistema di prenotazione. Forniamo SDK, documentazione e codice di esempio per iniziare in pochi minuti.",
   },
   {
     question: "I miei dati sono al sicuro?",
@@ -160,7 +163,7 @@ export const TESTIMONIALS = [
     name: "Marco Rossi",
     role: "Manager, UrbanFit Palestra",
     content:
-      "Perdevamo migliaia di euro ogni mese per sessioni PT saltate. I promemoria intelligenti e la riprenotazione automatica di NoShowZero hanno recuperato oltre €12.000 nel primo trimestre.",
+      "Perdevamo migliaia di euro ogni mese per sessioni PT saltate. I promemoria intelligenti e la riprenotazione automatica di NoShow hanno recuperato oltre €12.000 nel primo trimestre.",
     avatar: "MR",
   },
   {

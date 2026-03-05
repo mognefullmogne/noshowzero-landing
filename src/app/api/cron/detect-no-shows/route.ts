@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Cron: Detect no-shows (every 15 min).
  * Finds appointments that are 15+ minutes overdue and marks them as no_show.

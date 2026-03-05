@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Check whether a provider already has an active appointment that overlaps
  * with a proposed time window. Prevents double-booking the same person.

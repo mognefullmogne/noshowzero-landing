@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * GET  /api/slots — List slots with filters.
  * POST /api/slots — Create a slot or block a time.

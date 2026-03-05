@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { authenticateApiKey } from "@/lib/api-key-auth";

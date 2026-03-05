@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import { z } from "zod";
 
 // --- Patient ---
@@ -161,6 +164,7 @@ export const AppointmentFiltersSchema = z.object({
       "cancelled",
     ])
     .optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   patient_id: z.string().uuid().optional(),

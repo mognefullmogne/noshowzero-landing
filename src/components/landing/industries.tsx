@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import {
@@ -31,7 +34,7 @@ export function Industries() {
             Pensato per Ogni Settore
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
-            Se la tua attività funziona su appuntamento, NoShowZero fa per te.
+            Se la tua attività funziona su appuntamento, NoShow fa per te.
           </p>
         </ScrollReveal>
       </div>

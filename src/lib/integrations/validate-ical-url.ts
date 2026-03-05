@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * iCal URL validation with SSRF protection.
  * Blocks private IPs, reserved ranges, and non-HTTP(S) schemes.

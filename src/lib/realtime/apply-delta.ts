@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import type { Appointment } from "@/lib/types";
 import type { RealtimeAppointmentEvent } from "./types";
 

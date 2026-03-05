@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * POST /api/ai/appointment-chat — Context-aware AI for appointment detail panel.
  * Accepts { message, history, context: { appointment_id } }.

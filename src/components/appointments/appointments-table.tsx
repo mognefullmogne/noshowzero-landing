@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import { useState } from "react";
@@ -142,20 +145,18 @@ export function AppointmentsTable({ appointments, loading, onRefresh }: Appointm
                   <RiskBadge score={appt.risk_score} />
                 </TableCell>
                 <TableCell>
-                  {appt.status !== "cancelled" && appt.status !== "completed" && appt.status !== "no_show" && (
-                    <button
-                      onClick={(e) => cancelAppointment(e, appt.id)}
-                      disabled={cancellingId === appt.id}
-                      title="Cancella appuntamento"
-                      className="rounded-md p-1.5 text-red-400 border border-red-200 bg-red-50 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50"
-                    >
-                      {cancellingId === appt.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                    </button>
-                  )}
+                  <button
+                    onClick={(e) => cancelAppointment(e, appt.id)}
+                    disabled={cancellingId === appt.id}
+                    title="Cancella appuntamento"
+                    className="rounded-md p-1.5 text-red-400 border border-red-200 bg-red-50 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50"
+                  >
+                    {cancellingId === appt.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4" />
+                    )}
+                  </button>
                 </TableCell>
               </TableRow>
             ))}

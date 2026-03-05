@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import { createHash } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 

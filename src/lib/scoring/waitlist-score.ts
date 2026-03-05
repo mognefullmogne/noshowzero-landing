@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Smart waitlist scoring (0–100).
  * Ported from NestJS MatchingService.computeSmartScore()

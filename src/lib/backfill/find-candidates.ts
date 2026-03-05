@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Find and rank candidate patients for a cancelled appointment slot.
  *
@@ -78,12 +81,13 @@ export async function findCandidates(
 ): Promise<readonly RankedCandidate[]> {
   const now = new Date();
 
-  // Guard: slot must be in the future with at least 2-hour lead time
-  if (slot.scheduledAt <= now) {
-    console.warn("[Backfill] Slot is in the past — skipping candidate search");
+  // Guard: slot must not have fully elapsed, and needs minimum lead time
+  const slotEndTime = new Date(slot.scheduledAt.getTime() + slot.durationMin * 60_000);
+  if (slotEndTime <= now) {
+    console.warn("[Backfill] Slot has fully elapsed — skipping candidate search");
     return [];
   }
-  if (slot.scheduledAt.getTime() - now.getTime() < MIN_LEAD_TIME_MS) {
+  if (slot.scheduledAt.getTime() - now.getTime() < MIN_LEAD_TIME_MS && slot.scheduledAt > now) {
     console.warn("[Backfill] Slot is less than 2 hours away — skipping candidate search");
     return [];
   }

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * AI-powered patient conversation orchestrator.
  * 1. Load context (thread, latest appointment, active offer)

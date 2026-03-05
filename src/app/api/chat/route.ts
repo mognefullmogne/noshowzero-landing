@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
@@ -30,10 +33,10 @@ const BodySchema = z.object({
   messages: z.array(ChatMessageSchema).max(MAX_MESSAGES),
 });
 
-const SYSTEM_PROMPT = `You are the NoShowZero AI assistant — a friendly, knowledgeable chatbot on the NoShowZero website. NoShowZero is an AI-powered appointment management platform that helps businesses eliminate no-shows, fill empty slots, and boost revenue.
+const SYSTEM_PROMPT = `You are the NoShow AI assistant — a friendly, knowledgeable chatbot on the NoShow website. NoShow is an AI-powered appointment management platform that helps businesses eliminate no-shows, fill empty slots, and boost revenue.
 
 KEY PRODUCT INFO:
-- NoShowZero works for ALL appointment-based businesses: healthcare, dental, salons, auto service, fitness, consulting, legal, etc.
+- NoShow works for ALL appointment-based businesses: healthcare, dental, salons, auto service, fitness, consulting, legal, etc.
 - Core features: AI-timed smart reminders (WhatsApp, SMS, email), AI no-show risk scoring, AI waitlist with auto-fill, calendar optimization, real-time analytics
 - Plans: Growth ($199/mo), Professional ($499/mo), Enterprise ($999/mo). All include 14-day free trial. Annual billing saves 15-20%.
 - Growth: 1,000 appts/mo, 2 locations, 5 users. AI reminders + risk scoring + waitlist + REST API.
@@ -46,8 +49,8 @@ BEHAVIOR RULES:
 - Be concise and helpful. Use 2-4 sentences for most answers.
 - Bold key terms using **markdown**.
 - When appropriate, suggest the user start a free trial or visit the pricing page.
-- If asked about competitors, focus on NoShowZero's strengths without disparaging others.
-- If asked about something unrelated to NoShowZero, gently redirect: "I specialize in NoShowZero's appointment management platform. How can I help you with reducing no-shows?"
+- If asked about competitors, focus on NoShow's strengths without disparaging others.
+- If asked about something unrelated to NoShow, gently redirect: "I specialize in NoShow's appointment management platform. How can I help you with reducing no-shows?"
 - Never make up features that don't exist.
 - Be warm and professional.`;
 
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
 
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage || lastMessage.role !== "user") {
-      return NextResponse.json({ message: "I'm ready to help! Ask me anything about NoShowZero." });
+      return NextResponse.json({ message: "I'm ready to help! Ask me anything about NoShow." });
     }
 
     // If no API key configured, fall back to rule-based
@@ -110,7 +113,7 @@ export async function POST(request: Request) {
     const text =
       response.content[0]?.type === "text"
         ? response.content[0].text
-        : "I'm here to help! Ask me anything about NoShowZero.";
+        : "I'm here to help! Ask me anything about NoShow.";
 
     return NextResponse.json({ message: text });
   } catch (error) {
@@ -119,7 +122,7 @@ export async function POST(request: Request) {
     // On any API error, return a helpful fallback
     return NextResponse.json({
       message:
-        "I'm having a brief technical moment. In the meantime: **NoShowZero** helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. All plans include a **14-day free trial**. What would you like to know?",
+        "I'm having a brief technical moment. In the meantime: **NoShow** helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. All plans include a **14-day free trial**. What would you like to know?",
     });
   }
 }
@@ -133,8 +136,8 @@ function getFallbackResponse(userMessage: string): string {
   }
 
   if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
-    return "Hello! Welcome to NoShowZero. I'm here to help you learn about our AI-powered appointment management platform. What would you like to know? I can tell you about pricing, features, integrations, or how to get started.";
+    return "Hello! Welcome to NoShow. I'm here to help you learn about our AI-powered appointment management platform. What would you like to know? I can tell you about pricing, features, integrations, or how to get started.";
   }
 
-  return "That's a great question! **NoShowZero** helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. For specific details, I'd recommend starting a **free trial** or reaching out to our team at info@noshowzero.com. Is there something specific about our features, pricing, or setup I can help with?";
+  return "That's a great question! **NoShow** helps businesses eliminate no-shows with AI-powered reminders, smart waitlists, and calendar optimization. For specific details, I'd recommend starting a **free trial** or reaching out to our team at info@noshowzero.com. Is there something specific about our features, pricing, or setup I can help with?";
 }

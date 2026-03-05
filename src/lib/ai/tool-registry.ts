@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * AI tool definitions + dispatch for operator chat.
  * Each tool is a function that takes validated params and returns structured results.

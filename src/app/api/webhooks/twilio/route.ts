@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * POST /api/webhooks/twilio — Inbound WhatsApp/SMS webhook.
  * Public endpoint (no session auth) — verified via Twilio signature.

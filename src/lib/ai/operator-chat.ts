@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Claude Sonnet agentic loop for operator chat.
  * Max 10 tool iterations, system prompt, tool execution.
@@ -11,7 +14,7 @@ import { TOOL_DEFINITIONS, dispatchTool } from "./tool-registry";
 const MAX_ITERATIONS = 10;
 const MODEL = "claude-sonnet-4-6";
 
-const SYSTEM_PROMPT = `Sei un assistente operatore per una clinica medica che usa NoShowZero.
+const SYSTEM_PROMPT = `Sei un assistente operatore per una clinica medica che usa NoShow.
 Hai accesso a strumenti per gestire appuntamenti, pazienti, lista d'attesa e messaggi.
 
 Regole:

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 "use client";
 
 import {
@@ -21,7 +24,7 @@ export function Faq() {
               Domande Frequenti
             </h2>
             <p className="mt-4 text-lg text-slate-500">
-              Tutto quello che devi sapere su NoShowZero.
+              Tutto quello che devi sapere su NoShow.
             </p>
           </ScrollReveal>
         </div>

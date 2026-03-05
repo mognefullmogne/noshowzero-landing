@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * GET /api/ai/no-show-analysis
  * Returns AI-generated no-show root cause analysis for the authenticated tenant.
@@ -8,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/auth-helpers";
 import { analyzeNoShowPatterns, invalidateAnalysisCache } from "@/lib/ai/no-show-analysis";
 
@@ -25,7 +28,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await createServiceClient();
     const result = await analyzeNoShowPatterns(supabase, tenantId);
 
     return NextResponse.json({

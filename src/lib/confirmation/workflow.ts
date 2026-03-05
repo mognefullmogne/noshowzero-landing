@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Confirmation workflow state machine (serverless, DB-driven).
  * States: pending_send -> message_sent -> reminder_sent -> final_warning_sent -> confirmed | declined | timed_out | cancelled

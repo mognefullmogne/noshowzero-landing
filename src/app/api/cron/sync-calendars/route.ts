@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * GET /api/cron/sync-calendars
  * Cron endpoint — syncs all active integrations across all tenants.

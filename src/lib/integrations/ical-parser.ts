@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * iCal (.ics) feed parser.
  * Fetches and parses VCALENDAR feeds, expands recurring events up to 6 months.

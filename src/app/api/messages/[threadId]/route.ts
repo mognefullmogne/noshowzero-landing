@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * GET  /api/messages/[threadId] — Messages in thread, ordered by created_at ASC.
  * POST /api/messages/[threadId] — Send outbound message to patient.

@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Italian message templates for the conversational booking flow.
  * All user-facing text in one place for easy maintenance.

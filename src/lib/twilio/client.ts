@@ -1,3 +1,6 @@
+// Copyright © 2025 Aimone Vittorio Pitacco. NowShow™.
+// Proprietary and confidential. All rights reserved.
+
 /**
  * Twilio client singleton — mirrors the pattern used in the NestJS local version.
  * Supports WhatsApp, SMS, and Email channels via Twilio.
