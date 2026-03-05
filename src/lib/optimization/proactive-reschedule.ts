@@ -52,7 +52,7 @@ export async function flagHighRiskAppointments(
       type: "proactive_reschedule",
       status: "proposed",
       description: `Appuntamento ad alto rischio (${appt.risk_score}%) per ${patientName} — considerare riprogrammazione`,
-      reasoning: `Risk score: ${appt.risk_score}/100. Servizio: ${appt.service_name}. Data: ${new Date(appt.scheduled_at).toLocaleDateString("it-IT")}`,
+      reasoning: `Risk score: ${appt.risk_score}/100. Servizio: ${appt.service_name}. Data: ${new Date(appt.scheduled_at).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })}`,
       score: appt.risk_score ?? 0,
       source_appointment_id: appt.id,
       proposed_changes: {

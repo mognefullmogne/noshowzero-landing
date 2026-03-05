@@ -90,7 +90,7 @@ export async function runOptimization(
         tenant_id: tenantId,
         type: "gap_fill",
         status: isAutoApproved ? "approved" : "proposed",
-        description: `Riempire gap ${gap.providerName} ${new Date(gap.startAt).toLocaleString("it-IT")} con ${best.patientName}`,
+        description: `Riempire gap ${gap.providerName} ${new Date(gap.startAt).toLocaleString("it-IT", { timeZone: "Europe/Rome" })} con ${best.patientName}`,
         reasoning: `Score: ${best.score}/100. Service match: ${best.breakdown.serviceMatch}, Gap reduction: ${best.breakdown.gapReduction}, Time pref: ${best.breakdown.timePreference}`,
         score: best.score,
         target_waitlist_entry_id: best.waitlistEntryId,
