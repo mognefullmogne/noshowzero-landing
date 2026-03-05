@@ -22,8 +22,14 @@ import { AppointmentDetail } from "@/components/appointments/appointment-detail"
 import { useTenant } from "@/hooks/use-tenant";
 import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
 
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 7); // 7:00–18:00
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+// --- Calendar layout constants ---
+const DAY_START = 7; // 7:00 AM
+const DAY_END = 19; // 7:00 PM
+const TOTAL_HOURS = DAY_END - DAY_START; // 12 hours
+const HOUR_HEIGHT = 72; // px per hour
+const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT; // 864px
+const HOURS = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => i + DAY_START);
+const DAYS = ["Lun", "Mar", "Mer", "Gio", "Ven"];
 
 interface CalendarAppointment {
   readonly id: string;
@@ -35,6 +41,14 @@ interface CalendarAppointment {
   readonly patient_name: string;
 }
 
+/** Appointment with computed layout position */
+interface LayoutAppt extends CalendarAppointment {
+  readonly top: number;
+  readonly height: number;
+  readonly colIndex: number;
+  readonly totalCols: number;
+}
+
 function getWeekStart(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -44,16 +58,75 @@ function getWeekStart(date: Date): Date {
   return d;
 }
 
+function getMinutesFromMidnight(dateStr: string): number {
+  const d = new Date(dateStr);
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+/** Position appointments in columns to handle overlaps (Google Calendar-style). */
+function layoutAppointments(appts: readonly CalendarAppointment[]): LayoutAppt[] {
+  if (appts.length === 0) return [];
+
+  const sorted = [...appts].sort(
+    (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+  );
+
+  // Column-packing: assign each appointment to the first column with no overlap
+  const colEnds: number[] = []; // end-minute of last appt in each column
+  const colMap = new Map<string, number>();
+
+  for (const appt of sorted) {
+    const startMin = getMinutesFromMidnight(appt.scheduled_at);
+    const endMin = startMin + appt.duration_min;
+
+    let placed = false;
+    for (let c = 0; c < colEnds.length; c++) {
+      if (startMin >= colEnds[c]) {
+        colEnds[c] = endMin;
+        colMap.set(appt.id, c);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      colMap.set(appt.id, colEnds.length);
+      colEnds.push(endMin);
+    }
+  }
+
+  // For each appointment, compute totalCols among its overlapping cluster
+  return sorted.map((appt) => {
+    const startMin = getMinutesFromMidnight(appt.scheduled_at);
+    const endMin = startMin + appt.duration_min;
+    const col = colMap.get(appt.id) ?? 0;
+
+    // Find all appointments that overlap with this one (directly or transitively)
+    const overlapping = sorted.filter((other) => {
+      const otherStart = getMinutesFromMidnight(other.scheduled_at);
+      const otherEnd = otherStart + other.duration_min;
+      return startMin < otherEnd && endMin > otherStart;
+    });
+
+    const maxCol = Math.max(...overlapping.map((o) => colMap.get(o.id) ?? 0));
+    const totalCols = maxCol + 1;
+
+    const top = ((startMin - DAY_START * 60) / 60) * HOUR_HEIGHT;
+    const height = Math.max((appt.duration_min / 60) * HOUR_HEIGHT, 24);
+
+    return { ...appt, top, height, colIndex: col, totalCols };
+  });
+}
+
 const STATUS_COLORS: Record<string, string> = {
-  scheduled: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  reminder_pending: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  reminder_sent: "bg-yellow-50 text-yellow-700 border-yellow-200",
-  confirmed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  completed: "bg-gray-50 text-gray-500 border-gray-200",
-  no_show: "bg-red-50 text-red-700 border-red-200",
-  cancelled: "bg-gray-50 text-gray-400 border-gray-200",
-  declined: "bg-orange-50 text-orange-700 border-orange-200",
-  timeout: "bg-orange-50 text-orange-600 border-orange-200",
+  scheduled: "bg-indigo-100/90 text-indigo-800 border-indigo-300",
+  reminder_pending: "bg-indigo-100/90 text-indigo-800 border-indigo-300",
+  reminder_sent: "bg-yellow-100/90 text-yellow-800 border-yellow-300",
+  confirmed: "bg-emerald-100/90 text-emerald-800 border-emerald-300",
+  completed: "bg-gray-100/90 text-gray-500 border-gray-300",
+  no_show: "bg-red-100/90 text-red-800 border-red-300",
+  cancelled: "bg-purple-50/90 text-purple-600 border-purple-300",
+  declined: "bg-orange-100/90 text-orange-800 border-orange-300",
+  timeout: "bg-orange-100/90 text-orange-700 border-orange-300",
 };
 
 export default function CalendarPage() {
@@ -107,7 +180,7 @@ export default function CalendarPage() {
               status: a.status,
               patient_name: patient
                 ? `${patient.first_name} ${patient.last_name}`
-                : "Unknown",
+                : "Sconosciuto",
             };
           });
           setAppointments(mapped);
@@ -117,20 +190,18 @@ export default function CalendarPage() {
       setError(null);
     } catch (err) {
       console.error("Calendar fetch error:", err);
-      setError("Failed to load calendar data");
+      setError("Errore nel caricamento del calendario");
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
     }
   }, [weekStart]);
 
-  // Initial load (no polling)
   useEffect(() => {
     setLoading(true);
     fetchData();
   }, [fetchData]);
 
-  // Re-fetch calendar data when Realtime delivers a change
   const isInitialMount = useRef(true);
   useEffect(() => {
     if (isInitialMount.current) {
@@ -165,10 +236,10 @@ export default function CalendarPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        setError(data?.error?.message ?? "Failed to generate slots");
+        setError(data?.error?.message ?? "Errore nella generazione slot");
       }
     } catch {
-      setError("Failed to generate slots — network error");
+      setError("Errore di rete nella generazione slot");
     }
     setGenerating(false);
     fetchData();
@@ -184,10 +255,10 @@ export default function CalendarPage() {
           body: JSON.stringify({ status: newStatus }),
         });
         if (!res.ok) {
-          setError("Failed to update slot");
+          setError("Errore nell'aggiornamento slot");
         }
       } catch {
-        setError("Failed to update slot — network error");
+        setError("Errore di rete nell'aggiornamento slot");
       }
       fetchData();
     },
@@ -206,7 +277,7 @@ export default function CalendarPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        setError(data?.error?.message ?? "Failed to load appointment details");
+        setError(data?.error?.message ?? "Errore nel caricamento dettagli");
         return;
       }
       const json = await res.json();
@@ -215,40 +286,88 @@ export default function CalendarPage() {
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
-      setError("Failed to load appointment details");
+      setError("Errore nel caricamento dettagli appuntamento");
     } finally {
       setLoadingAppointment(false);
     }
   }, []);
 
-  const cancelAppointment = useCallback(async (e: React.MouseEvent, apptId: string) => {
-    e.stopPropagation();
-    if (!window.confirm("Sei sicuro? L'appuntamento verrà cancellato e lo slot sarà disponibile per il backfill AI.")) return;
-    setCancellingId(apptId);
-    try {
-      const res = await fetch(`/api/appointments/${apptId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
-      });
-      if (res.ok) {
-        fetchData();
+  const cancelAppointment = useCallback(
+    async (e: React.MouseEvent, apptId: string) => {
+      e.stopPropagation();
+      if (
+        !window.confirm(
+          "Sei sicuro? L'appuntamento verrà cancellato e lo slot sarà disponibile per il backfill AI."
+        )
+      )
+        return;
+      setCancellingId(apptId);
+      try {
+        const res = await fetch(`/api/appointments/${apptId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "cancelled" }),
+        });
+        if (res.ok) {
+          fetchData();
+        }
+      } catch {
+        /* ignore */
       }
-    } catch { /* ignore */ }
-    setCancellingId(null);
-  }, [fetchData]);
+      setCancellingId(null);
+    },
+    [fetchData]
+  );
 
   const prevWeek = () =>
     setWeekStart(new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000));
   const nextWeek = () =>
     setWeekStart(new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000));
 
-  // Group slots by day/hour (memoized to prevent flicker on Realtime re-renders)
+  const weekDates = DAYS.map((_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+
+  // Group slots by day index
+  const slotsByDay = useMemo(() => {
+    const map: Record<number, AppointmentSlot[]> = {};
+    for (const slot of slots) {
+      const d = new Date(slot.start_at);
+      const dayIdx = (d.getDay() + 6) % 7;
+      if (dayIdx > 4) continue; // skip weekends
+      if (!map[dayIdx]) map[dayIdx] = [];
+      map[dayIdx].push(slot);
+    }
+    return map;
+  }, [slots]);
+
+  // Group appointments by day index, then layout for overlaps
+  const layoutByDay = useMemo(() => {
+    const byDay: Record<number, CalendarAppointment[]> = {};
+    for (const appt of appointments) {
+      if (appt.status === "declined") continue;
+      const d = new Date(appt.scheduled_at);
+      const dayIdx = (d.getDay() + 6) % 7;
+      if (dayIdx > 4) continue;
+      if (!byDay[dayIdx]) byDay[dayIdx] = [];
+      byDay[dayIdx].push(appt);
+    }
+    const result: Record<number, LayoutAppt[]> = {};
+    for (const dayIdx of Object.keys(byDay)) {
+      result[Number(dayIdx)] = layoutAppointments(byDay[Number(dayIdx)]);
+    }
+    return result;
+  }, [appointments]);
+
+  // Group slots by day+hour for background rendering
   const slotGrid = useMemo(() => {
     const grid: Record<string, AppointmentSlot[]> = {};
     for (const slot of slots) {
       const d = new Date(slot.start_at);
-      const dayIdx = (d.getDay() + 6) % 7; // Monday=0
+      const dayIdx = (d.getDay() + 6) % 7;
+      if (dayIdx > 4) continue;
       const hour = d.getHours();
       const key = `${dayIdx}-${hour}`;
       if (!grid[key]) grid[key] = [];
@@ -257,38 +376,17 @@ export default function CalendarPage() {
     return grid;
   }, [slots]);
 
-  // Group appointments by day/hour (memoized to prevent flicker on Realtime re-renders)
-  const apptGrid = useMemo(() => {
-    const grid: Record<string, CalendarAppointment[]> = {};
-    for (const appt of appointments) {
-      if (appt.status === "declined") continue;
-      const d = new Date(appt.scheduled_at);
-      const dayIdx = (d.getDay() + 6) % 7;
-      const hour = d.getHours();
-      const key = `${dayIdx}-${hour}`;
-      if (!grid[key]) grid[key] = [];
-      grid[key].push(appt);
-    }
-    return grid;
-  }, [appointments]);
-
-  const weekDates = DAYS.map((_, i) => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
-
   const hasContent = slots.length > 0 || appointments.length > 0;
 
   return (
     <div>
       <PageHeader
-        title="Calendar"
-        description="Manage provider schedules and view appointments"
+        title="Calendario"
+        description="Gestisci gli orari e visualizza gli appuntamenti"
         actions={
           <Button onClick={handleGenerateSlots} disabled={generating}>
             <Plus className="mr-2 h-4 w-4" />
-            {generating ? "Generating..." : "Generate Slots"}
+            {generating ? "Generando..." : "Genera Slot"}
           </Button>
         }
       />
@@ -299,10 +397,10 @@ export default function CalendarPage() {
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium text-gray-700">
-          {weekStart.toLocaleDateString("en-US", { month: "long", day: "numeric" })} –{" "}
-          {weekDates[4].toLocaleDateString("en-US", {
-            month: "long",
+          {weekStart.toLocaleDateString("it-IT", { day: "numeric", month: "long" })} –{" "}
+          {weekDates[4].toLocaleDateString("it-IT", {
             day: "numeric",
+            month: "long",
             year: "numeric",
           })}
         </span>
@@ -311,30 +409,19 @@ export default function CalendarPage() {
         </Button>
       </div>
 
-      {/* Error banner */}
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
-          {error}
-        </div>
+        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>
       )}
 
       {/* Legend */}
       <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
         <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-green-100 border border-green-300" />
-          Available slot
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-gray-200 border border-gray-300" />
-          Blocked
-        </div>
-        <div className="flex items-center gap-1">
           <span className="inline-block h-3 w-3 rounded bg-indigo-100 border border-indigo-300" />
-          Scheduled
+          Prenotato
         </div>
         <div className="flex items-center gap-1">
           <span className="inline-block h-3 w-3 rounded bg-emerald-100 border border-emerald-300" />
-          Confirmed
+          Confermato
         </div>
         <div className="flex items-center gap-1">
           <span className="inline-block h-3 w-3 rounded bg-red-100 border border-red-300" />
@@ -344,6 +431,14 @@ export default function CalendarPage() {
           <span className="inline-block h-3 w-3 rounded bg-purple-100 border-2 border-dashed border-purple-300" />
           AI Backfill
         </div>
+        <div className="flex items-center gap-1">
+          <span className="inline-block h-3 w-3 rounded bg-green-100 border border-green-300" />
+          Slot libero
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="inline-block h-3 w-3 rounded bg-gray-200 border border-gray-300" />
+          Bloccato
+        </div>
       </div>
 
       {loading ? (
@@ -351,149 +446,238 @@ export default function CalendarPage() {
       ) : !hasContent ? (
         <EmptyState
           icon={<CalendarRange className="h-10 w-10" />}
-          title="No slots or appointments for this week"
-          description="Generate slots to start managing your calendar, or create an appointment"
+          title="Nessuno slot o appuntamento per questa settimana"
+          description="Genera gli slot per iniziare a gestire il calendario"
           action={
             <Button onClick={handleGenerateSlots} disabled={generating}>
-              Generate Weekly Slots
+              Genera Slot Settimanali
             </Button>
           }
         />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full table-fixed">
-            <thead>
-              <tr>
-                <th className="w-16 border-b border-r border-gray-200 bg-gray-50 p-2 text-xs font-medium text-gray-500">
-                  Time
-                </th>
-                {weekDates.map((d, i) => {
-                  const isToday = d.toDateString() === new Date().toDateString();
-                  return (
-                    <th
-                      key={i}
-                      className={`border-b border-gray-200 p-2 text-center ${
-                        isToday ? "bg-blue-50" : "bg-gray-50"
-                      }`}
-                    >
-                      <div className="text-xs font-medium text-gray-500">{DAYS[i]}</div>
-                      <div
-                        className={`text-sm font-semibold ${
-                          isToday ? "text-blue-600" : "text-gray-900"
-                        }`}
-                      >
-                        {d.getDate()}
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
+          {/* Calendar grid using CSS grid: time-col + 5 day-cols */}
+          <div
+            className="grid min-w-[700px]"
+            style={{ gridTemplateColumns: "56px repeat(5, 1fr)" }}
+          >
+            {/* ---- HEADER ROW ---- */}
+            <div className="sticky top-0 z-10 border-b border-r border-gray-200 bg-gray-50 p-2 text-center text-xs font-medium text-gray-500">
+              Ora
+            </div>
+            {weekDates.map((d, i) => {
+              const isToday = d.toDateString() === new Date().toDateString();
+              return (
+                <div
+                  key={i}
+                  className={`sticky top-0 z-10 border-b border-gray-200 p-2 text-center ${
+                    isToday ? "bg-blue-50" : "bg-gray-50"
+                  }`}
+                >
+                  <div className="text-xs font-medium text-gray-500">{DAYS[i]}</div>
+                  <div
+                    className={`text-sm font-semibold ${
+                      isToday ? "text-blue-600" : "text-gray-900"
+                    }`}
+                  >
+                    {d.getDate()}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* ---- BODY: time labels column ---- */}
+            <div className="relative border-r border-gray-200" style={{ height: TOTAL_HEIGHT }}>
               {HOURS.map((hour) => (
-                <tr key={hour}>
-                  <td className="border-r border-b border-gray-100 p-2 text-center text-xs text-gray-400">
+                <div
+                  key={hour}
+                  className="absolute right-0 left-0 flex items-start justify-center border-b border-gray-100 text-[11px] font-medium text-gray-400"
+                  style={{
+                    top: (hour - DAY_START) * HOUR_HEIGHT,
+                    height: hour < DAY_END ? HOUR_HEIGHT : 0,
+                  }}
+                >
+                  <span className="-mt-[7px] bg-white px-1">
                     {String(hour).padStart(2, "0")}:00
-                  </td>
-                  {DAYS.map((_, dayIdx) => {
-                    const cellSlots = slotGrid[`${dayIdx}-${hour}`] ?? [];
-                    const cellAppts = apptGrid[`${dayIdx}-${hour}`] ?? [];
-                    const isToday =
-                      weekDates[dayIdx].toDateString() === new Date().toDateString();
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* ---- BODY: day columns with positioned appointments ---- */}
+            {DAYS.map((_, dayIdx) => {
+              const dayAppts = layoutByDay[dayIdx] ?? [];
+              const daySlots = slotsByDay[dayIdx] ?? [];
+              const isToday = weekDates[dayIdx].toDateString() === new Date().toDateString();
+
+              return (
+                <div
+                  key={dayIdx}
+                  className={`relative ${isToday ? "bg-blue-50/20" : ""}`}
+                  style={{ height: TOTAL_HEIGHT }}
+                >
+                  {/* Hour grid lines */}
+                  {HOURS.slice(0, -1).map((hour) => (
+                    <div
+                      key={hour}
+                      className="absolute right-0 left-0 border-b border-gray-100"
+                      style={{ top: (hour - DAY_START) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                    >
+                      {/* Half-hour dashed line */}
+                      <div
+                        className="absolute right-0 left-0 border-b border-dashed border-gray-50"
+                        style={{ top: HOUR_HEIGHT / 2 }}
+                      />
+                    </div>
+                  ))}
+
+                  {/* Slot background indicators (small dot per slot) */}
+                  {daySlots.map((slot) => {
+                    const d = new Date(slot.start_at);
+                    const startMin = d.getHours() * 60 + d.getMinutes();
+                    const slotEnd = new Date(slot.end_at);
+                    const endMin = slotEnd.getHours() * 60 + slotEnd.getMinutes();
+                    const top = ((startMin - DAY_START * 60) / 60) * HOUR_HEIGHT;
+                    const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 12);
+
+                    // Don't show slot indicator if there's an appointment at this time
+                    const hasAppt = dayAppts.some((a) => {
+                      const aStart = getMinutesFromMidnight(a.scheduled_at);
+                      const aEnd = aStart + a.duration_min;
+                      return aStart < endMin && aEnd > startMin && a.status !== "cancelled";
+                    });
+
+                    if (hasAppt) return null;
+
                     return (
-                      <td
-                        key={dayIdx}
-                        className={`border-b border-gray-100 p-1 ${
-                          isToday ? "bg-blue-50/30" : ""
+                      <button
+                        key={slot.id}
+                        onClick={() => toggleSlotBlock(slot)}
+                        className={`absolute left-1 right-1 rounded border text-[10px] flex items-center gap-1 px-1 transition ${
+                          slot.status === "available"
+                            ? "bg-green-50/60 border-green-200 text-green-600 hover:bg-green-100"
+                            : slot.status === "blocked"
+                            ? "bg-gray-100/60 border-gray-200 text-gray-400 hover:bg-gray-200"
+                            : "bg-blue-50/60 border-blue-200 text-blue-500"
                         }`}
+                        style={{ top, height }}
+                        title={
+                          slot.status === "available"
+                            ? "Clicca per bloccare"
+                            : slot.status === "blocked"
+                            ? "Clicca per sbloccare"
+                            : slot.provider_name
+                        }
                       >
-                        <div className="space-y-1">
-                          {/* Appointments first — clickable */}
-                          {cellAppts.map((appt) =>
-                            appt.status === "cancelled" ? (
-                              <button
-                                key={appt.id}
-                                onClick={() => openAppointmentDetail(appt.id)}
-                                className="flex w-full items-center gap-1 rounded-lg border-2 border-dashed border-purple-300 bg-purple-50/50 px-2 py-1.5 text-xs text-left cursor-pointer transition hover:ring-2 hover:ring-purple-300 hover:ring-offset-1"
-                              >
-                                <Zap className="h-3 w-3 flex-shrink-0 text-purple-500" />
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate font-medium text-purple-600">
-                                    Slot libero
-                                  </div>
-                                  <div className="truncate text-purple-400">
-                                    AI backfill attivo
-                                  </div>
-                                </div>
-                              </button>
-                            ) : (
-                              <button
-                                key={appt.id}
-                                onClick={() => openAppointmentDetail(appt.id)}
-                                disabled={loadingAppointment}
-                                className={`flex w-full items-center gap-1 rounded-lg border px-2 py-1.5 text-xs text-left cursor-pointer transition hover:ring-2 hover:ring-blue-300 hover:ring-offset-1 ${
-                                  STATUS_COLORS[appt.status] ??
-                                  "bg-gray-50 text-gray-600 border-gray-200"
-                                }`}
-                              >
-                                <User className="h-3 w-3 flex-shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate font-medium">
-                                    {appt.patient_name}
-                                  </div>
-                                  <div className="truncate opacity-75">
-                                    {appt.service_name}
-                                    {appt.provider_name ? ` · ${appt.provider_name}` : ""}
-                                  </div>
-                                </div>
-                                {appt.status !== "completed" && appt.status !== "no_show" && (
-                                  <button
-                                    onClick={(e) => cancelAppointment(e, appt.id)}
-                                    disabled={cancellingId === appt.id}
-                                    title="Cancella appuntamento"
-                                    className="ml-auto flex-shrink-0 rounded p-0.5 text-current opacity-40 hover:opacity-100 hover:bg-red-100 hover:text-red-600 transition-all"
-                                  >
-                                    {cancellingId === appt.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <X className="h-3 w-3" />
-                                    )}
-                                  </button>
-                                )}
-                              </button>
-                            )
-                          )}
-                          {/* Available/blocked slots */}
-                          {cellSlots.map((slot) => (
-                            <button
-                              key={slot.id}
-                              onClick={() => toggleSlotBlock(slot)}
-                              className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs transition ${
-                                slot.status === "available"
-                                  ? "bg-green-50 text-green-700 hover:bg-green-100"
-                                  : slot.status === "booked"
-                                  ? "bg-blue-50 text-blue-700"
-                                  : slot.status === "blocked"
-                                  ? "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                  : "bg-gray-50 text-gray-400"
-                              }`}
-                            >
-                              <span className="truncate">{slot.provider_name}</span>
-                              {slot.status === "blocked" ? (
-                                <Lock className="h-3 w-3 flex-shrink-0" />
-                              ) : slot.status === "available" ? (
-                                <Unlock className="h-3 w-3 flex-shrink-0 opacity-30" />
-                              ) : null}
-                            </button>
-                          ))}
-                        </div>
-                      </td>
+                        {slot.status === "blocked" ? (
+                          <Lock className="h-2.5 w-2.5 flex-shrink-0" />
+                        ) : slot.status === "available" ? (
+                          <Unlock className="h-2.5 w-2.5 flex-shrink-0 opacity-50" />
+                        ) : null}
+                        <span className="truncate">{slot.provider_name}</span>
+                      </button>
                     );
                   })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+                  {/* Appointments — absolutely positioned by time */}
+                  {dayAppts.map((appt) => {
+                    const widthPct = 100 / appt.totalCols;
+                    const leftPct = appt.colIndex * widthPct;
+                    const isCancelled = appt.status === "cancelled";
+
+                    return (
+                      <button
+                        key={appt.id}
+                        onClick={() => openAppointmentDetail(appt.id)}
+                        disabled={loadingAppointment}
+                        className={`absolute overflow-hidden rounded-lg border text-left text-[11px] leading-tight transition-all cursor-pointer
+                          ${isCancelled
+                            ? "border-2 border-dashed border-purple-300 bg-purple-50/80 hover:ring-2 hover:ring-purple-300"
+                            : `${STATUS_COLORS[appt.status] ?? "bg-gray-100/90 text-gray-600 border-gray-300"} hover:ring-2 hover:ring-blue-300 hover:ring-offset-1 shadow-sm`
+                          }`}
+                        style={{
+                          top: appt.top,
+                          height: appt.height,
+                          left: `calc(${leftPct}% + 2px)`,
+                          width: `calc(${widthPct}% - 4px)`,
+                        }}
+                      >
+                        <div className="flex h-full flex-col p-1.5">
+                          {isCancelled ? (
+                            <>
+                              <div className="flex items-center gap-1 font-semibold text-purple-600">
+                                <Zap className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">Slot libero</span>
+                              </div>
+                              {appt.height > 36 && (
+                                <div className="truncate text-[10px] text-purple-400 mt-0.5">
+                                  AI backfill attivo
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <User className="h-3 w-3 flex-shrink-0 opacity-70" />
+                                <span className="truncate font-semibold">
+                                  {appt.patient_name}
+                                </span>
+                              </div>
+                              {appt.height > 36 && (
+                                <div className="truncate text-[10px] opacity-75 mt-0.5">
+                                  {appt.service_name}
+                                </div>
+                              )}
+                              {appt.height > 52 && appt.provider_name && (
+                                <div className="truncate text-[10px] opacity-60">
+                                  {appt.provider_name}
+                                </div>
+                              )}
+                              {/* Cancel button */}
+                              {appt.status !== "completed" && appt.status !== "no_show" && (
+                                <button
+                                  onClick={(e) => cancelAppointment(e, appt.id)}
+                                  disabled={cancellingId === appt.id}
+                                  title="Cancella appuntamento"
+                                  className="absolute top-1 right-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:!opacity-100 hover:bg-red-200 hover:text-red-700 transition-all"
+                                  style={{ opacity: cancellingId === appt.id ? 1 : undefined }}
+                                >
+                                  {cancellingId === appt.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <X className="h-3 w-3" />
+                                  )}
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {/* Time label at bottom when tall enough */}
+                          {appt.height > 48 && (
+                            <div className="mt-auto text-[10px] opacity-50">
+                              {new Date(appt.scheduled_at).toLocaleTimeString("it-IT", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                              {" · "}
+                              {appt.duration_min}min
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Loading overlay */}
+      {loadingAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
       )}
 
