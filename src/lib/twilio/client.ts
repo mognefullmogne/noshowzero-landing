@@ -26,9 +26,9 @@ export function getTwilioClient() {
 }
 
 export function getTwilioWhatsAppFrom(): string {
-  return process.env.TWILIO_WHATSAPP_NUMBER ?? "whatsapp:+14155238886";
+  return process.env.TWILIO_WHATSAPP_NUMBER ?? "whatsapp:+393399957337";
 }
 
 export function getTwilioSmsFrom(): string {
-  return process.env.TWILIO_SMS_NUMBER ?? "+14155238886";
+  return process.env.TWILIO_SMS_NUMBER ?? "+393399957337";
 }
