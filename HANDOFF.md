@@ -1,173 +1,95 @@
-# Project Handoff
+# Project Handoff — NoShowZero
 
 > Last updated: 2026-03-05
-> Session: Neutralize phone number, add cancel button, seed recovery stats
+> Session: 7 bug fixes + optimization flow complete
 
 ## Active Project
 
 - **Path**: /Users/aiassistant/products/noshowzero-landing
-- **Stack**: Next.js 15 + Supabase + Twilio WhatsApp + Claude AI (Haiku/Sonnet)
+- **Stack**: Next.js 15 + Supabase + Twilio WhatsApp + Claude AI
 - **Branch**: `main`
-- **Build status**: PASSING (`npx next build` clean)
+- **Build status**: PASSING
 - **Production**: https://noshowzero-landing.vercel.app
 - **Git remote**: https://github.com/mognefullmogne/noshowzero-landing.git
 
-## What Was Done (2026-03-05, Session 4)
+## Current State (Everything Deployed)
 
-### Phone Number Neutralized
-- **Problem**: User received 3 WhatsApp messages for appointments because `DEMO_PHONE_OVERRIDE` in `send-notification.ts` hardcoded `+393516761840` and redirected ALL demo tenant messages to it
-- **Fix**: `DEMO_PHONE_OVERRIDE` now reads from `process.env.DEMO_PHONE_OVERRIDE` — defaults to `null` (disabled). Set the env var to re-enable.
-- **File**: `src/lib/twilio/send-notification.ts`
-- Seed script also updated: all 15 test patients now have unique fake phones (`+390000000001` through `+390000000015`) instead of the real number
-- **File**: `scripts/seed-hairdresser.mjs`
+All code is committed and deployed. No pending changes.
 
-### Cancel Button on Appointments Table + Calendar
-- **Appointments table** (`src/components/appointments/appointments-table.tsx`): Added X button per row (hidden for cancelled/completed/no_show). Calls `PATCH /api/appointments/{id}` with `{status: "cancelled"}`. Italian confirmation dialog ("Sei sicuro?"). Triggers backfill automatically.
-- **Calendar view** (`src/app/(app)/calendar/page.tsx`): Added subtle X button on each appointment card. Same cancel + backfill behavior.
-- Both use `e.stopPropagation()` to avoid opening detail dialog when clicking cancel.
+### 7 Bug Fixes (commit `4ab9ed2`)
+1. **Date filter** — Fixed timezone parsing + API date query param
+2. **Optimization Run Analysis** — Added error handling, loading state, proper API response
+3. **Audit section** — `logAuditEvent` wired into appointment CRUD, offer sending, optimization
+4. **Strategy log** — Entry creation added to decision engine + RLS fix on no-show analysis
+5. **Dashboard widgets** — No-show insights + strategy log now fetch data correctly
+6. **Delete button** — Shows on ALL appointments regardless of status
+7. **Backfill pipeline** — Past-slot guard uses slot end time (no-shows can now trigger backfill)
 
-### Database Re-seeded (Production)
-- Cleaned all existing tenant data (FK-safe order) from production Supabase
-- Re-seeded: 15 patients, 800 slots, 78 appointments across 4 weeks
-- Created 4 accepted `waitlist_offers` (with `new_appointment_id` pointing to completed appointments) — populates "Slot recuperati" and "Ricavi salvati"
-- Created 2 pending `waitlist_offers` — populates "Offerte attive"
-- Response times seeded at 5-30 min — "Tempo medio risposta" shows real numbers
-- Also created matching `waitlist_entries` (required FK for offers)
+### Optimization Flow (commit `47e0f2e`)
+- **Approve** → creates appointment (in calendar) + marks slot booked + waitlist entry fulfilled + audit log
+- **Reject** → marks decision rejected
+- **Auto-execute** for score ≥ 90 (no human approval needed)
+- Optimistic UI: card disappears instantly, toast notification via sonner
+- Scoring: service match (30) + smart score (25) + time pref (20) + urgency (15) + payment (10) + provider bonus (5) = max 100
 
-## What Was Done (2026-03-05, Sessions 2-3) — History
-
-- Fixed cancel flow: `"confirmed"` added to actionable statuses
-- Smart rebooking: rewritten to use calendar gaps, returns text (no fire-and-forget)
-- `handleCancel` now awaits rebook and returns single combined TwiML message
-- New `reschedule` intent with Italian regex patterns
-- Waitlist via WhatsApp (`join_waitlist` intent, LISTA keyword)
-- Markdown rendering: `renderInlineMarkdown()` + `MarkdownBlock`
-- Created `/cmux-delegate` skill for parallel agent workflow
-
-## What Is In Progress
-
-### NOT YET COMMITTED — 13 files modified
-- All changes from sessions 3 + 4 are uncommitted
-- Must commit, push to main, and Vercel will auto-deploy
-
-## What To Do Next (Priority Order)
-
-### P0 — Commit, Push, Deploy
-- Commit all 13 modified files
-- Push to main → Vercel auto-deploys
-- Verify dashboard shows recovery stats on production
-
-### P1 — Test Cancel + Rebook + Reschedule Flow
-- Go to Appointments or Calendar on production site
-- Click X to cancel an appointment → verify backfill triggers
-- Check dashboard stats update (slot recuperati should increment)
-- Test WhatsApp flow if needed (reminder → cancel → rebook)
-
-### P2 — Waitlist Contact When Slot Opens
-- Connect `waitlist_entries` (from LISTA responses) to backfill cascade
-- When a patient cancels, check waitlist for matching patients
-
-### P3 — Twilio Production Number
-- Regulatory bundle pending: `BU5ba25bbf9f13d345559d217d15d9e340`
-- WhatsApp Business registration + Italian message templates
+### Test Data in DB
+- 3 deleted appointments to create gaps (Luca Ferrari, Sofia Russo, Davide Conti)
+- 3 waitlist entries added (Marco Rossi, Giulia Bianchi, Luca Ferrari — status: waiting/fulfilled)
+- 3 optimization decisions created (scores 80-85, status: proposed/executed)
 
 ## Key Decisions
 
-- App is fully Italian-localized — all UI strings, metadata, currency in Italian/EUR
-- Dashboard layout is fluid (no max-width cap)
-- `DEMO_PHONE_OVERRIDE` disabled by default — set env var to re-enable for testing
-- All test patients have fake phone numbers — no real phones in seed data
-- Calendar gap-based slot finding for rebooking (not dependent on `appointment_slots` table)
-- Rebooking uses `slot_proposals` table so patient can respond with 1/2/3
-- Cancel reply is a single combined message (cancel + rebook options)
-- `smart-rebook.ts` is a pure function: creates DB proposal, returns text, does NOT send messages
-- User prefers parallel cmux agent delegation for complex tasks (skill: `/cmux-delegate`)
+- App is fully Italian-localized (UI, currency EUR, dates it-IT)
+- `DEMO_PHONE_OVERRIDE` disabled by default — set env var to re-enable
+- Optimization threshold: score ≥ 90 = auto-approve, < 90 = human review
+- Backfill allows past-start slots if slot end time hasn't passed yet
 
-## Known Issues & Gotchas
+## Environment
 
-- Twilio WhatsApp sandbox webhook URL can ONLY be changed via Twilio console UI
-- Twilio WhatsApp sandbox: only pre-joined numbers work
-- Test account: `aimonepitacco@gmail.com` / `Aimone123!`
-- Vercel Hobby plan: crons limited to daily frequency only
-- Calendar gap finder uses server timezone — may need timezone-aware logic later
-- `clode` command does not exist — use `claude` when spawning instances via cmux
-- Seed script `waitlist_offers` uses `waitlist_entry_id: null` — OK since migration 012 made it nullable
-
-## Files Changed (Session 4)
-
-**Phone number fix**:
-- `src/lib/twilio/send-notification.ts` — DEMO_PHONE_OVERRIDE now env-var based
-- `scripts/seed-hairdresser.mjs` — fake phones, recovery data seeding
-
-**Cancel button**:
-- `src/components/appointments/appointments-table.tsx` — X button per row
-- `src/app/(app)/calendar/page.tsx` — X button on calendar appointment cards
-
-**From Session 3 (still uncommitted)**:
-- `src/lib/ai/smart-rebook.ts` — removed sendMessage, returns text
-- `src/lib/webhooks/message-router.ts` — handleCancel awaits rebook, new handleReschedule
-- `src/lib/messaging/intent-engine.ts` — added reschedule regex
-- `src/lib/types.ts` — added "reschedule" to MessageIntent
-- `src/app/api/webhooks/twilio/route.ts` — added "reschedule" to VALID_INTENTS
-
-## Environment & Config
-
-- `.env.local` has all required vars (Supabase, Stripe, Twilio, Anthropic)
-- Supabase project: `hwxebnmrgrdzpfappyvk`
+- `.env.local` has all vars (Supabase, Stripe, Twilio, Anthropic)
 - Tenant ID: `e1d14300-10cb-42d0-9e9d-eb8fee866570`
+- Supabase project: `hwxebnmrgrdzpfappyvk`
 - Twilio sandbox: `whatsapp:+14155238886`
 - Twilio webhook: `https://noshowzero-landing.vercel.app/api/webhooks/twilio`
-- `DEMO_PHONE_OVERRIDE` env var: unset (disabled) — set to a phone number to re-enable
 
-## How to Verify
+## Known Issues
 
-```bash
-npx next build        # should pass, zero errors
-npx vitest run        # unit tests
-npm run dev           # http://localhost:3000
-vercel logs --follow  # check function logs after deploy
-```
+- Twilio WhatsApp sandbox: only pre-joined numbers work, webhook URL changed via console only
+- Vercel Hobby plan: crons limited to daily frequency
+- Audit table populates only as users take actions (no historical data)
+- `smart_score` is null on waitlist entries → scoring defaults to 13/25
 
-## Parallel Agent Workflow (cmux + claude instances)
+## What To Do Next
 
-The user prefers splitting work into parallel claude instances via cmux split panes.
+### P1 — Twilio Production Number
+- Regulatory bundle pending: `BU5ba25bbf9f13d345559d217d15d9e340`
+- WhatsApp Business registration + Italian message templates
 
-### BOSS RULES (THIS INSTANCE)
-- **YOU ARE THE BOSS. You DO NOT write code. You DO NOT run subagents/Agent tool.**
-- You ONLY delegate by sending prompts to worker panes via cmux, read their output, and re-delegate if needed.
-- **DO NOT sleep/wait for workers to finish. The user will tell you when a worker is done.** Then you read the output and decide next steps. Sleeping wastes tokens.
-- When delegating, write clear specific prompts with file paths and expected outcomes.
-- After each completed round of work, commit + push to deploy (Vercel auto-deploys from main).
+### P2 — Cron Jobs
+- Set up Vercel crons for: detect-no-shows, run-optimization, send-confirmations, process-reminders
+- These populate audit, strategy log, and trigger backfill automatically
 
-### HOW TO SEND PROMPTS TO WORKERS
-1. First time: start claude in the pane, THEN send the prompt separately:
-   ```bash
-   cmux send --surface surface:N 'claude'
-   cmux send-key --surface surface:N Enter
-   # WAIT for user to confirm claude is running
-   cmux send --surface surface:N 'your prompt here'
-   cmux send-key --surface surface:N Enter
-   ```
-2. If claude is already running in the pane (check status bar for "Opus 4.6"):
-   ```bash
-   cmux send --surface surface:N 'your prompt here'
-   cmux send-key --surface surface:N Enter
-   ```
-3. To read output: `cmux read-screen --surface surface:N --lines 100 --scrollback`
-4. Use `cmux notify` + `cmux trigger-flash` to alert user when a round is complete.
+### P3 — E2E Testing
+- Test full flow: cancel appointment → backfill triggers → waitlist candidate gets offer → accepts → new appointment in calendar
 
-### CURRENT WORKER PANES
-| Pane | Role | Surface |
-|------|------|---------|
-| INVESTIGATOR 🔍 | Read-only code auditor | surface:14 |
-| FRONTEND 🎨 | React/UI fixer | surface:15 |
-| BACKEND ⚙️ | API/DB fixer | surface:16 |
-| AI ENGINE 🧠 | AI/backfill/optimization | surface:17 |
-| QA ✅ | Build verification | surface:18 |
+## cmux Boss Workflow
 
-### DEPLOY PROTOCOL
-After QA passes, commit and push:
-```bash
-git add -A && git commit -m "fix: description" && git push origin main
-```
-Vercel auto-deploys from main.
+### RULES
+- **Boss instance does NOT write code. Only delegates via cmux prompts.**
+- **Do NOT sleep/wait for workers.** User says when worker is done, then boss reads output.
+- After QA passes: `git add -A && git commit -m "fix: desc" && git push origin main`
+- Use `cmux notify` + `cmux trigger-flash` when a round completes.
+
+### How to Send Prompts
+1. If claude not running in pane: `cmux send --surface surface:N 'claude'` + Enter, wait for user confirmation
+2. If claude already running: `cmux send --surface surface:N 'prompt here'` + Enter
+3. Read output: `cmux read-screen --surface surface:N --lines 100 --scrollback`
+
+### Worker Panes
+| Role | Surface | Scope |
+|------|---------|-------|
+| INVESTIGATOR 🔍 | surface:14 | Read-only code analysis |
+| FRONTEND 🎨 | surface:15 | src/components/, src/app/(app)/ pages, hooks, contexts |
+| BACKEND ⚙️ | surface:16 | src/app/api/, src/lib/ (non-AI) |
+| AI ENGINE 🧠 | surface:17 | src/lib/ai/, backfill/, intelligence/, optimization/, scoring/ |
+| QA ✅ | surface:18 | Build checks, verification only |

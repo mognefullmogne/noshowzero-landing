@@ -111,7 +111,7 @@ export default function OptimizationPage() {
 
       {/* Filters */}
       <div className="mb-6 flex gap-2">
-        {["", "proposed", "approved", "executed", "rejected", "expired"].map((s) => (
+        {["", "proposed", "approved", "rejected"].map((s) => (
           <button
             key={s}
             onClick={() => { setStatusFilter(s); setPage(1); }}
