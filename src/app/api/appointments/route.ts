@@ -15,6 +15,7 @@ import { markMessageSent } from "@/lib/confirmation/workflow";
 import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
 import { maybeProcessPending } from "@/lib/engine/process-pending";
 import type { Patient, MessageChannel } from "@/lib/types";
+import { checkProviderConflict } from "@/lib/booking/provider-conflict";
 
 export async function GET(request: Request) {
   try {
@@ -195,6 +196,29 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: { code: "VALIDATION_ERROR", message: "Invalid request body. Please check all required fields." } },
         { status: 400 }
+      );
+    }
+
+    // Prevent double-booking: check if provider already has an appointment at this time
+    const conflict = await checkProviderConflict(supabase, {
+      tenantId: auth.data.tenantId,
+      providerName: appointmentData.provider_name,
+      scheduledAt: appointmentData.scheduled_at,
+      durationMin: appointmentData.duration_min,
+    });
+
+    if (conflict.hasConflict) {
+      const c = conflict.conflicting;
+      const when = c ? new Date(c.scheduled_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) : "";
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "PROVIDER_CONFLICT",
+            message: `${appointmentData.provider_name ?? "Il professionista"} ha già un appuntamento alle ${when}. Non è possibile sovrapporre appuntamenti per lo stesso professionista.`,
+          },
+        },
+        { status: 409 }
       );
     }
 

@@ -15,6 +15,7 @@ import { calculateConfirmationDeadline } from "@/lib/confirmation/timing";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
 import type { MessageChannel } from "@/lib/types";
+import { checkProviderConflict } from "./provider-conflict";
 
 interface CreateBookingResult {
   readonly success: true;
@@ -61,7 +62,28 @@ export async function createAppointmentFromBooking(
       return { success: false, error: "slot_unavailable" };
     }
 
-    // 2. Get patient history for risk scoring
+    // 2. Prevent double-booking: ensure provider has no overlapping appointment
+    const durationMs = new Date(slot.endAt).getTime() - new Date(slot.startAt).getTime();
+    const durationMinCheck = Math.round(durationMs / 60_000) || 30;
+
+    const conflict = await checkProviderConflict(supabase, {
+      tenantId,
+      providerName: slot.providerName,
+      scheduledAt: slot.startAt,
+      durationMin: durationMinCheck,
+    });
+
+    if (conflict.hasConflict) {
+      // Release the slot we just claimed
+      await supabase
+        .from("appointment_slots")
+        .update({ status: "available", appointment_id: null })
+        .eq("id", slot.slotId)
+        .eq("tenant_id", tenantId);
+      return { success: false, error: "provider_conflict" };
+    }
+
+    // 3. Get patient history for risk scoring
     const [{ count: totalAppts }, { count: noShows }] = await Promise.all([
       supabase
         .from("appointments")
@@ -78,10 +100,9 @@ export async function createAppointmentFromBooking(
 
     const now = new Date();
     const scheduledAt = new Date(slot.startAt);
-    const durationMs = new Date(slot.endAt).getTime() - scheduledAt.getTime();
-    const durationMin = Math.round(durationMs / 60_000) || 30;
+    const durationMin = durationMinCheck;
 
-    // 3. Compute risk score
+    // 4. Compute risk score
     const riskResult = computeRiskScore({
       totalAppointments: totalAppts ?? 0,
       noShows: noShows ?? 0,
@@ -89,7 +110,7 @@ export async function createAppointmentFromBooking(
       createdAt: now,
     });
 
-    // 4. Insert appointment
+    // 5. Insert appointment
     const { data: appointment, error: insertError } = await supabase
       .from("appointments")
       .insert({
@@ -118,7 +139,7 @@ export async function createAppointmentFromBooking(
       return { success: false, error: "insert_failed" };
     }
 
-    // 5. Link appointment to the slot
+    // 6. Link appointment to the slot
     const { error: slotLinkError } = await supabase
       .from("appointment_slots")
       .update({ appointment_id: appointment.id })
@@ -129,7 +150,7 @@ export async function createAppointmentFromBooking(
       console.error("[BookingCreator] Slot link error:", { code: slotLinkError.code, message: slotLinkError.message });
     }
 
-    // 6. Get patient preferred channel for reminders
+    // 7. Get patient preferred channel for reminders
     const { data: patient } = await supabase
       .from("patients")
       .select("preferred_channel")
@@ -139,7 +160,7 @@ export async function createAppointmentFromBooking(
     const preferredChannel: MessageChannel =
       (patient?.preferred_channel as MessageChannel) ?? "whatsapp";
 
-    // 7. Schedule reminders
+    // 8. Schedule reminders
     const schedule = generateContactSchedule(riskResult.score, preferredChannel);
     const reminderTimes = scheduleToReminders(scheduledAt, schedule);
 
@@ -162,7 +183,7 @@ export async function createAppointmentFromBooking(
       }
     }
 
-    // 8. Create confirmation workflow and send immediately if the window is already open.
+    // 9. Create confirmation workflow and send immediately if the window is already open.
     createAndMaybeSendConfirmation(
       supabase,
       tenantId,
