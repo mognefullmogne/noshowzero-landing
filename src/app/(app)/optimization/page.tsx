@@ -29,7 +29,7 @@ export default function OptimizationPage() {
   const [runError, setRunError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("proposed");
 
   const fetchDecisions = useCallback(async () => {
     const params = new URLSearchParams({ page: String(page), pageSize: "20" });

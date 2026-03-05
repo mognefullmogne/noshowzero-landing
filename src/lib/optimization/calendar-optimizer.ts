@@ -48,12 +48,18 @@ export async function runOptimization(
 
   const gaps = await detectGaps(supabase, tenantId, now.toISOString(), weekEnd.toISOString());
 
-  // Clear stale proposed decisions before creating new ones
+  // Clear stale proposed and expired decisions before creating new ones
   await supabase
     .from("optimization_decisions")
     .delete()
     .eq("tenant_id", tenantId)
     .eq("status", "proposed");
+
+  await supabase
+    .from("optimization_decisions")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("status", "expired");
 
   // 2. Count available waitlist entries for early exit
   const { count: waitlistCount } = await supabase
