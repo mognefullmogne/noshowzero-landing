@@ -3,54 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import {
-  Zap,
-  LayoutDashboard,
-  CreditCard,
-  Settings,
-  LogOut,
-  Rocket,
-  BookOpen,
-  Loader2,
-  CalendarDays,
-  Users,
-  BarChart3,
-  Gift,
-  CalendarRange,
-  MessageSquare,
-  Bot,
-  Sparkles,
-  Settings2,
-  ScrollText,
-  Plug,
-  Brain,
-} from "lucide-react";
+import { Zap, LogOut, Rocket, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/hooks/use-tenant";
-import { cn } from "@/lib/utils";
 import { ChatWidget } from "@/components/chat/chat-widget";
+
 import { RealtimeStatusProvider } from "@/contexts/realtime-status-context";
 import { ConnectionStatus } from "@/components/shared/connection-status";
-
-const sidebarLinks = [
-  { label: "Bacheca", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Appuntamenti", href: "/appointments", icon: CalendarDays },
-  { label: "Calendario", href: "/calendar", icon: CalendarRange },
-  { label: "Lista d'attesa", href: "/waitlist", icon: Users },
-  { label: "Offerte", href: "/offers", icon: Gift },
-  { label: "Messaggi", href: "/messages", icon: MessageSquare },
-  { label: "Integrazioni", href: "/integrations", icon: Plug },
-  { label: "Chat AI", href: "/ai-chat", icon: Bot },
-  { label: "Ottimizzazione", href: "/optimization", icon: Sparkles },
-  { label: "Regole", href: "/rules", icon: Settings2 },
-  { label: "Strategia AI", href: "/strategy-log", icon: Brain },
-  { label: "Audit", href: "/audit", icon: ScrollText },
-  { label: "Statistiche", href: "/analytics", icon: BarChart3 },
-  { label: "Documentazione API", href: "/docs", icon: BookOpen },
-  { label: "Fatturazione", href: "/billing", icon: CreditCard },
-  { label: "Impostazioni", href: "/settings", icon: Settings },
-] as const;
+import { SortableSidebar } from "@/components/sortable-sidebar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -153,26 +114,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 p-4">
-          {sidebarLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                )}
-              >
-                <link.icon className="h-5 w-5" />
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <SortableSidebar
+          pathname={pathname}
+          sidebarOrder={tenant?.sidebar_order ?? null}
+        />
 
         <div className="border-t border-black/[0.04] p-4">
           <Button

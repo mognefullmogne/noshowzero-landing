@@ -15,6 +15,7 @@ interface Tenant {
   readonly stripe_customer_id: string | null;
   readonly stripe_subscription_id: string | null;
   readonly avg_appointment_value: number;
+  readonly sidebar_order: string[] | null;
 }
 
 export function useTenant() {
@@ -36,7 +37,7 @@ export function useTenant() {
 
       // Try with avg_appointment_value first; fall back without it if column doesn't exist yet (migration 013)
       let data: Tenant | null = null;
-      const fullSelect = "id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, avg_appointment_value";
+      const fullSelect = "id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, avg_appointment_value, sidebar_order";
       const fallbackSelect = "id, name, slug, industry, business_size, plan, plan_status, trial_ends_at, stripe_customer_id, stripe_subscription_id";
 
       const { data: fullData, error: fullError } = await supabase
@@ -59,7 +60,7 @@ export function useTenant() {
           setLoading(false);
           return;
         }
-        data = fallbackData ? { ...fallbackData, avg_appointment_value: 80 } as Tenant : null;
+        data = fallbackData ? { ...fallbackData, avg_appointment_value: 80, sidebar_order: null } as Tenant : null;
       } else if (fullError) {
         console.error("useTenant: failed to fetch tenant", fullError);
         setError("Failed to load account data. Please refresh the page.");
