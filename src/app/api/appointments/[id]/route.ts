@@ -217,6 +217,20 @@ export async function DELETE(
 
     const supabase = await createClient();
 
+    logAuditEvent({
+      tenantId: auth.data.tenantId,
+      actorType: "user",
+      actorId: auth.data.userId,
+      entityType: "appointment",
+      entityId: id,
+      action: "appointment.deleted",
+    });
+
+    // Trigger backfill before deleting so the backfill can read appointment data
+    const serviceClient = await createServiceClient();
+    triggerBackfill(serviceClient, id, auth.data.tenantId)
+      .catch((err) => console.error("[Backfill] Trigger failed:", err));
+
     const { error } = await supabase
       .from("appointments")
       .delete()
@@ -230,15 +244,6 @@ export async function DELETE(
         { status: 500 }
       );
     }
-
-    logAuditEvent({
-      tenantId: auth.data.tenantId,
-      actorType: "user",
-      actorId: auth.data.userId,
-      entityType: "appointment",
-      entityId: id,
-      action: "appointment.deleted",
-    });
 
     return NextResponse.json({ success: true });
   } catch (err) {
