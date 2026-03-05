@@ -26,7 +26,7 @@ export async function flagHighRiskAppointments(
     .gte("scheduled_at", now.toISOString())
     .lte("scheduled_at", weekEnd.toISOString())
     .order("risk_score", { ascending: false })
-    .limit(20);
+    .limit(5);
 
   if (!highRisk || highRisk.length === 0) return { flagged: 0 };
 
