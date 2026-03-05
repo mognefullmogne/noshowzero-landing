@@ -443,7 +443,7 @@ export default function OnboardingPage() {
             Tutto pronto!
           </h1>
           <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
-            Il tuo account NoShow è pronto. {apiKey ? "Ecco la tua chiave API per iniziare — o vai alla dashboard dove trovi tutto quello che ti serve." : "Vai alla dashboard per generare una chiave API e iniziare l'integrazione."}
+            Il tuo account NowShow è pronto. {apiKey ? "Ecco la tua chiave API per iniziare — o vai alla dashboard dove trovi tutto quello che ti serve." : "Vai alla dashboard per generare una chiave API e iniziare l'integrazione."}
           </p>
 
           {apiKey && (

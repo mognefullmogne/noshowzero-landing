@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <Zap className="h-6 w-6 text-white" />
         </div>
         <span className="text-2xl font-bold tracking-tight">
-          NoShow<span className="text-blue-600">Zero</span>
+          Now<span className="text-blue-600">Show</span>
         </span>
       </Link>
       {children}

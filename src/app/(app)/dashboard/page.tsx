@@ -116,7 +116,7 @@ export default function DashboardPage() {
 
   // Show operational dashboard when business is set up
   if (hasBusinessSetup) {
-    return <OperationalDashboard tenantName={tenant?.name ?? "NoShow"} />;
+    return <OperationalDashboard tenantName={tenant?.name ?? "NowShow"} />;
   }
 
   const planStatus = tenant?.plan_status ?? "trialing";
@@ -154,7 +154,7 @@ export default function DashboardPage() {
     },
     {
       title: "Leggi la documentazione API",
-      description: "Scopri come integrare NoShow",
+      description: "Scopri come integrare NowShow",
       done: false,
       action: () => router.push("/docs"),
       actionLabel: "Vedi docs",
@@ -178,7 +178,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500">
-            Benvenuto/a su {tenant?.name ?? "NoShow"}
+            Benvenuto/a su {tenant?.name ?? "NowShow"}
           </p>
         </div>
         <Badge
@@ -203,7 +203,7 @@ export default function DashboardPage() {
               Il periodo di prova gratuito scade il {trialEnds}
             </p>
             <p className="text-xs text-blue-600">
-              Aggiungi i dettagli di pagamento per continuare a usare NoShow.
+              Aggiungi i dettagli di pagamento per continuare a usare NowShow.
             </p>
           </div>
           <Button

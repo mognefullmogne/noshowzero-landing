@@ -155,7 +155,7 @@ export default function IntegrationsPage() {
           Integrazioni
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Importa i tuoi appuntamenti dal tuo calendario e lascia che NoShow
+          Importa i tuoi appuntamenti dal tuo calendario e lascia che NowShow
           li gestisca con l&apos;intelligenza artificiale.
         </p>
       </div>

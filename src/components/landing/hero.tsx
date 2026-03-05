@@ -333,7 +333,7 @@ export function Hero() {
                       <div className="h-5 w-5 rounded-md bg-gradient-to-br from-teal-600 to-cyan-500 flex items-center justify-center">
                         <Zap className="h-3 w-3 text-white" />
                       </div>
-                      <span className="font-bold text-[11px] text-slate-900">NoShow</span>
+                      <span className="font-bold text-[11px] text-slate-900">NowShow</span>
                     </div>
                     <div className="space-y-0.5">
                       {SIDEBAR_NAV.map((item) => (

@@ -13,7 +13,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "NoShow — Elimina i No-Show con l'IA",
+  title: "NowShow — Elimina i No-Show con l'IA",
   description:
     "Gestione appuntamenti con IA che riduce i no-show fino all'80%. Promemoria intelligenti, liste d'attesa IA e riempimento automatico degli slot per qualsiasi attività su appuntamento.",
   keywords: [
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     "booking",
   ],
   openGraph: {
-    title: "NoShow — Elimina i No-Show con l'IA",
+    title: "NowShow — Elimina i No-Show con l'IA",
     description:
       "Promemoria intelligenti, liste d'attesa IA e riempimento automatico degli slot. Riduci i no-show fino all'80%.",
     type: "website",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "NoShow — Elimina i No-Show con l'IA",
+    title: "NowShow — Elimina i No-Show con l'IA",
     description:
       "Promemoria intelligenti, liste d'attesa IA e riempimento automatico degli slot. Riduci i no-show fino all'80%.",
   },
