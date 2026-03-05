@@ -48,13 +48,35 @@ export async function runOptimization(
 
   const gaps = await detectGaps(supabase, tenantId, now.toISOString(), weekEnd.toISOString());
 
-  // 2. For each gap, find best waitlist candidates
+  // Clear stale proposed decisions before creating new ones
+  await supabase
+    .from("optimization_decisions")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("status", "proposed");
+
+  // 2. Count available waitlist entries for early exit
+  const { count: waitlistCount } = await supabase
+    .from("waitlist_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .eq("status", "waiting");
+
+  const totalWaitlistEntries = waitlistCount ?? 0;
+  if (totalWaitlistEntries === 0) {
+    return { decisions: 0, errors };
+  }
+
+  // 3. For each gap, find best waitlist candidates
+  const assignedEntries = new Set<string>();
+
   for (const gap of gaps) {
     try {
       const candidates = await scoreCandidatesForGap(supabase, tenantId, gap);
-      if (candidates.length === 0) continue;
+      const available = candidates.filter((c) => !assignedEntries.has(c.waitlistEntryId));
+      if (available.length === 0) continue;
 
-      const best = candidates[0];
+      const best = available[0];
 
       // Create optimization decision
       const isAutoApproved = best.score >= AUTO_APPLY_THRESHOLD;
@@ -78,6 +100,7 @@ export async function runOptimization(
         errors.push(`Gap fill error: ${error.message}`);
       } else {
         decisionsCreated++;
+        assignedEntries.add(best.waitlistEntryId);
 
         // Auto-execute approved decisions (books slot + audit log)
         if (isAutoApproved && inserted) {
@@ -85,6 +108,25 @@ export async function runOptimization(
           if (!execResult.success) {
             errors.push(`Auto-execute failed for ${inserted.id}: ${execResult.error}`);
           }
+        }
+
+        // All waitlist entries assigned — no point continuing
+        if (assignedEntries.size >= totalWaitlistEntries) {
+          // Log before breaking
+          await supabase.from("audit_events").insert({
+            tenant_id: tenantId,
+            actor_type: "system",
+            entity_type: "optimization",
+            entity_id: best.waitlistEntryId,
+            action: "ai_strategy_applied",
+            metadata: {
+              strategy: "gap_fill",
+              reasoning: `Riempire gap ${gap.providerName} con ${best.patientName} (score: ${best.score}/100)`,
+              ai_generated: false,
+              auto_executed: isAutoApproved,
+            },
+          });
+          break;
         }
 
         // Log to audit_events so it appears in the strategy log dashboard
