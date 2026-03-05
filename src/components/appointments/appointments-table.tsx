@@ -147,7 +147,7 @@ export function AppointmentsTable({ appointments, loading, onRefresh }: Appointm
                       onClick={(e) => cancelAppointment(e, appt.id)}
                       disabled={cancellingId === appt.id}
                       title="Cancella appuntamento"
-                      className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
+                      className="rounded-md p-1.5 text-red-400 border border-red-200 bg-red-50 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50"
                     >
                       {cancellingId === appt.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

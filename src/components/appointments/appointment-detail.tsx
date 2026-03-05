@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { RiskBadge } from "./risk-badge";
 import { StatusBadge } from "./status-badge";
-import { Loader2, Brain, Bell, Clock, Gift, User, Bot, Send, Pencil, Check, X } from "lucide-react";
-import type { Appointment, Reminder, OfferStatus } from "@/lib/types";
+import { Loader2, Brain, Bell, Clock, Gift, User, Bot, Send, Pencil, Check, X, Trash2 } from "lucide-react";
+import type { Appointment, Reminder, OfferStatus, AppointmentStatus } from "@/lib/types";
 import { VALID_TRANSITIONS as transitions } from "@/lib/types";
 import { AppointmentAiChat } from "./appointment-ai-chat";
 
@@ -178,10 +178,36 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
     }
   }
 
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleCancelAppointment() {
+    if (!window.confirm("Sei sicuro di voler cancellare questo appuntamento? Lo slot verrà liberato e l'AI cercherà un sostituto dalla lista d'attesa.")) return;
+    setCancelling(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/appointments/${appointment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setActionError(data?.error?.message ?? "Errore durante la cancellazione");
+        return;
+      }
+      onUpdated();
+    } catch {
+      setActionError("Errore di rete — riprova");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   const patient = appointment.patient;
   const reminders = (appointment as Appointment & { reminders?: Reminder[] }).reminders ?? [];
   const offers = (appointment as Appointment & { offers?: OfferSummary[] }).offers ?? [];
   const isCancelledOrNoShow = appointment.status === "cancelled" || appointment.status === "no_show";
+  const canCancel = allowed.includes("cancelled" as AppointmentStatus);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -230,6 +256,19 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
             <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
               {actionError}
             </div>
+          )}
+
+          {/* Prominent cancel button */}
+          {canCancel && (
+            <Button
+              variant="destructive"
+              onClick={handleCancelAppointment}
+              disabled={cancelling}
+              className="w-full"
+            >
+              {cancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Cancella Appuntamento
+            </Button>
           )}
 
           {/* Patient info */}

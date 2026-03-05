@@ -11,6 +11,7 @@ import {
   Unlock,
   User,
   X,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
@@ -260,7 +261,7 @@ export default function CalendarPage() {
   const apptGrid = useMemo(() => {
     const grid: Record<string, CalendarAppointment[]> = {};
     for (const appt of appointments) {
-      if (appt.status === "cancelled" || appt.status === "declined") continue;
+      if (appt.status === "declined") continue;
       const d = new Date(appt.scheduled_at);
       const dayIdx = (d.getDay() + 6) % 7;
       const hour = d.getHours();
@@ -339,6 +340,10 @@ export default function CalendarPage() {
           <span className="inline-block h-3 w-3 rounded bg-red-100 border border-red-300" />
           No-show
         </div>
+        <div className="flex items-center gap-1">
+          <span className="inline-block h-3 w-3 rounded bg-purple-100 border-2 border-dashed border-purple-300" />
+          AI Backfill
+        </div>
       </div>
 
       {loading ? (
@@ -404,42 +409,60 @@ export default function CalendarPage() {
                       >
                         <div className="space-y-1">
                           {/* Appointments first — clickable */}
-                          {cellAppts.map((appt) => (
-                            <button
-                              key={appt.id}
-                              onClick={() => openAppointmentDetail(appt.id)}
-                              disabled={loadingAppointment}
-                              className={`flex w-full items-center gap-1 rounded-lg border px-2 py-1.5 text-xs text-left cursor-pointer transition hover:ring-2 hover:ring-blue-300 hover:ring-offset-1 ${
-                                STATUS_COLORS[appt.status] ??
-                                "bg-gray-50 text-gray-600 border-gray-200"
-                              }`}
-                            >
-                              <User className="h-3 w-3 flex-shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <div className="truncate font-medium">
-                                  {appt.patient_name}
+                          {cellAppts.map((appt) =>
+                            appt.status === "cancelled" ? (
+                              <button
+                                key={appt.id}
+                                onClick={() => openAppointmentDetail(appt.id)}
+                                className="flex w-full items-center gap-1 rounded-lg border-2 border-dashed border-purple-300 bg-purple-50/50 px-2 py-1.5 text-xs text-left cursor-pointer transition hover:ring-2 hover:ring-purple-300 hover:ring-offset-1"
+                              >
+                                <Zap className="h-3 w-3 flex-shrink-0 text-purple-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate font-medium text-purple-600">
+                                    Slot libero
+                                  </div>
+                                  <div className="truncate text-purple-400">
+                                    AI backfill attivo
+                                  </div>
                                 </div>
-                                <div className="truncate opacity-75">
-                                  {appt.service_name}
-                                  {appt.provider_name ? ` · ${appt.provider_name}` : ""}
+                              </button>
+                            ) : (
+                              <button
+                                key={appt.id}
+                                onClick={() => openAppointmentDetail(appt.id)}
+                                disabled={loadingAppointment}
+                                className={`flex w-full items-center gap-1 rounded-lg border px-2 py-1.5 text-xs text-left cursor-pointer transition hover:ring-2 hover:ring-blue-300 hover:ring-offset-1 ${
+                                  STATUS_COLORS[appt.status] ??
+                                  "bg-gray-50 text-gray-600 border-gray-200"
+                                }`}
+                              >
+                                <User className="h-3 w-3 flex-shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate font-medium">
+                                    {appt.patient_name}
+                                  </div>
+                                  <div className="truncate opacity-75">
+                                    {appt.service_name}
+                                    {appt.provider_name ? ` · ${appt.provider_name}` : ""}
+                                  </div>
                                 </div>
-                              </div>
-                              {appt.status !== "completed" && appt.status !== "no_show" && (
-                                <button
-                                  onClick={(e) => cancelAppointment(e, appt.id)}
-                                  disabled={cancellingId === appt.id}
-                                  title="Cancella appuntamento"
-                                  className="ml-auto flex-shrink-0 rounded p-0.5 text-current opacity-40 hover:opacity-100 hover:bg-red-100 hover:text-red-600 transition-all"
-                                >
-                                  {cancellingId === appt.id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <X className="h-3 w-3" />
-                                  )}
-                                </button>
-                              )}
-                            </button>
-                          ))}
+                                {appt.status !== "completed" && appt.status !== "no_show" && (
+                                  <button
+                                    onClick={(e) => cancelAppointment(e, appt.id)}
+                                    disabled={cancellingId === appt.id}
+                                    title="Cancella appuntamento"
+                                    className="ml-auto flex-shrink-0 rounded p-0.5 text-current opacity-40 hover:opacity-100 hover:bg-red-100 hover:text-red-600 transition-all"
+                                  >
+                                    {cancellingId === appt.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <X className="h-3 w-3" />
+                                    )}
+                                  </button>
+                                )}
+                              </button>
+                            )
+                          )}
                           {/* Available/blocked slots */}
                           {cellSlots.map((slot) => (
                             <button
