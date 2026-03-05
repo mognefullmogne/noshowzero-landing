@@ -6,9 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Lock,
   Loader2,
-  Unlock,
   User,
   X,
   Zap,
@@ -17,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { EmptyState } from "@/components/shared/empty-state";
-import type { AppointmentSlot, Appointment } from "@/lib/types";
+import type { Appointment } from "@/lib/types";
 import { AppointmentDetail } from "@/components/appointments/appointment-detail";
 import { useTenant } from "@/hooks/use-tenant";
 import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
@@ -134,7 +132,7 @@ export default function CalendarPage() {
   const { appointments: realtimeAppointments } = useRealtimeAppointments(tenant?.id);
 
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const [slots, setSlots] = useState<AppointmentSlot[]>([]);
+  const [slotsExist, setSlotsExist] = useState(false);
   const [appointments, setAppointments] = useState<CalendarAppointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -163,7 +161,7 @@ export default function CalendarPage() {
 
       if (slotsRes.ok) {
         const slotsJson = await slotsRes.json();
-        if (slotsJson.success) setSlots(slotsJson.data);
+        if (slotsJson.success) setSlotsExist(slotsJson.data.length > 0);
       }
 
       if (apptsRes.ok) {
@@ -245,26 +243,6 @@ export default function CalendarPage() {
     fetchData();
   }, [weekStart, fetchData]);
 
-  const toggleSlotBlock = useCallback(
-    async (slot: AppointmentSlot) => {
-      const newStatus = slot.status === "blocked" ? "available" : "blocked";
-      try {
-        const res = await fetch(`/api/slots/${slot.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        });
-        if (!res.ok) {
-          setError("Errore nell'aggiornamento slot");
-        }
-      } catch {
-        setError("Errore di rete nell'aggiornamento slot");
-      }
-      fetchData();
-    },
-    [fetchData]
-  );
-
   const openAppointmentDetail = useCallback(async (appointmentId: string) => {
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -330,19 +308,6 @@ export default function CalendarPage() {
     return d;
   });
 
-  // Group slots by day index
-  const slotsByDay = useMemo(() => {
-    const map: Record<number, AppointmentSlot[]> = {};
-    for (const slot of slots) {
-      const d = new Date(slot.start_at);
-      const dayIdx = (d.getDay() + 6) % 7;
-      if (dayIdx > 4) continue; // skip weekends
-      if (!map[dayIdx]) map[dayIdx] = [];
-      map[dayIdx].push(slot);
-    }
-    return map;
-  }, [slots]);
-
   // Group appointments by day index, then layout for overlaps
   const layoutByDay = useMemo(() => {
     const byDay: Record<number, CalendarAppointment[]> = {};
@@ -361,22 +326,7 @@ export default function CalendarPage() {
     return result;
   }, [appointments]);
 
-  // Group slots by day+hour for background rendering
-  const slotGrid = useMemo(() => {
-    const grid: Record<string, AppointmentSlot[]> = {};
-    for (const slot of slots) {
-      const d = new Date(slot.start_at);
-      const dayIdx = (d.getDay() + 6) % 7;
-      if (dayIdx > 4) continue;
-      const hour = d.getHours();
-      const key = `${dayIdx}-${hour}`;
-      if (!grid[key]) grid[key] = [];
-      grid[key].push(slot);
-    }
-    return grid;
-  }, [slots]);
-
-  const hasContent = slots.length > 0 || appointments.length > 0;
+  const hasContent = slotsExist || appointments.length > 0;
 
   return (
     <div>
@@ -432,12 +382,8 @@ export default function CalendarPage() {
           AI Backfill
         </div>
         <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-green-100 border border-green-300" />
-          Slot libero
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-gray-200 border border-gray-300" />
-          Bloccato
+          <span className="inline-block h-3 w-3 rounded bg-gray-100 border border-gray-200" />
+          Completato
         </div>
       </div>
 
@@ -507,13 +453,12 @@ export default function CalendarPage() {
             {/* ---- BODY: day columns with positioned appointments ---- */}
             {DAYS.map((_, dayIdx) => {
               const dayAppts = layoutByDay[dayIdx] ?? [];
-              const daySlots = slotsByDay[dayIdx] ?? [];
               const isToday = weekDates[dayIdx].toDateString() === new Date().toDateString();
 
               return (
                 <div
                   key={dayIdx}
-                  className={`relative ${isToday ? "bg-blue-50/20" : ""}`}
+                  className={`relative border-r border-gray-100 ${isToday ? "bg-blue-50/20" : ""}`}
                   style={{ height: TOTAL_HEIGHT }}
                 >
                   {/* Hour grid lines */}
@@ -530,54 +475,6 @@ export default function CalendarPage() {
                       />
                     </div>
                   ))}
-
-                  {/* Slot background indicators (small dot per slot) */}
-                  {daySlots.map((slot) => {
-                    const d = new Date(slot.start_at);
-                    const startMin = d.getHours() * 60 + d.getMinutes();
-                    const slotEnd = new Date(slot.end_at);
-                    const endMin = slotEnd.getHours() * 60 + slotEnd.getMinutes();
-                    const top = ((startMin - DAY_START * 60) / 60) * HOUR_HEIGHT;
-                    const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 12);
-
-                    // Don't show slot indicator if there's an appointment at this time
-                    const hasAppt = dayAppts.some((a) => {
-                      const aStart = getMinutesFromMidnight(a.scheduled_at);
-                      const aEnd = aStart + a.duration_min;
-                      return aStart < endMin && aEnd > startMin && a.status !== "cancelled";
-                    });
-
-                    if (hasAppt) return null;
-
-                    return (
-                      <button
-                        key={slot.id}
-                        onClick={() => toggleSlotBlock(slot)}
-                        className={`absolute left-1 right-1 rounded border text-[10px] flex items-center gap-1 px-1 transition ${
-                          slot.status === "available"
-                            ? "bg-green-50/60 border-green-200 text-green-600 hover:bg-green-100"
-                            : slot.status === "blocked"
-                            ? "bg-gray-100/60 border-gray-200 text-gray-400 hover:bg-gray-200"
-                            : "bg-blue-50/60 border-blue-200 text-blue-500"
-                        }`}
-                        style={{ top, height }}
-                        title={
-                          slot.status === "available"
-                            ? "Clicca per bloccare"
-                            : slot.status === "blocked"
-                            ? "Clicca per sbloccare"
-                            : slot.provider_name
-                        }
-                      >
-                        {slot.status === "blocked" ? (
-                          <Lock className="h-2.5 w-2.5 flex-shrink-0" />
-                        ) : slot.status === "available" ? (
-                          <Unlock className="h-2.5 w-2.5 flex-shrink-0 opacity-50" />
-                        ) : null}
-                        <span className="truncate">{slot.provider_name}</span>
-                      </button>
-                    );
-                  })}
 
                   {/* Appointments — absolutely positioned by time */}
                   {dayAppts.map((appt) => {
