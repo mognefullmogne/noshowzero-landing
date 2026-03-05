@@ -22,5 +22,9 @@ export function verifyTwilioSignature(
     return false;
   }
 
-  return Twilio.validateRequest(authToken, signature, url, params);
+  const valid = Twilio.validateRequest(authToken, signature, url, params);
+  if (!valid) {
+    console.error("[Twilio] Signature mismatch — url used for verify:", url);
+  }
+  return valid;
 }
