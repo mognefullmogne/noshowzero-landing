@@ -15,7 +15,29 @@ interface ConfirmationVars {
   readonly locationName?: string;
 }
 
-// --- Touch 1: Initial confirmation (existing) ---
+// --- Appointment notification (informational only, no confirmation request) ---
+
+export function renderNotificationWhatsApp(vars: ConfirmationVars): string {
+  const provider = vars.providerName ? ` con ${vars.providerName}` : "";
+  const location = vars.locationName ? ` presso ${vars.locationName}` : "";
+
+  return [
+    `Ciao ${vars.patientName}!`,
+    "",
+    `Il tuo appuntamento è stato prenotato:`,
+    `📋 ${vars.serviceName}${provider}`,
+    `📅 ${vars.date} alle ${vars.time}${location}`,
+    "",
+    `Ti invieremo un promemoria prima dell'appuntamento.`,
+    `A presto!`,
+  ].join("\n");
+}
+
+export function renderNotificationSms(vars: ConfirmationVars): string {
+  return `Appuntamento prenotato: ${vars.serviceName} il ${vars.date} ore ${vars.time}. Riceverai un promemoria.`;
+}
+
+// --- Touch 1: Confirmation request (asks SI/NO) ---
 
 export function renderConfirmationWhatsApp(vars: ConfirmationVars): string {
   const provider = vars.providerName ? ` con ${vars.providerName}` : "";
