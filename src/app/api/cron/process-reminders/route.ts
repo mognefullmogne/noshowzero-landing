@@ -7,6 +7,7 @@ import { ensureRemindersScheduled } from "@/lib/reminders/schedule-reminders";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { renderReminderWhatsApp, renderReminderSms } from "@/lib/reminders/templates";
 import { verifyCronSecret } from "@/lib/cron-auth";
+import { CONTENT_SIDS, buildReminderVars } from "@/lib/twilio/content-templates";
 import { autoScoreAppointments, autoScoreWaitlistEntries } from "@/lib/scoring/auto-score";
 import type { MessageChannel } from "@/lib/types";
 
@@ -134,6 +135,18 @@ export async function GET(request: Request) {
             ? renderReminderWhatsApp(vars)
             : renderReminderSms(vars);
 
+        // Use Content Template for WhatsApp (works outside 24h window)
+        const useContentTemplate = channel === "whatsapp";
+        const contentSid = useContentTemplate ? CONTENT_SIDS.appointment_reminder : undefined;
+        const contentVariables = useContentTemplate
+          ? buildReminderVars({
+              patientName: vars.patientName,
+              serviceName: vars.serviceName,
+              date: vars.date,
+              time: vars.time,
+            })
+          : undefined;
+
         // Send via Twilio
         const result = await sendMessage(supabase, {
           tenantId: reminder.tenant_id,
@@ -142,6 +155,8 @@ export async function GET(request: Request) {
           channel,
           body,
           contextAppointmentId: reminder.appointment_id,
+          contentSid,
+          contentVariables,
         });
 
         if (result.success) {

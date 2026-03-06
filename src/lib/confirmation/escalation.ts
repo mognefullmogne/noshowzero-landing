@@ -28,6 +28,7 @@ import {
   renderFinalWarningWhatsApp,
 } from "./templates";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
+import { CONTENT_SIDS, buildConfirmationReminderVars } from "@/lib/twilio/content-templates";
 
 interface EscalationResult {
   readonly touch2Sent: number;
@@ -214,6 +215,18 @@ async function escalateToTouch3(
         ? renderFinalWarningWhatsApp(vars)
         : renderFinalWarningSms(vars);
 
+      // Use Content Template for WhatsApp (confirmation_reminder — final_warning still pending)
+      const useContentTemplate = channel === "whatsapp";
+      const contentSid = useContentTemplate ? CONTENT_SIDS.confirmation_reminder : undefined;
+      const contentVariables = useContentTemplate
+        ? buildConfirmationReminderVars({
+            patientName: vars.patientName,
+            serviceName: vars.serviceName,
+            date: vars.date,
+            time: vars.time,
+          })
+        : undefined;
+
       const sendResult = await sendMessage(supabase, {
         tenantId: wf.tenant_id,
         patientId: appt.patient.id,
@@ -221,6 +234,8 @@ async function escalateToTouch3(
         channel,
         body,
         contextAppointmentId: wf.appointment_id,
+        contentSid,
+        contentVariables,
       });
 
       if (sendResult.success) {

@@ -13,7 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { markMessageSent, markReminderSent, markFinalWarningSent, markTimedOut, ESCALATION_TOUCH_2_HOURS_BEFORE, ESCALATION_TOUCH_3_HOURS_BEFORE } from "@/lib/confirmation/workflow";
 import { renderConfirmationWhatsApp, renderConfirmationSms, renderReminderSms, renderFinalWarningWhatsApp, renderFinalWarningSms } from "@/lib/confirmation/templates";
-import { CONTENT_SIDS, buildConfirmationVars } from "@/lib/twilio/content-templates";
+import { CONTENT_SIDS, buildConfirmationVars, buildConfirmationReminderVars } from "@/lib/twilio/content-templates";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
 import { checkExpiredOffers } from "@/lib/backfill/check-expired-offers";
 import { detectNoShows } from "@/lib/intelligence/no-show-detector";
@@ -355,6 +355,18 @@ async function escalateTouch3(
           ? renderFinalWarningWhatsApp(vars)
           : renderFinalWarningSms(vars);
 
+      // Use Content Template for WhatsApp (confirmation_reminder — final_warning still pending)
+      const useTemplate = channel === "whatsapp";
+      const contentSid = useTemplate ? CONTENT_SIDS.confirmation_reminder : undefined;
+      const contentVariables = useTemplate
+        ? buildConfirmationReminderVars({
+            patientName: vars.patientName,
+            serviceName: vars.serviceName,
+            date: vars.date,
+            time: vars.time,
+          })
+        : undefined;
+
       const result = await sendMessage(supabase, {
         tenantId: wf.tenant_id,
         patientId: patient.id,
@@ -362,6 +374,8 @@ async function escalateTouch3(
         channel,
         body,
         contextAppointmentId: wf.appointment_id,
+        contentSid,
+        contentVariables,
       });
 
       if (result.success) {

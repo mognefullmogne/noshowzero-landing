@@ -22,6 +22,7 @@ import {
   renderOfferEmailSubject,
   renderOfferEmailBody,
 } from "@/lib/twilio/templates";
+import { CONTENT_SIDS, buildBackfillOfferVars } from "@/lib/twilio/content-templates";
 import { logAuditEvent } from "@/lib/audit/log-event";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -146,9 +147,21 @@ export async function sendOffer(
   let subject: string | undefined;
   let to: string;
 
+  let contentSid: string | undefined;
+  let contentVariables: string | undefined;
+
   if (channel === "whatsapp") {
     body = renderOfferWhatsApp(templateVars);
     to = input.candidate.patientPhone ?? "";
+    // Use approved Content Template for WhatsApp (works outside 24h window)
+    contentSid = CONTENT_SIDS.backfill_offer;
+    contentVariables = buildBackfillOfferVars({
+      patientName: input.candidate.patientName,
+      serviceName: input.serviceName,
+      date: dateStr,
+      time: timeStr,
+      expiresAt: expiresStr,
+    });
   } else if (channel === "sms") {
     body = renderOfferSms(templateVars);
     to = input.candidate.patientPhone ?? "";
@@ -176,7 +189,7 @@ export async function sendOffer(
 
   // Send notification (uses SMS template for email-preferred patients until SendGrid is set up)
   const effectiveChannel = channel === "email" ? "sms" : channel;
-  const sendResult = await sendNotification({ to, body, channel: effectiveChannel, subject, tenantId: input.tenantId });
+  const sendResult = await sendNotification({ to, body, channel: effectiveChannel, subject, tenantId: input.tenantId, contentSid, contentVariables });
 
   if (sendResult.status === "failed") {
     console.error("[Backfill] Failed to send notification:", sendResult.errorMessage);
