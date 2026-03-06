@@ -206,13 +206,13 @@ export async function triggerBackfill(
           scheduled_at: appointment.scheduled_at,
           duration_min: appointment.duration_min,
         });
-        // Fire-and-forget rebooking message
-        sendNotification({
+        // Must be awaited — Vercel serverless kills unresolved promises.
+        await sendNotification({
           to: patientPhone,
           body: rebook.message,
           channel: "whatsapp",
           tenantId,
-        }).catch((err) => console.warn("[Backfill] Rebook notification failed:", err));
+        });
         console.info(`[Backfill] AI: rebook_first — sent rebooking suggestion to cancelling patient`);
       }
     } catch (err) {

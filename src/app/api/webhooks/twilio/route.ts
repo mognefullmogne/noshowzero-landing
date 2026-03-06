@@ -29,10 +29,9 @@ import type { MessageChannel, MessageIntent } from "@/lib/types";
 // Phone number validation (E.164 format)
 const E164_PATTERN = /^\+?[1-9]\d{6,14}$/;
 
-// Rate limiting: 10 messages per phone per 60 seconds
-const phoneRateLimit = new Map<string, { count: number; resetAt: number }>();
+// Rate limiting: 10 messages per phone per 60 seconds (Supabase-backed)
 const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_WINDOW = 60_000;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
 
 // Message body cap
 const MAX_BODY_LENGTH = 1000;
@@ -46,16 +45,22 @@ const VALID_INTENTS = new Set<string>([
   "slot_select", "book_appointment", "join_waitlist", "reschedule", "question", "unknown",
 ]);
 
-function checkPhoneRateLimit(phone: string): boolean {
-  const now = Date.now();
-  const entry = phoneRateLimit.get(phone);
-  if (!entry || now > entry.resetAt) {
-    phoneRateLimit.set(phone, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+async function checkPhoneRateLimit(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  phone: string
+): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("message_events")
+    .select("*", { count: "exact", head: true })
+    .eq("from_number", phone)
+    .eq("direction", "inbound")
+    .gte("created_at", new Date(Date.now() - RATE_LIMIT_WINDOW_SECONDS * 1000).toISOString());
+  if (error) {
+    // Fail open on rate-limit query error so we don't block legitimate messages
+    console.warn("[Webhook] Rate limit query failed, allowing request:", error.message);
     return true;
   }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  phoneRateLimit.set(phone, { count: entry.count + 1, resetAt: entry.resetAt });
-  return true;
+  return (count ?? 0) < RATE_LIMIT_MAX;
 }
 
 function sanitizeForAI(text: string): string {
@@ -124,13 +129,13 @@ export async function POST(request: NextRequest) {
       return twimlResponse("");
     }
 
-    // Rate limit by phone
-    if (!checkPhoneRateLimit(phoneNumber)) {
+    const supabase = await createServiceClient();
+
+    // Rate limit by phone (Supabase-backed — persists across cold starts)
+    if (!(await checkPhoneRateLimit(supabase, phoneNumber))) {
       console.warn(`[Webhook] Rate limit exceeded for ***${phoneNumber.slice(-4)}`);
       return twimlResponse("");
     }
-
-    const supabase = await createServiceClient();
 
     // Find patient by phone — parameterized .eq() calls, no string interpolation
     // Try multiple formats: +39333..., whatsapp:+39333..., 333... (without prefix)
@@ -306,22 +311,22 @@ export async function POST(request: NextRequest) {
       `[Webhook] patient=${patient.id.slice(0, 8)}... intent=${intent} (${confidence.toFixed(2)}) → ${result.action ?? "no_action"}`
     );
 
-    // 5a. Run the full opportunistic processing engine for this tenant (fire-and-forget).
-    // This replaces the previous checkExpiredOffers call with the complete engine.
-    maybeProcessPending(supabase, patient.tenant_id);
+    // 5a. Run the full opportunistic processing engine for this tenant.
+    // Must be awaited — Vercel serverless kills unresolved promises.
+    await maybeProcessPending(supabase, patient.tenant_id);
 
     // 5b. Record response pattern for actionable intents (learn from patient behavior).
-    //     Fire-and-forget — do not block the TwiML reply.
     const ACTIONABLE_INTENTS = new Set(["confirm", "cancel", "accept_offer", "decline_offer"]);
     if (ACTIONABLE_INTENTS.has(intent) && result.action) {
       const respondedAt = new Date();
-      lookupLastOutboundTime(supabase, patient.tenant_id, patient.id)
-        .then((sentAt) => {
-          if (sentAt) {
-            return recordResponsePattern(supabase, patient.id, channel, sentAt, respondedAt);
-          }
-        })
-        .catch((err) => console.error("[Webhook] Response pattern recording failed:", err));
+      try {
+        const sentAt = await lookupLastOutboundTime(supabase, patient.tenant_id, patient.id);
+        if (sentAt) {
+          await recordResponsePattern(supabase, patient.id, channel, sentAt, respondedAt);
+        }
+      } catch (err) {
+        console.error("[Webhook] Response pattern recording failed:", err);
+      }
     }
 
     // 6. Return reply directly via TwiML

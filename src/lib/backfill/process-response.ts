@@ -121,10 +121,13 @@ export async function processAccept(
       .eq("tenant_id", offer.tenant_id)
       .in("status", ["scheduled", "reminder_pending", "reminder_sent", "confirmed"]);
 
-    // Chain cascade: the freed slot is now available for another patient
-    // Fire-and-forget — don't block the accept response
-    triggerBackfill(supabase, candidateApptId, offer.tenant_id, { triggerEvent: "cancellation" })
-      .catch((err) => console.error("[Backfill] Chain cascade failed:", err));
+    // Chain cascade: the freed slot is now available for another patient.
+    // Must be awaited — Vercel serverless kills unresolved promises.
+    try {
+      await triggerBackfill(supabase, candidateApptId, offer.tenant_id, { triggerEvent: "cancellation" });
+    } catch (err) {
+      console.error("[Backfill] Chain cascade failed:", err);
+    }
   }
 
   // Mark waitlist entry as fulfilled (if offer was sourced from waitlist)

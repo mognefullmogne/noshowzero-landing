@@ -30,6 +30,28 @@ interface RiskScoreResult {
   readonly reasoning: string;
 }
 
+/** Extract day-of-week (0=Sun) and hour (0-23) in Europe/Rome timezone. */
+function getRomeTimeParts(date: Date): { dayOfWeek: number; hour: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Rome",
+    weekday: "short",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(date);
+
+  const weekdayMap: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  };
+
+  const weekdayStr = parts.find((p) => p.type === "weekday")?.value ?? "Mon";
+  const hourStr = parts.find((p) => p.type === "hour")?.value ?? "12";
+
+  return {
+    dayOfWeek: weekdayMap[weekdayStr] ?? 1,
+    hour: parseInt(hourStr, 10),
+  };
+}
+
 export function computeRiskScore(input: RiskScoreInput): RiskScoreResult {
   const { totalAppointments, noShows, scheduledAt, createdAt } = input;
   let score = 0;
@@ -43,8 +65,8 @@ export function computeRiskScore(input: RiskScoreInput): RiskScoreResult {
   }
   score += history;
 
-  // 2. Day of week (0–15)
-  const dayOfWeek = scheduledAt.getUTCDay();
+  // 2. Day of week (0–15) — use Europe/Rome timezone
+  const { dayOfWeek, hour } = getRomeTimeParts(scheduledAt);
   let dayScore: number;
   if (dayOfWeek === 1) {
     dayScore = 15; // Monday
@@ -57,8 +79,7 @@ export function computeRiskScore(input: RiskScoreInput): RiskScoreResult {
   }
   score += dayScore;
 
-  // 3. Time of day (0–15)
-  const hour = scheduledAt.getUTCHours();
+  // 3. Time of day (0–15) — uses Rome hour extracted above
   let hourScore: number;
   if (hour < 9) {
     hourScore = 15; // early morning

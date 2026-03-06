@@ -164,9 +164,13 @@ async function handleCancel(
     }
   }
 
-  // Fire-and-forget: trigger backfill cascade — offer the freed slot to other patients
-  triggerBackfill(supabase, input.appointmentId, input.tenantId, { triggerEvent: "cancellation" })
-    .catch((err) => console.error("[Router] Backfill cascade after cancel failed:", err));
+  // Trigger backfill cascade — offer the freed slot to other patients.
+  // Must be awaited — Vercel serverless kills unresolved promises.
+  try {
+    await triggerBackfill(supabase, input.appointmentId, input.tenantId, { triggerEvent: "cancellation" });
+  } catch (err) {
+    console.error("[Router] Backfill cascade after cancel failed:", err);
+  }
 
   // Await smart rebooking — combine cancel confirmation + slot options in a single reply
   const cancelledAppt = data[0];
