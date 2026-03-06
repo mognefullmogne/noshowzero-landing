@@ -26,7 +26,7 @@ export interface CancelledAppointment {
   readonly duration_min: number;
 }
 
-interface GapSlot {
+export interface GapSlot {
   readonly startAt: string;
   readonly endAt: string;
   readonly dayLabel: string;
@@ -72,7 +72,7 @@ function localToUtcMs(dayStr: string, hour: number, tz: string): number {
  * All times are computed in TENANT_TIMEZONE so business hours and day labels
  * match what patients see in the app.
  */
-async function findCalendarGaps(
+export async function findCalendarGaps(
   supabase: SupabaseClient,
   tenantId: string,
   durationMin: number

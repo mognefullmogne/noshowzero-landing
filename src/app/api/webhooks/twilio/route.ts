@@ -264,6 +264,13 @@ export async function POST(request: NextRequest) {
       confidence = Math.max(confidence, 0.85);
     }
 
+    // Redirect to slot_select when patient has active slot proposal and intent is unclear
+    if (context.hasActiveSlotProposal && (intent === "unknown" || intent === "question")) {
+      intent = "slot_select";
+      confidence = Math.max(confidence, 0.7);
+      console.log(`[Webhook] Redirected to slot_select (active slot proposal)`);
+    }
+
     // AI fallback for unclear messages when an active offer exists
     if (intent === "unknown" && context.activeOfferId && process.env.ANTHROPIC_API_KEY) {
       try {
@@ -376,7 +383,7 @@ async function loadPatientContext(
   tenantId: string,
   patientId: string,
   now: string
-): Promise<{ nextAppointmentId?: string; activeOfferId?: string }> {
+): Promise<{ nextAppointmentId?: string; activeOfferId?: string; hasActiveSlotProposal?: boolean }> {
   // Prioritize actionable appointments (ones that can actually be confirmed/cancelled).
   // Only fall back to confirmed/cancelled/declined if no actionable ones exist.
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -416,9 +423,21 @@ async function loadPatientContext(
     .limit(1)
     .maybeSingle();
 
+  // 3. Check for active slot proposal (patient was offered slots from waitlist or rebook)
+  const { data: activeProposal } = await supabase
+    .from("slot_proposals")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("patient_id", patientId)
+    .eq("status", "pending")
+    .gte("expires_at", now)
+    .limit(1)
+    .maybeSingle();
+
   return {
     nextAppointmentId: nextAppt?.id,
     activeOfferId: activeOffer?.id,
+    hasActiveSlotProposal: !!activeProposal,
   };
 }
 

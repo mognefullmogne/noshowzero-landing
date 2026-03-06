@@ -13,6 +13,8 @@ import type { MessageIntent } from "@/lib/types";
 import { processAccept, processDecline } from "@/lib/backfill/process-response";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
 import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
+import { findAvailableBackfillSlots, type AvailableBackfillSlot } from "@/lib/backfill/find-available-slots";
+import { parseItalianDate } from "@/lib/booking/date-parser";
 
 // AI input sanitization
 const MAX_AI_INPUT_CHARS = 500;
@@ -285,14 +287,7 @@ async function handleSlotSelect(
   supabase: SupabaseClient,
   input: RouteInput
 ): Promise<RouteResult> {
-  const match = input.messageBody.match(/[123]/);
-  if (!match) {
-    return { reply: "Per favore rispondi con 1, 2 o 3 per scegliere l'orario." };
-  }
-
-  const selectedIndex = parseInt(match[0], 10);
-
-  // Find active slot proposal for this patient (graceful — table may not exist)
+  // Find active slot proposal for this patient
   try {
     const { data: proposal } = await supabase
       .from("slot_proposals")
@@ -310,64 +305,257 @@ async function handleSlotSelect(
     }
 
     const slots = proposal.proposed_slots as Array<{ index: number; slot_id: string; start_at: string; end_at: string }>;
-    const selected = slots.find((s) => s.index === selectedIndex);
-    if (!selected) {
-      return { reply: "Opzione non valida. Per favore scegli 1, 2 o 3." };
+
+    // Try numeric selection first
+    const numMatch = input.messageBody.match(/[123]/);
+    if (numMatch) {
+      const selectedIndex = parseInt(numMatch[0], 10);
+      const selected = slots.find((s) => s.index === selectedIndex);
+      if (selected) {
+        return confirmSlotSelection(supabase, input, proposal, selected, selectedIndex);
+      }
+      return { reply: `Opzione non valida. Per favore scegli tra 1 e ${slots.length}.` };
     }
 
-    // Mark proposal as selected
-    await supabase
-      .from("slot_proposals")
-      .update({
-        selected_index: selectedIndex,
-        selected_slot_id: selected.slot_id,
-        status: "selected",
-      })
-      .eq("id", proposal.id)
-      .eq("tenant_id", input.tenantId);
-
-    // Create the new appointment from the selected slot
-    const origApptId = proposal.appointment_id as string;
-    const { data: origAppt } = await supabase
-      .from("appointments")
-      .select("service_code, service_name, provider_name, location_name, duration_min")
-      .eq("id", origApptId)
-      .maybeSingle();
-
-    const duration = origAppt?.duration_min ?? 30;
-    const { error: createErr } = await supabase
-      .from("appointments")
-      .insert({
-        tenant_id: input.tenantId,
-        patient_id: input.patientId,
-        service_code: origAppt?.service_code ?? null,
-        service_name: origAppt?.service_name ?? "Visita",
-        provider_name: origAppt?.provider_name ?? null,
-        location_name: origAppt?.location_name ?? null,
-        scheduled_at: selected.start_at,
-        duration_min: duration,
-        status: "confirmed",
-        confirmed_at: new Date().toISOString(),
-      });
-
-    if (createErr) {
-      console.error("[Router] Create appointment from slot failed:", createErr);
-      return { reply: "Si è verificato un errore nella prenotazione. Contatta la segreteria." };
-    }
-
-    const date = new Date(selected.start_at);
-    const TENANT_TIMEZONE = "Europe/Rome";
-    const dateStr = date.toLocaleDateString("it-IT", { timeZone: TENANT_TIMEZONE, weekday: "long", day: "numeric", month: "long" });
-    const timeStr = date.toLocaleTimeString("it-IT", { timeZone: TENANT_TIMEZONE, hour: "2-digit", minute: "2-digit" });
-
-    return {
-      reply: `Perfetto! Il tuo appuntamento e' confermato per ${dateStr} alle ${timeStr}. Ti aspettiamo!`,
-      action: "slot_selected",
-    };
+    // Not a number — try to parse as time preference
+    return handleTimePreference(supabase, input, proposal, slots);
   } catch (err) {
     console.error("[Router] Slot select error:", err);
     return { reply: "Non ho trovato una proposta attiva. Contatta la segreteria." };
   }
+}
+
+/**
+ * Handle free-text time preference from patient.
+ * Parse the date/time, find matching or nearest available slot.
+ */
+async function handleTimePreference(
+  supabase: SupabaseClient,
+  input: RouteInput,
+  proposal: Record<string, unknown>,
+  proposedSlots: Array<{ index: number; slot_id: string; start_at: string; end_at: string }>
+): Promise<RouteResult> {
+  const parsed = await parseItalianDate(input.messageBody);
+
+  if (!parsed) {
+    // Can't parse — ask again
+    const slotCount = proposedSlots.length;
+    return {
+      reply: `Non ho capito la tua preferenza. Rispondi con un numero da 1 a ${slotCount} per scegliere uno degli slot proposti, oppure indica una data e ora (es. "martedi alle 10").`,
+    };
+  }
+
+  const TENANT_TIMEZONE = "Europe/Rome";
+  const preferredDate = parsed.date; // YYYY-MM-DD
+  const preferredTime = parsed.time; // HH:MM or undefined
+
+  // Check if any proposed slot matches the preference
+  const matchingSlot = findMatchingSlot(proposedSlots, preferredDate, preferredTime, TENANT_TIMEZONE);
+  if (matchingSlot) {
+    return confirmSlotSelection(supabase, input, proposal, matchingSlot.slot, matchingSlot.slot.index);
+  }
+
+  // No match in proposed slots — search for backfill slots on the preferred date
+  const backfillOnDate = await findAvailableBackfillSlots(supabase, input.tenantId, { limit: 5 });
+  const matchInBackfill = findMatchingSlotFromBackfill(backfillOnDate, preferredDate, preferredTime, TENANT_TIMEZONE);
+
+  if (matchInBackfill) {
+    // Found a matching backfill slot not in the original proposal — offer it directly
+    const proposedSlot = {
+      index: 1,
+      slot_id: matchInBackfill.appointmentId,
+      start_at: matchInBackfill.scheduledAt,
+      end_at: new Date(new Date(matchInBackfill.scheduledAt).getTime() + matchInBackfill.durationMin * 60_000).toISOString(),
+    };
+
+    // Update proposal with the new slot
+    await supabase
+      .from("slot_proposals")
+      .update({
+        proposed_slots: [proposedSlot],
+        expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      })
+      .eq("id", proposal.id as string)
+      .eq("tenant_id", input.tenantId);
+
+    return {
+      reply: `Abbiamo uno slot disponibile il ${matchInBackfill.dayLabel} alle ${matchInBackfill.timeLabel}${matchInBackfill.providerName ? ` con ${matchInBackfill.providerName}` : ""}. Rispondi *1* per prenotare.`,
+      action: "time_preference_match_found",
+    };
+  }
+
+  // No backfill match — find nearest available slot to the preference
+  const nearest = findNearestSlot(proposedSlots, preferredDate, preferredTime, TENANT_TIMEZONE);
+  if (nearest) {
+    const date = new Date(nearest.start_at);
+    const dayStr = date.toLocaleDateString("it-IT", { timeZone: TENANT_TIMEZONE, weekday: "long", day: "numeric", month: "long" });
+    const timeStr = date.toLocaleTimeString("it-IT", { timeZone: TENANT_TIMEZONE, hour: "2-digit", minute: "2-digit" });
+
+    return {
+      reply: `Purtroppo non c'e' disponibilita' per quel giorno/ora. Lo slot piu' vicino e': ${dayStr} alle ${timeStr}. Rispondi *${nearest.index}* per prenotare, oppure indica un'altra preferenza.`,
+      action: "time_preference_nearest",
+    };
+  }
+
+  return {
+    reply: "Purtroppo non abbiamo slot disponibili per quella data. Ti contatteremo appena si libera un posto adatto!",
+    action: "time_preference_no_match",
+  };
+}
+
+/** Confirm a slot selection: create appointment, mark proposal, fulfill waitlist entry. */
+async function confirmSlotSelection(
+  supabase: SupabaseClient,
+  input: RouteInput,
+  proposal: Record<string, unknown>,
+  selected: { index: number; slot_id: string; start_at: string; end_at: string },
+  selectedIndex: number
+): Promise<RouteResult> {
+  const TENANT_TIMEZONE = "Europe/Rome";
+
+  // Mark proposal as selected
+  await supabase
+    .from("slot_proposals")
+    .update({
+      selected_index: selectedIndex,
+      selected_slot_id: selected.slot_id,
+      status: "selected",
+    })
+    .eq("id", proposal.id as string)
+    .eq("tenant_id", input.tenantId);
+
+  // Load appointment details from the slot reference (cancelled appointment)
+  const { data: origAppt } = await supabase
+    .from("appointments")
+    .select("service_code, service_name, provider_name, location_name, duration_min")
+    .eq("id", selected.slot_id)
+    .maybeSingle();
+
+  // Fall back to the proposal's reference appointment if slot_id is a gap reference
+  const refApptId = proposal.appointment_id as string;
+  const refAppt = origAppt ?? (await supabase
+    .from("appointments")
+    .select("service_code, service_name, provider_name, location_name, duration_min")
+    .eq("id", refApptId)
+    .maybeSingle()).data;
+
+  const duration = refAppt?.duration_min ?? 30;
+  const { error: createErr } = await supabase
+    .from("appointments")
+    .insert({
+      tenant_id: input.tenantId,
+      patient_id: input.patientId,
+      service_code: refAppt?.service_code ?? null,
+      service_name: refAppt?.service_name ?? "Visita",
+      provider_name: refAppt?.provider_name ?? null,
+      location_name: refAppt?.location_name ?? null,
+      scheduled_at: selected.start_at,
+      duration_min: duration,
+      status: "confirmed",
+      confirmed_at: new Date().toISOString(),
+    });
+
+  if (createErr) {
+    console.error("[Router] Create appointment from slot failed:", createErr);
+    return { reply: "Si e' verificato un errore nella prenotazione. Contatta la segreteria." };
+  }
+
+  // Mark any waiting waitlist entry for this patient as fulfilled
+  await supabase
+    .from("waitlist_entries")
+    .update({ status: "fulfilled" })
+    .eq("tenant_id", input.tenantId)
+    .eq("patient_id", input.patientId)
+    .eq("status", "waiting");
+
+  const date = new Date(selected.start_at);
+  const dateStr = date.toLocaleDateString("it-IT", { timeZone: TENANT_TIMEZONE, weekday: "long", day: "numeric", month: "long" });
+  const timeStr = date.toLocaleTimeString("it-IT", { timeZone: TENANT_TIMEZONE, hour: "2-digit", minute: "2-digit" });
+
+  return {
+    reply: `Perfetto! Il tuo appuntamento e' confermato per ${dateStr} alle ${timeStr}. Ti aspettiamo!`,
+    action: "slot_selected",
+  };
+}
+
+// --- Slot matching utilities ---
+
+function findMatchingSlot(
+  slots: Array<{ index: number; slot_id: string; start_at: string; end_at: string }>,
+  preferredDate: string,
+  preferredTime: string | undefined,
+  tz: string
+): { slot: typeof slots[number] } | null {
+  for (const slot of slots) {
+    const slotDate = new Date(slot.start_at);
+    const slotDateStr = slotDate.toLocaleDateString("en-CA", { timeZone: tz }); // YYYY-MM-DD
+    if (slotDateStr !== preferredDate) continue;
+
+    if (!preferredTime) {
+      return { slot }; // date match, no time specified — take first on that day
+    }
+
+    const slotTimeStr = slotDate.toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+    // Match within 30 minutes
+    const slotMinutes = timeToMinutes(slotTimeStr);
+    const prefMinutes = timeToMinutes(preferredTime);
+    if (Math.abs(slotMinutes - prefMinutes) <= 30) {
+      return { slot };
+    }
+  }
+  return null;
+}
+
+function findMatchingSlotFromBackfill(
+  backfillSlots: readonly AvailableBackfillSlot[],
+  preferredDate: string,
+  preferredTime: string | undefined,
+  tz: string
+): AvailableBackfillSlot | null {
+  for (const slot of backfillSlots) {
+    const slotDate = new Date(slot.scheduledAt);
+    const slotDateStr = slotDate.toLocaleDateString("en-CA", { timeZone: tz });
+    if (slotDateStr !== preferredDate) continue;
+
+    if (!preferredTime) {
+      return slot;
+    }
+
+    const slotTimeStr = slotDate.toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+    if (Math.abs(timeToMinutes(slotTimeStr) - timeToMinutes(preferredTime)) <= 30) {
+      return slot;
+    }
+  }
+  return null;
+}
+
+function findNearestSlot(
+  slots: Array<{ index: number; slot_id: string; start_at: string; end_at: string }>,
+  preferredDate: string,
+  preferredTime: string | undefined,
+  tz: string
+): typeof slots[number] | null {
+  if (slots.length === 0) return null;
+
+  const prefMs = new Date(`${preferredDate}T${preferredTime ?? "09:00"}:00`).getTime();
+
+  let nearest = slots[0];
+  let minDiff = Math.abs(new Date(slots[0].start_at).getTime() - prefMs);
+
+  for (const slot of slots.slice(1)) {
+    const diff = Math.abs(new Date(slot.start_at).getTime() - prefMs);
+    if (diff < minDiff) {
+      minDiff = diff;
+      nearest = slot;
+    }
+  }
+
+  return nearest;
+}
+
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
 }
 
 async function handleJoinWaitlist(
@@ -377,7 +565,7 @@ async function handleJoinWaitlist(
   // Find the most recent cancelled appointment for service context
   const { data: recentAppt } = await supabase
     .from("appointments")
-    .select("service_name, provider_name")
+    .select("id, service_name, provider_name, duration_min")
     .eq("tenant_id", input.tenantId)
     .eq("patient_id", input.patientId)
     .eq("status", "cancelled")
@@ -405,9 +593,71 @@ async function handleJoinWaitlist(
     return { reply: "Si è verificato un errore. Contatta la segreteria." };
   }
 
+  // Immediately check for available backfill slots
+  const backfillSlots = await findAvailableBackfillSlots(supabase, input.tenantId, {
+    serviceName,
+    limit: 3,
+  });
+
+  if (backfillSlots.length === 0) {
+    return {
+      reply: `Sei stato inserito in lista d'attesa per ${serviceName}. Al momento non ci sono slot disponibili, ma ti contatteremo appena si libera un posto!`,
+      action: "joined_waitlist",
+    };
+  }
+
+  // Create slot_proposals from backfill slots so patient can pick
+  const proposedSlots = backfillSlots.map((s, i) => ({
+    index: i + 1,
+    slot_id: s.appointmentId, // reference to the cancelled appointment
+    start_at: s.scheduledAt,
+    end_at: new Date(new Date(s.scheduledAt).getTime() + s.durationMin * 60_000).toISOString(),
+  }));
+
+  const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+
+  // Use the cancelled appointment as reference (or first backfill slot's appointment)
+  const referenceApptId = recentAppt?.id ?? backfillSlots[0].appointmentId;
+
+  const { error: proposalError } = await supabase
+    .from("slot_proposals")
+    .insert({
+      tenant_id: input.tenantId,
+      appointment_id: referenceApptId,
+      patient_id: input.patientId,
+      proposed_slots: proposedSlots,
+      status: "pending",
+      expires_at: expiresAt.toISOString(),
+    });
+
+  if (proposalError) {
+    console.error("[Router] Slot proposal creation failed:", proposalError);
+    return {
+      reply: `Sei stato inserito in lista d'attesa per ${serviceName}. Ti contatteremo appena si libera un posto!`,
+      action: "joined_waitlist",
+    };
+  }
+
+  // Build message with backfill slot options
+  const lines = [
+    `Sei in lista d'attesa per ${serviceName}. Abbiamo gia' degli slot disponibili:`,
+    "",
+  ];
+
+  for (const slot of backfillSlots) {
+    const idx = backfillSlots.indexOf(slot) + 1;
+    const providerSuffix = slot.providerName ? ` con ${slot.providerName}` : "";
+    lines.push(`*${idx}* - ${slot.dayLabel} alle ${slot.timeLabel}${providerSuffix}`);
+  }
+
+  lines.push(
+    "",
+    "Rispondi con il numero per prenotare, oppure scrivi il giorno e l'ora che preferisci e verificheremo la disponibilita'."
+  );
+
   return {
-    reply: `Sei stato inserito in lista d'attesa per ${serviceName}. Ti contatteremo appena si libera un posto adatto a te!`,
-    action: "joined_waitlist",
+    reply: lines.join("\n"),
+    action: "joined_waitlist_with_slots",
   };
 }
 
