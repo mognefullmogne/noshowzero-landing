@@ -160,30 +160,33 @@ export async function PATCH(
       metadata: { from: currentStatus, to: newStatus },
     });
 
-    // Trigger waitlist backfill on cancellation or no-show (non-blocking)
+    // Trigger backfill + smart rebook on cancellation/no-show.
+    // MUST be awaited — on Vercel serverless, fire-and-forget promises get killed
+    // when the response is returned.
     if (newStatus === "cancelled" || newStatus === "no_show") {
-      createServiceClient()
-        .then((serviceClient) => triggerBackfill(serviceClient, id, auth.data.tenantId))
-        .catch((err) => console.error("[Backfill] Trigger failed:", err));
+      try {
+        const serviceClient = await createServiceClient();
+        await triggerBackfill(serviceClient, id, auth.data.tenantId);
+      } catch (err) {
+        console.error("[Backfill] Trigger failed:", err);
+      }
     }
 
-    // Send smart rebooking suggestion on cancellation (non-blocking, fire-and-forget)
     if (newStatus === "cancelled" && updated.patient?.phone) {
-      const patientPhone = updated.patient.phone;
-      const tenantId = auth.data.tenantId;
-      createServiceClient()
-        .then(async (serviceClient) => {
-          const suggestions = await generateRebookingSuggestions(serviceClient, tenantId, updated.patient_id, {
-            id: updated.id,
-            service_name: updated.service_name,
-            provider_name: updated.provider_name ?? null,
-            location_name: updated.location_name ?? null,
-            scheduled_at: updated.scheduled_at,
-            duration_min: updated.duration_min,
-          });
-          await sendNotification({ to: patientPhone, body: suggestions.message, channel: "whatsapp", tenantId });
-        })
-        .catch((err) => console.error("[SmartRebook] Trigger failed:", err));
+      try {
+        const serviceClient = await createServiceClient();
+        const suggestions = await generateRebookingSuggestions(serviceClient, auth.data.tenantId, updated.patient_id, {
+          id: updated.id,
+          service_name: updated.service_name,
+          provider_name: updated.provider_name ?? null,
+          location_name: updated.location_name ?? null,
+          scheduled_at: updated.scheduled_at,
+          duration_min: updated.duration_min,
+        });
+        await sendNotification({ to: updated.patient.phone, body: suggestions.message, channel: "whatsapp", tenantId: auth.data.tenantId });
+      } catch (err) {
+        console.error("[SmartRebook] Trigger failed:", err);
+      }
     }
 
     // After any appointment status change, run the full engine to catch any cascading work.

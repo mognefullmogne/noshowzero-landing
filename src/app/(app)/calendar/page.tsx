@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Plus,
   Loader2,
-  User,
   X,
   Zap,
 } from "lucide-react";
@@ -346,9 +345,24 @@ export default function CalendarPage() {
 
   // Group appointments by day index, then layout for overlaps
   const layoutByDay = useMemo(() => {
+    // Build a set of "scheduled_at|provider_name" keys for active appointments.
+    // A cancelled (purple) slot is hidden when an active appointment exists at
+    // the same time + same provider (i.e. the slot was filled by backfill or
+    // a new manual appointment).
+    const filledSlotKeys = new Set(
+      appointments
+        .filter((a) => !["cancelled", "declined", "no_show", "timeout"].includes(a.status))
+        .map((a) => `${a.scheduled_at}|${a.provider_name ?? ""}`)
+    );
+
     const byDay: Record<number, CalendarAppointment[]> = {};
     for (const appt of appointments) {
       if (appt.status === "declined") continue;
+      // Hide cancelled slot if replaced by an active appointment (same time + provider)
+      if (appt.status === "cancelled") {
+        const key = `${appt.scheduled_at}|${appt.provider_name ?? ""}`;
+        if (filledSlotKeys.has(key)) continue;
+      }
       const d = new Date(appt.scheduled_at);
       const dayIdx = (d.getDay() + 6) % 7;
       if (dayIdx > 4) continue;

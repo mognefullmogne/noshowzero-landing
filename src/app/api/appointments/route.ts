@@ -12,7 +12,6 @@ import {
 import { computeRiskScore } from "@/lib/scoring/risk-score";
 import { generateContactSchedule, scheduleToReminders } from "@/lib/scoring/contact-timing";
 import { createConfirmationWorkflow } from "@/lib/confirmation/workflow";
-import { calculateConfirmationDeadline } from "@/lib/confirmation/timing";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { markMessageSent } from "@/lib/confirmation/workflow";
 import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
@@ -305,21 +304,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create confirmation workflow and, if the send window is already open, send immediately.
-    createAndMaybeSendConfirmation(
-      supabase,
-      auth.data.tenantId,
-      appointment.id,
-      scheduledAt,
-      riskResult.score,
-      patientId,
-      preferredChannel,
-      {
-        service_name: appointmentData.service_name,
-        provider_name: appointmentData.provider_name ?? null,
-        location_name: appointmentData.location_name ?? null,
-      }
-    ).catch((err) => console.error("[Appointments] Confirmation workflow error:", err));
+    // Send immediate WhatsApp/SMS confirmation to the patient.
+    // MUST be awaited — on Vercel serverless, fire-and-forget promises get killed
+    // when the response is returned, so the message would never actually send.
+    try {
+      await createAndMaybeSendConfirmation(
+        supabase,
+        auth.data.tenantId,
+        appointment.id,
+        scheduledAt,
+        riskResult.score,
+        patientId,
+        preferredChannel,
+        {
+          service_name: appointmentData.service_name,
+          provider_name: appointmentData.provider_name ?? null,
+          location_name: appointmentData.location_name ?? null,
+        }
+      );
+    } catch (err) {
+      console.error("[Appointments] Confirmation workflow error:", err);
+    }
 
     logAuditEvent({
       tenantId: auth.data.tenantId,
@@ -346,10 +351,13 @@ export async function POST(request: Request) {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a confirmation workflow for a new appointment.
- * If the send deadline is already in the past (i.e., the appointment is close enough
- * that we should confirm right now), send the message immediately rather than waiting
- * for the cron or opportunistic engine to pick it up.
+ * Create a confirmation workflow AND always send an immediate appointment
+ * confirmation to the patient via WhatsApp/SMS.
+ *
+ * The confirmation workflow handles the multi-touch escalation ladder
+ * (Touch 2: SMS reminder 24h before, Touch 3: final warning 6h before).
+ * But the patient should ALWAYS receive a notification the moment the
+ * appointment is created — regardless of how far out it is scheduled.
  */
 async function createAndMaybeSendConfirmation(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -365,11 +373,7 @@ async function createAndMaybeSendConfirmation(
     location_name: string | null;
   }
 ): Promise<void> {
-  // Calculate when we should send (based on risk score)
-  const sendDeadline = calculateConfirmationDeadline(scheduledAt, riskScore);
-  const now = new Date();
-
-  // Create the workflow record
+  // Create the workflow record for the escalation ladder
   const workflowId = await createConfirmationWorkflow(
     supabase,
     tenantId,
@@ -378,79 +382,75 @@ async function createAndMaybeSendConfirmation(
     riskScore
   );
 
-  // Send confirmation immediately when send deadline is already past.
-  // This covers both: workflow created (appointment soon) and workflow skipped
-  // (same-day appointments where the deadline was already in the past).
-  if (sendDeadline <= now) {
-    const { data: patient } = await supabase
-      .from("patients")
-      .select("id, first_name, last_name, phone, preferred_channel")
-      .eq("id", patientId)
-      .maybeSingle();
+  // Always send immediate confirmation to the patient
+  const { data: patient } = await supabase
+    .from("patients")
+    .select("id, first_name, last_name, phone, preferred_channel")
+    .eq("id", patientId)
+    .maybeSingle();
 
-    if (!patient?.phone) return;
+  if (!patient?.phone) return;
 
-    const dateStr = scheduledAt.toLocaleDateString("it-IT", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      timeZone: "Europe/Rome",
-    });
-    const timeStr = scheduledAt.toLocaleTimeString("it-IT", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Europe/Rome",
-    });
+  const dateStr = scheduledAt.toLocaleDateString("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Rome",
+  });
+  const timeStr = scheduledAt.toLocaleTimeString("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Rome",
+  });
 
-    const vars = {
-      patientName: `${patient.first_name} ${patient.last_name}`,
-      serviceName: apptMeta.service_name,
-      date: dateStr,
-      time: timeStr,
-      providerName: apptMeta.provider_name ?? undefined,
-      locationName: apptMeta.location_name ?? undefined,
-    };
+  const vars = {
+    patientName: `${patient.first_name} ${patient.last_name}`,
+    serviceName: apptMeta.service_name,
+    date: dateStr,
+    time: timeStr,
+    providerName: apptMeta.provider_name ?? undefined,
+    locationName: apptMeta.location_name ?? undefined,
+  };
 
-    const channel = preferredChannel;
-    const body =
-      channel === "whatsapp"
-        ? renderConfirmationWhatsApp(vars)
-        : renderConfirmationSms(vars);
+  const channel = preferredChannel;
+  const body =
+    channel === "whatsapp"
+      ? renderConfirmationWhatsApp(vars)
+      : renderConfirmationSms(vars);
 
-    const contentSid = channel === "whatsapp" ? CONTENT_SIDS.appointment_confirmation : undefined;
-    const contentVariables = channel === "whatsapp"
-      ? buildConfirmationVars({
-          patientName: vars.patientName,
-          serviceName: vars.serviceName,
-          date: vars.date,
-          time: vars.time,
-        })
-      : undefined;
+  const contentSid = channel === "whatsapp" ? CONTENT_SIDS.appointment_confirmation : undefined;
+  const contentVariables = channel === "whatsapp"
+    ? buildConfirmationVars({
+        patientName: vars.patientName,
+        serviceName: vars.serviceName,
+        date: vars.date,
+        time: vars.time,
+      })
+    : undefined;
 
-    const result = await sendMessage(supabase, {
-      tenantId,
-      patientId: patient.id,
-      patientPhone: patient.phone,
-      channel,
-      body,
-      contextAppointmentId: appointmentId,
-      contentSid,
-      contentVariables,
-    });
+  const result = await sendMessage(supabase, {
+    tenantId,
+    patientId: patient.id,
+    patientPhone: patient.phone,
+    channel,
+    body,
+    contextAppointmentId: appointmentId,
+    contentSid,
+    contentVariables,
+  });
 
-    if (result.success) {
-      if (workflowId && result.message) {
-        await markMessageSent(supabase, workflowId, result.message.id);
-      }
-      console.info(
-        `[Appointments] Conferma inviata immediatamente per appuntamento ${appointmentId}`
-      );
-    } else {
-      console.error(
-        "[Appointments] Invio conferma immediata fallito:",
-        appointmentId,
-        result.error
-      );
+  if (result.success) {
+    if (workflowId && result.message) {
+      await markMessageSent(supabase, workflowId, result.message.id);
     }
+    console.info(
+      `[Appointments] Conferma inviata immediatamente per appuntamento ${appointmentId}`
+    );
+  } else {
+    console.error(
+      "[Appointments] Invio conferma immediata fallito:",
+      appointmentId,
+      result.error
+    );
   }
 }
