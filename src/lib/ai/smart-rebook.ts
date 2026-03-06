@@ -37,15 +37,40 @@ interface GapSlot {
 // Calendar gap finder
 // ---------------------------------------------------------------------------
 
-/** Business hours: 9:00 - 18:00 */
+/** Business hours in tenant local time: 9:00 - 18:00 */
 const BIZ_START_HOUR = 9;
 const BIZ_END_HOUR = 18;
 const MAX_DAYS_AHEAD = 7;
 const MAX_SLOTS = 3;
 
+/** Tenant timezone — all slot times are displayed and compared in this zone. */
+const TENANT_TIMEZONE = "Europe/Rome";
+
+/**
+ * Convert "YYYY-MM-DD" + hour in a local timezone to UTC milliseconds.
+ * Strategy: create a UTC timestamp for that hour, check what local hour it
+ * corresponds to, then shift to find the UTC time where local hour matches.
+ */
+function localToUtcMs(dayStr: string, hour: number, tz: string): number {
+  const utcMs = Date.UTC(
+    parseInt(dayStr.slice(0, 4)),
+    parseInt(dayStr.slice(5, 7)) - 1,
+    parseInt(dayStr.slice(8, 10)),
+    hour, 0, 0
+  );
+  const d = new Date(utcMs);
+  const localHour =
+    parseInt(
+      new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hour12: false }).format(d)
+    ) % 24;
+  // Shift so that the resulting UTC time corresponds to `hour` in local timezone
+  return utcMs + (hour - localHour) * 3_600_000;
+}
+
 /**
  * Find gaps in the tenant's calendar for the next 7 business days.
- * A "gap" is a period during business hours where no appointment is scheduled.
+ * All times are computed in TENANT_TIMEZONE so business hours and day labels
+ * match what patients see in the app.
  */
 async function findCalendarGaps(
   supabase: SupabaseClient,
@@ -56,16 +81,21 @@ async function findCalendarGaps(
   const gaps: GapSlot[] = [];
 
   for (let dayOffset = 1; dayOffset <= MAX_DAYS_AHEAD && gaps.length < MAX_SLOTS; dayOffset++) {
-    const date = new Date(now);
-    date.setDate(date.getDate() + dayOffset);
+    const candidateMs = now.getTime() + dayOffset * 24 * 60 * 60 * 1000;
+    const candidate = new Date(candidateMs);
+
+    // Get local date string (YYYY-MM-DD) and day-of-week in tenant timezone
+    const localDateStr = new Intl.DateTimeFormat("en-CA", { timeZone: TENANT_TIMEZONE }).format(candidate);
+    const localDow = new Date(candidate.toLocaleString("en-US", { timeZone: TENANT_TIMEZONE })).getDay();
 
     // Skip weekends (0=Sun, 6=Sat)
-    const dow = date.getDay();
-    if (dow === 0 || dow === 6) continue;
+    if (localDow === 0 || localDow === 6) continue;
 
-    const dayStr = date.toISOString().slice(0, 10);
-    const dayStart = `${dayStr}T${String(BIZ_START_HOUR).padStart(2, "0")}:00:00`;
-    const dayEnd = `${dayStr}T${String(BIZ_END_HOUR).padStart(2, "0")}:00:00`;
+    // Business hours boundaries in UTC (so DB comparisons are correct)
+    const bizStartMs = localToUtcMs(localDateStr, BIZ_START_HOUR, TENANT_TIMEZONE);
+    const bizEndMs = localToUtcMs(localDateStr, BIZ_END_HOUR, TENANT_TIMEZONE);
+    const dayStart = new Date(bizStartMs).toISOString();
+    const dayEnd = new Date(bizEndMs).toISOString();
 
     // Fetch existing appointments for this day
     const { data: appts } = await supabase
@@ -85,9 +115,7 @@ async function findCalendarGaps(
     });
 
     // Find gaps between occupied intervals during business hours
-    const bizStart = new Date(dayStart).getTime();
-    const bizEnd = new Date(dayEnd).getTime();
-    let cursor = bizStart;
+    let cursor = bizStartMs;
 
     for (const interval of occupied) {
       if (interval.start > cursor) {
@@ -101,8 +129,8 @@ async function findCalendarGaps(
     }
 
     // Check gap after last appointment until end of business hours
-    if (gaps.length < MAX_SLOTS && cursor < bizEnd) {
-      const gapDuration = (bizEnd - cursor) / 60_000;
+    if (gaps.length < MAX_SLOTS && cursor < bizEndMs) {
+      const gapDuration = (bizEndMs - cursor) / 60_000;
       if (gapDuration >= durationMin) {
         gaps.push(buildGapSlot(new Date(cursor), durationMin));
       }
@@ -118,11 +146,13 @@ function buildGapSlot(startDate: Date, durationMin: number): GapSlot {
     startAt: startDate.toISOString(),
     endAt: endDate.toISOString(),
     dayLabel: startDate.toLocaleDateString("it-IT", {
+      timeZone: TENANT_TIMEZONE,
       weekday: "long",
       day: "numeric",
       month: "long",
     }),
     timeLabel: startDate.toLocaleTimeString("it-IT", {
+      timeZone: TENANT_TIMEZONE,
       hour: "2-digit",
       minute: "2-digit",
     }),

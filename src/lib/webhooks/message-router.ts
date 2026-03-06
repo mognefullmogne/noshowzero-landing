@@ -356,8 +356,9 @@ async function handleSlotSelect(
     }
 
     const date = new Date(selected.start_at);
-    const dateStr = date.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
-    const timeStr = date.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    const TENANT_TIMEZONE = "Europe/Rome";
+    const dateStr = date.toLocaleDateString("it-IT", { timeZone: TENANT_TIMEZONE, weekday: "long", day: "numeric", month: "long" });
+    const timeStr = date.toLocaleTimeString("it-IT", { timeZone: TENANT_TIMEZONE, hour: "2-digit", minute: "2-digit" });
 
     return {
       reply: `Perfetto! Il tuo appuntamento e' confermato per ${dateStr} alle ${timeStr}. Ti aspettiamo!`,
