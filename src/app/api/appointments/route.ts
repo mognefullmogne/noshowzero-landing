@@ -15,7 +15,7 @@ import { createConfirmationWorkflow } from "@/lib/confirmation/workflow";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { markMessageSent } from "@/lib/confirmation/workflow";
 import { renderNotificationWhatsApp, renderNotificationSms } from "@/lib/confirmation/templates";
-import { CONTENT_SIDS, buildConfirmationVars } from "@/lib/twilio/content-templates";
+import { CONTENT_SIDS, buildNotificationVars } from "@/lib/twilio/content-templates";
 import { maybeProcessPending } from "@/lib/engine/process-pending";
 import { autoScoreAppointments } from "@/lib/scoring/auto-score";
 import type { Patient, MessageChannel } from "@/lib/types";
@@ -415,18 +415,15 @@ async function createAndMaybeSendConfirmation(
   const channel = preferredChannel;
   // First message is informational only — no SI/NO confirmation request.
   // The confirmation request comes later via the reminder (X hours before).
-  // WhatsApp uses the Content Template for reliable delivery (required outside
-  // 24h window). SMS uses the notification-only text.
-  // TODO: submit a notification-only Content Template to Meta to replace
-  // appointment_confirmation for this first message.
+  // WhatsApp uses the notification-only Content Template (no quick-reply buttons).
   const body =
     channel === "whatsapp"
       ? renderNotificationWhatsApp(vars)
       : renderNotificationSms(vars);
 
-  const contentSid = channel === "whatsapp" ? CONTENT_SIDS.appointment_confirmation : undefined;
+  const contentSid = channel === "whatsapp" ? CONTENT_SIDS.appointment_notification : undefined;
   const contentVariables = channel === "whatsapp"
-    ? buildConfirmationVars({
+    ? buildNotificationVars({
         patientName: vars.patientName,
         serviceName: vars.serviceName,
         date: vars.date,

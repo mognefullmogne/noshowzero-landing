@@ -75,7 +75,8 @@ function localToUtcMs(dayStr: string, hour: number, tz: string): number {
 export async function findCalendarGaps(
   supabase: SupabaseClient,
   tenantId: string,
-  durationMin: number
+  durationMin: number,
+  options?: { excludeSlotAt?: string }
 ): Promise<readonly GapSlot[]> {
   const now = new Date();
   const gaps: GapSlot[] = [];
@@ -135,6 +136,16 @@ export async function findCalendarGaps(
         gaps.push(buildGapSlot(new Date(cursor), durationMin));
       }
     }
+  }
+
+  // Exclude the cancelled appointment's own slot — the patient can't make that time
+  if (options?.excludeSlotAt) {
+    const excludeMs = new Date(options.excludeSlotAt).getTime();
+    const tolerance = durationMin * 60_000; // overlap window = service duration
+    return gaps.filter((g) => {
+      const gapMs = new Date(g.startAt).getTime();
+      return Math.abs(gapMs - excludeMs) >= tolerance;
+    });
   }
 
   return gaps;
@@ -272,11 +283,12 @@ export async function generateRebookingSuggestions(
     return { message: "", suggestedSlots: [] };
   }
 
-  // Find calendar gaps
+  // Find calendar gaps — exclude the cancelled slot (patient can't make that time)
   const gaps = await findCalendarGaps(
     supabase,
     tenantId,
-    cancelledAppointment.duration_min
+    cancelledAppointment.duration_min,
+    { excludeSlotAt: cancelledAppointment.scheduled_at }
   );
 
   // Create proposal + build message (does NOT send — caller includes in TwiML reply)

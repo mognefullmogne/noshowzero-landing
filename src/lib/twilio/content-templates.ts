@@ -11,6 +11,9 @@
 
 /** Registry of approved Content SIDs keyed by template name. */
 export const CONTENT_SIDS = {
+  /** Notification-only first message (no SI/NO). Pending Meta approval. */
+  appointment_notification: "HX872e96ad30837f3d313731ab657376f6",
+  /** Confirmation request with SI/NO quick-reply (used for Touch 1 reminder). */
   appointment_confirmation: "HX692673826556aac6f477f66f3a5831a9",
   backfill_offer: "HX9fd4c0a9fcece8d9f3d66df6cc1766de",
   appointment_reminder: "HXc7700b93275ace01bfbc8a8db18457d5",
@@ -22,6 +25,24 @@ export type ContentTemplateName = keyof typeof CONTENT_SIDS;
 
 /** Messaging Service SID — required when sending Content Templates via Twilio. */
 export const MESSAGING_SERVICE_SID = "MG2b3b5573ab7a04bf5428a5c563846fe7";
+
+/**
+ * Build contentVariables JSON for the appointment_notification template.
+ * Variables: {{1}}=name, {{2}}=service, {{3}}=date, {{4}}=time
+ */
+export function buildNotificationVars(params: {
+  readonly patientName: string;
+  readonly serviceName: string;
+  readonly date: string;
+  readonly time: string;
+}): string {
+  return JSON.stringify({
+    "1": params.patientName,
+    "2": params.serviceName,
+    "3": params.date,
+    "4": params.time,
+  });
+}
 
 /**
  * Build contentVariables JSON for the appointment_confirmation template.
