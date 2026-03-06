@@ -12,6 +12,7 @@ import { markMessageSent } from "@/lib/confirmation/workflow";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
 import { personalizeConfirmationMessage } from "@/lib/scoring/ai-confirmation-personalizer";
+import { CONTENT_SIDS, buildConfirmationVars } from "@/lib/twilio/content-templates";
 import type { MessageChannel } from "@/lib/types";
 import { verifyCronSecret } from "@/lib/cron-auth";
 
@@ -78,9 +79,24 @@ export async function GET(request: NextRequest) {
       const channel = (patient.preferred_channel as MessageChannel) ?? "whatsapp";
       const riskScore = typeof appt.risk_score === "number" ? appt.risk_score : null;
 
-      // Try AI-personalized message if risk_score is available
+      // WhatsApp initial confirmation: MUST use Content SID template (outside 24h window).
+      // AI personalization only applies to SMS where freeform text is always allowed.
       let body: string;
-      if (riskScore !== null && process.env.ANTHROPIC_API_KEY) {
+      let contentSid: string | undefined;
+      let contentVariables: string | undefined;
+
+      if (channel === "whatsapp") {
+        // Use approved WhatsApp template — required outside conversation window
+        contentSid = CONTENT_SIDS.appointment_confirmation;
+        contentVariables = buildConfirmationVars({
+          patientName: vars.patientName,
+          serviceName: vars.serviceName,
+          date: vars.date,
+          time: vars.time,
+        });
+        body = renderConfirmationWhatsApp(vars); // fallback body for SMS retry
+      } else if (riskScore !== null && process.env.ANTHROPIC_API_KEY) {
+        // SMS: AI personalization when risk score available
         const { count: noShowCount } = await supabase
           .from("appointments")
           .select("id", { count: "exact", head: true })
@@ -105,15 +121,12 @@ export async function GET(request: NextRequest) {
             previousNoShows: noShowCount ?? 0,
             totalAppointments: totalCount ?? 0,
           },
-          channel === "whatsapp" ? "whatsapp" : "sms"
+          "sms"
         );
 
         body = personalizeResult.message;
       } else {
-        body =
-          channel === "whatsapp"
-            ? renderConfirmationWhatsApp(vars)
-            : renderConfirmationSms(vars);
+        body = renderConfirmationSms(vars);
       }
 
       const result = await sendMessage(supabase, {
@@ -123,6 +136,8 @@ export async function GET(request: NextRequest) {
         channel,
         body,
         contextAppointmentId: wf.appointment_id,
+        contentSid,
+        contentVariables,
       });
 
       if (result.success && result.message) {

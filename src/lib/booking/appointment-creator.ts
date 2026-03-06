@@ -17,6 +17,7 @@ import { createConfirmationWorkflow, markMessageSent } from "@/lib/confirmation/
 import { calculateConfirmationDeadline } from "@/lib/confirmation/timing";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { renderConfirmationWhatsApp, renderConfirmationSms } from "@/lib/confirmation/templates";
+import { CONTENT_SIDS, buildConfirmationVars } from "@/lib/twilio/content-templates";
 import type { MessageChannel } from "@/lib/types";
 import { checkProviderConflict } from "./provider-conflict";
 
@@ -272,6 +273,16 @@ async function createAndMaybeSendConfirmation(
       ? renderConfirmationWhatsApp(vars)
       : renderConfirmationSms(vars);
 
+  const contentSid = channel === "whatsapp" ? CONTENT_SIDS.appointment_confirmation : undefined;
+  const contentVariables = channel === "whatsapp"
+    ? buildConfirmationVars({
+        patientName: vars.patientName,
+        serviceName: vars.serviceName,
+        date: vars.date,
+        time: vars.time,
+      })
+    : undefined;
+
   const result = await sendMessage(supabase, {
     tenantId,
     patientId: patient.id,
@@ -279,6 +290,8 @@ async function createAndMaybeSendConfirmation(
     channel,
     body,
     contextAppointmentId: appointmentId,
+    contentSid,
+    contentVariables,
   });
 
   if (result.success && result.message) {

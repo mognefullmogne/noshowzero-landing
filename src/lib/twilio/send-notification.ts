@@ -8,6 +8,7 @@
 
 import type { MessageChannel } from "@/lib/types";
 import { getTwilioClient, getTwilioWhatsAppFrom, getTwilioSmsFrom } from "./client";
+import { MESSAGING_SERVICE_SID } from "./content-templates";
 
 export interface SendResult {
   readonly externalMessageId: string;
@@ -22,6 +23,10 @@ interface SendParams {
   readonly channel: MessageChannel;
   readonly subject?: string; // only for email
   readonly tenantId?: string;
+  /** Twilio Content SID for WhatsApp templates (uses template instead of body). */
+  readonly contentSid?: string;
+  /** JSON-encoded template variables e.g. '{"1":"Marco","2":"Taglio"}'. */
+  readonly contentVariables?: string;
 }
 
 // Demo phone override DISABLED — was routing all messages to the owner's phone.
@@ -54,12 +59,21 @@ async function sendWithRetry(params: SendParams, attempt: number = 1): Promise<S
       : params.to.replace(/^whatsapp:/, "");
 
     if (params.channel === "whatsapp") {
-      const msg = await client.messages.create({
-        from: getTwilioWhatsAppFrom(),
-        to: `whatsapp:${effectiveTo}`,
-        body: params.body,
-        ...(statusCallback && { statusCallback }),
-      });
+      const whatsappPayload = params.contentSid
+        ? {
+            messagingServiceSid: MESSAGING_SERVICE_SID,
+            to: `whatsapp:${effectiveTo}`,
+            contentSid: params.contentSid,
+            contentVariables: params.contentVariables,
+            ...(statusCallback && { statusCallback }),
+          }
+        : {
+            from: getTwilioWhatsAppFrom(),
+            to: `whatsapp:${effectiveTo}`,
+            body: params.body,
+            ...(statusCallback && { statusCallback }),
+          };
+      const msg = await client.messages.create(whatsappPayload);
       return { externalMessageId: msg.sid, provider: "twilio-whatsapp", status: "sent" };
     }
 
@@ -107,10 +121,11 @@ async function sendWithRetry(params: SendParams, attempt: number = 1): Promise<S
 export async function sendNotification(params: SendParams): Promise<SendResult> {
   const result = await sendWithRetry(params);
 
-  // Fallback: WhatsApp failure → retry as SMS
+  // Fallback: WhatsApp failure → retry as SMS (strip Content SID — templates are WhatsApp-only)
   if (result.status === "failed" && params.channel === "whatsapp") {
     console.warn("[Twilio] WhatsApp failed, falling back to SMS");
-    return sendWithRetry({ ...params, channel: "sms" });
+    const { contentSid: _, contentVariables: __, ...smsParams } = params;
+    return sendWithRetry({ ...smsParams, channel: "sms" });
   }
 
   return result;

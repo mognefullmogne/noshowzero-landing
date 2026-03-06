@@ -104,9 +104,10 @@ export async function POST(request: NextRequest) {
     }
 
     const rawBody = params.Body ?? "";
+    const buttonPayload = params.ButtonPayload ?? "";
     const from = params.From ?? "";
 
-    if (!rawBody || !from) {
+    if ((!rawBody && !buttonPayload) || !from) {
       return twimlResponse("");
     }
 
@@ -200,10 +201,25 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Webhook] Found patient=${patient.id.slice(0, 8)}... for phone ***${phoneNumber.slice(-4)}`);
 
-    // 1. Classify intent via regex
-    const classification = classifyIntent(body);
-    let intent: MessageIntent = classification.intent;
-    let confidence = classification.confidence;
+    // 0. Quick Reply button payload → direct intent (highest confidence)
+    const BUTTON_PAYLOAD_MAP: Record<string, MessageIntent> = {
+      accept: "confirm",
+      decline: "cancel",
+    };
+
+    // 1. Classify intent via regex (or button payload shortcut)
+    let intent: MessageIntent;
+    let confidence: number;
+
+    if (buttonPayload && BUTTON_PAYLOAD_MAP[buttonPayload]) {
+      intent = BUTTON_PAYLOAD_MAP[buttonPayload];
+      confidence = 1.0;
+      console.log(`[Webhook] Button payload: ${buttonPayload} → ${intent}`);
+    } else {
+      const classification = classifyIntent(body);
+      intent = classification.intent;
+      confidence = classification.confidence;
+    }
 
     // 2. AI fallback for unknown intents
     if (intent === "unknown" && process.env.ANTHROPIC_API_KEY) {

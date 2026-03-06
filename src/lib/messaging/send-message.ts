@@ -19,6 +19,10 @@ interface SendMessageInput {
   readonly body: string;
   readonly contextAppointmentId?: string;
   readonly contextOfferId?: string;
+  /** Twilio Content SID for WhatsApp templates (uses template instead of body). */
+  readonly contentSid?: string;
+  /** JSON-encoded template variables e.g. '{"1":"Marco","2":"Taglio"}'. */
+  readonly contentVariables?: string;
 }
 
 interface SendMessageResult {
@@ -74,6 +78,8 @@ export async function sendMessage(
     body: input.body,
     channel: effectiveChannel,
     tenantId: input.tenantId,
+    contentSid: input.contentSid,
+    contentVariables: input.contentVariables,
   });
 
   // Log message event

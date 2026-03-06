@@ -15,6 +15,7 @@ import {
   renderConfirmationWhatsApp,
   renderConfirmationSms,
 } from "@/lib/confirmation/templates";
+import { CONTENT_SIDS, buildConfirmationVars } from "@/lib/twilio/content-templates";
 import type { MessageChannel } from "@/lib/types";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -126,12 +127,25 @@ export async function POST(
     // Delivery channel — email falls back to SMS
     const deliveryChannel: "whatsapp" | "sms" = channel === "whatsapp" ? "whatsapp" : "sms";
 
+    // WhatsApp: use Content SID template (required outside 24h conversation window)
+    const contentSid = deliveryChannel === "whatsapp" ? CONTENT_SIDS.appointment_confirmation : undefined;
+    const contentVariables = deliveryChannel === "whatsapp"
+      ? buildConfirmationVars({
+          patientName: vars.patientName,
+          serviceName: vars.serviceName,
+          date: vars.date,
+          time: vars.time,
+        })
+      : undefined;
+
     // Send via Twilio (with retry + fallback)
     const result = await sendNotification({
       to: patient.phone,
       body,
       channel: deliveryChannel,
       tenantId: auth.data.tenantId,
+      contentSid,
+      contentVariables,
     });
 
     if (result.status === "failed") {

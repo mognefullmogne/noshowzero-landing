@@ -13,6 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendMessage } from "@/lib/messaging/send-message";
 import { markMessageSent, markReminderSent, markFinalWarningSent, markTimedOut, ESCALATION_TOUCH_2_HOURS_BEFORE, ESCALATION_TOUCH_3_HOURS_BEFORE } from "@/lib/confirmation/workflow";
 import { renderConfirmationWhatsApp, renderConfirmationSms, renderReminderSms, renderFinalWarningWhatsApp, renderFinalWarningSms } from "@/lib/confirmation/templates";
+import { CONTENT_SIDS, buildConfirmationVars } from "@/lib/twilio/content-templates";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
 import { checkExpiredOffers } from "@/lib/backfill/check-expired-offers";
 import { detectNoShows } from "@/lib/intelligence/no-show-detector";
@@ -189,6 +190,17 @@ async function sendDueConfirmations(
           ? renderConfirmationWhatsApp(vars)
           : renderConfirmationSms(vars);
 
+      // WhatsApp: use Content SID template (required outside 24h conversation window)
+      const contentSid = channel === "whatsapp" ? CONTENT_SIDS.appointment_confirmation : undefined;
+      const contentVariables = channel === "whatsapp"
+        ? buildConfirmationVars({
+            patientName: vars.patientName,
+            serviceName: vars.serviceName,
+            date: vars.date,
+            time: vars.time,
+          })
+        : undefined;
+
       const result = await sendMessage(supabase, {
         tenantId: wf.tenant_id,
         patientId: patient.id,
@@ -196,6 +208,8 @@ async function sendDueConfirmations(
         channel,
         body,
         contextAppointmentId: wf.appointment_id,
+        contentSid,
+        contentVariables,
       });
 
       if (result.success && result.message) {
