@@ -378,8 +378,10 @@ async function createAndMaybeSendConfirmation(
     riskScore
   );
 
-  // If the send deadline is already passed (appointment is soon enough), send now
-  if (workflowId && sendDeadline <= now) {
+  // Send confirmation immediately when send deadline is already past.
+  // This covers both: workflow created (appointment soon) and workflow skipped
+  // (same-day appointments where the deadline was already in the past).
+  if (sendDeadline <= now) {
     const { data: patient } = await supabase
       .from("patients")
       .select("id, first_name, last_name, phone, preferred_channel")
@@ -392,10 +394,12 @@ async function createAndMaybeSendConfirmation(
       weekday: "long",
       day: "numeric",
       month: "long",
+      timeZone: "Europe/Rome",
     });
     const timeStr = scheduledAt.toLocaleTimeString("it-IT", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Europe/Rome",
     });
 
     const vars = {
@@ -434,8 +438,10 @@ async function createAndMaybeSendConfirmation(
       contentVariables,
     });
 
-    if (result.success && result.message) {
-      await markMessageSent(supabase, workflowId, result.message.id);
+    if (result.success) {
+      if (workflowId && result.message) {
+        await markMessageSent(supabase, workflowId, result.message.id);
+      }
       console.info(
         `[Appointments] Conferma inviata immediatamente per appuntamento ${appointmentId}`
       );
