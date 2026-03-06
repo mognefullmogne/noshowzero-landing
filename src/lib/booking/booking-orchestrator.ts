@@ -199,7 +199,38 @@ async function handleAwaitingService(
   session: BookingSession,
   input: BookingInput
 ): Promise<BookingResult> {
-  // Sanitize: strip control chars, trim, cap length
+  // Load active services for this tenant
+  const { data: dbServices } = await supabase
+    .from("services")
+    .select("id, name, duration_min, price, currency")
+    .eq("tenant_id", session.tenant_id)
+    .eq("is_active", true)
+    .order("name");
+
+  if (dbServices && dbServices.length > 0) {
+    // Try to parse a numeric selection
+    const numMatch = input.messageBody.trim().match(/^(\d+)$/);
+    const selectedIndex = numMatch ? parseInt(numMatch[1], 10) : null;
+
+    if (selectedIndex !== null && selectedIndex >= 1 && selectedIndex <= dbServices.length) {
+      const selectedService = dbServices[selectedIndex - 1];
+      await advanceSession(supabase, session.id, {
+        state: "awaiting_date",
+        collected_service: selectedService.name,
+        collected_service_id: selectedService.id,
+        attempts: 0,
+      });
+      return { reply: msg.ASK_DATE, action: "booking_service_collected" };
+    }
+
+    // Not a valid number — show the list
+    return {
+      reply: msg.listServices(dbServices),
+      action: "booking_service_list_shown",
+    };
+  }
+
+  // No services in DB — fall back to free text
   const service = input.messageBody
     .replace(/[\x00-\x1F\x7F]/g, " ")
     .trim()
@@ -212,6 +243,7 @@ async function handleAwaitingService(
   await advanceSession(supabase, session.id, {
     state: "awaiting_date",
     collected_service: service,
+    collected_service_id: null,
     attempts: 0,
   });
 

@@ -18,6 +18,7 @@ import {
   BookOpen,
   CreditCard,
   Settings,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,6 +44,7 @@ export const DEFAULT_SIDEBAR_LINKS: readonly SidebarLink[] = [
   { label: "Statistiche", href: "/analytics", icon: BarChart3 },
   { label: "Documentazione API", href: "/docs", icon: BookOpen },
   { label: "Fatturazione", href: "/billing", icon: CreditCard },
+  { label: "Organizzazione", href: "/organizzazione", icon: Building2 },
   { label: "Impostazioni", href: "/settings", icon: Settings },
 ];
 

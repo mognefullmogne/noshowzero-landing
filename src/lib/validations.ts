@@ -53,8 +53,10 @@ export const InlineCreateAppointmentSchema = z.object({
   ),
   // Appointment info
   service_name: z.string().min(1, "Service is required").max(255),
-  provider_name: z.string().min(1, "Provider is required").max(255),
-  location_name: z.string().min(1, "Location is required").max(255),
+  service_id: z.string().uuid().optional(),
+  provider_name: z.string().max(255).optional(),
+  operator_id: z.string().uuid().optional(),
+  location_name: z.string().max(255).optional(),
   scheduled_at: z.string().min(1, "Date & time is required").refine(
     (v) => !isNaN(new Date(v).getTime()),
     { message: "Invalid date/time" }

@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,6 +23,17 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Loader2, Phone, Mail, MessageCircle, X } from "lucide-react";
+
+interface ServiceOption {
+  readonly id: string;
+  readonly name: string;
+  readonly duration_min: number;
+}
+
+interface OperatorOption {
+  readonly id: string;
+  readonly name: string;
+}
 
 interface AppointmentDialogProps {
   readonly onCreated: () => void;
@@ -70,7 +81,9 @@ const PHONE_PREFIXES = [
 const INITIAL_FORM = {
   first_name: "",
   last_name: "",
+  service_id: "",
   service_name: "",
+  operator_id: "",
   provider_name: "",
   location_name: "",
   scheduled_at: "",
@@ -86,11 +99,62 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
   const [contacts, setContacts] = useState<readonly ContactEntry[]>([
     { channel: "whatsapp", prefix: "+39", value: "" },
   ]);
+  const [services, setServices] = useState<readonly ServiceOption[]>([]);
+  const [operators, setOperators] = useState<readonly OperatorOption[]>([]);
+
+  // Load services when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/services?active=true")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setServices(d.data); })
+      .catch(() => {});
+  }, [open]);
+
+  // Load operators when service changes
+  useEffect(() => {
+    if (!open) return;
+    const url = form.service_id
+      ? `/api/operators?active=true&service_id=${form.service_id}`
+      : "/api/operators?active=true";
+    fetch(url)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setOperators(d.data); })
+      .catch(() => {});
+  }, [open, form.service_id]);
 
   const updateField = useCallback(
     (field: keyof typeof INITIAL_FORM, value: string | number) =>
       setForm((prev) => ({ ...prev, [field]: value })),
     []
+  );
+
+  const handleServiceChange = useCallback(
+    (serviceId: string) => {
+      const svc = services.find((s) => s.id === serviceId);
+      setForm((prev) => ({
+        ...prev,
+        service_id: serviceId,
+        service_name: svc?.name ?? "",
+        duration_min: svc?.duration_min ?? prev.duration_min,
+        // Reset operator when service changes
+        operator_id: "",
+        provider_name: "",
+      }));
+    },
+    [services]
+  );
+
+  const handleOperatorChange = useCallback(
+    (operatorId: string) => {
+      const op = operators.find((o) => o.id === operatorId);
+      setForm((prev) => ({
+        ...prev,
+        operator_id: operatorId,
+        provider_name: op?.name ?? "",
+      }));
+    },
+    [operators]
   );
 
   const addContact = useCallback(() => {
@@ -125,8 +189,6 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
     form.last_name.trim() &&
     hasValidContact &&
     form.service_name.trim() &&
-    form.provider_name.trim() &&
-    form.location_name.trim() &&
     form.scheduled_at;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -154,8 +216,10 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
             preferred_channel: preferredChannel,
           },
           service_name: form.service_name.trim(),
-          provider_name: form.provider_name.trim(),
-          location_name: form.location_name.trim(),
+          service_id: form.service_id || undefined,
+          provider_name: form.provider_name.trim() || undefined,
+          operator_id: form.operator_id || undefined,
+          location_name: form.location_name.trim() || undefined,
           scheduled_at: form.scheduled_at,
           duration_min: form.duration_min,
           notes: form.notes.trim() || undefined,
@@ -171,6 +235,8 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
       setOpen(false);
       setForm(INITIAL_FORM);
       setContacts([{ channel: "whatsapp", prefix: "+39", value: "" }]);
+      setServices([]);
+      setOperators([]);
       onCreated();
     } catch {
       setError("Network error — please try again");
@@ -325,27 +391,59 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
                 <Label>
                   Service <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  value={form.service_name}
-                  onChange={(e) => updateField("service_name", e.target.value)}
-                  placeholder="e.g. Dental Checkup"
-                />
+                {services.length > 0 ? (
+                  <Select
+                    value={form.service_id}
+                    onValueChange={handleServiceChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona servizio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name} ({s.duration_min}min)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={form.service_name}
+                    onChange={(e) => updateField("service_name", e.target.value)}
+                    placeholder="e.g. Dental Checkup"
+                  />
+                )}
               </div>
               <div>
-                <Label>
-                  Provider <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  value={form.provider_name}
-                  onChange={(e) => updateField("provider_name", e.target.value)}
-                  placeholder="e.g. Dr. Smith"
-                />
+                <Label>Provider</Label>
+                {operators.length > 0 ? (
+                  <Select
+                    value={form.operator_id}
+                    onValueChange={handleOperatorChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona operatore" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {operators.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>
+                          {o.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={form.provider_name}
+                    onChange={(e) => updateField("provider_name", e.target.value)}
+                    placeholder="e.g. Dr. Smith"
+                  />
+                )}
               </div>
             </div>
             <div>
-              <Label>
-                Location <span className="text-red-500">*</span>
-              </Label>
+              <Label>Location</Label>
               <Input
                 value={form.location_name}
                 onChange={(e) => updateField("location_name", e.target.value)}

@@ -103,7 +103,9 @@ export async function POST(request: Request) {
     let preferredChannel: MessageChannel = "email";
     let appointmentData: {
       service_name: string;
+      service_id?: string;
       provider_name?: string;
+      operator_id?: string;
       location_name?: string;
       scheduled_at: string;
       duration_min: number;
@@ -167,7 +169,9 @@ export async function POST(request: Request) {
       const scheduledDate = new Date(apptInfo.scheduled_at);
       appointmentData = {
         service_name: apptInfo.service_name,
+        service_id: apptInfo.service_id,
         provider_name: apptInfo.provider_name,
+        operator_id: apptInfo.operator_id,
         location_name: apptInfo.location_name,
         scheduled_at: scheduledDate.toISOString(),
         duration_min: apptInfo.duration_min,

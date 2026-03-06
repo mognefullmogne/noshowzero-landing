@@ -78,3 +78,19 @@ export const SLOT_TAKEN =
 
 export const GENERIC_ERROR =
   "Si è verificato un errore. Riprova o contatta la segreteria.";
+
+export interface ServiceListItem {
+  readonly id: string;
+  readonly name: string;
+  readonly duration_min: number;
+  readonly price: number | null;
+  readonly currency: string;
+}
+
+export function listServices(services: readonly ServiceListItem[]): string {
+  const lines = services.map((s, i) => {
+    const price = s.price !== null ? ` — €${s.price}` : "";
+    return `${i + 1}. ${s.name} (${s.duration_min}min${price})`;
+  });
+  return `Quali servizi desideri prenotare?\n\n${lines.join("\n")}\n\nRispondi con il numero del servizio.`;
+}

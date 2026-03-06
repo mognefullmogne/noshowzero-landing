@@ -29,6 +29,7 @@ export interface BookingSession {
   readonly state: BookingSessionState;
   readonly collected_name: string | null;
   readonly collected_service: string | null;
+  readonly collected_service_id: string | null;
   readonly collected_date_raw: string | null;
   readonly collected_date: string | null;
   readonly proposed_slots: readonly ProposedSlotOption[] | null;
@@ -61,6 +62,7 @@ export interface BookingSessionRow {
   readonly state: BookingSessionState;
   readonly collected_name: string | null;
   readonly collected_service: string | null;
+  readonly collected_service_id: string | null;
   readonly collected_date_raw: string | null;
   readonly collected_date: string | null;
   readonly proposed_slots: readonly ProposedSlotOption[] | null;
