@@ -16,10 +16,15 @@ export async function GET() {
   if (!auth.ok) return auth.response;
 
   const { tenantId } = auth.data;
-  const state = createOAuthState(tenantId);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const redirectUri = `${appUrl}/api/integrations/google/callback`;
 
-  const authUrl = getGoogleAuthUrl(redirectUri, state);
-  return NextResponse.redirect(authUrl);
+  try {
+    const state = createOAuthState(tenantId);
+    const redirectUri = `${appUrl}/api/integrations/google/callback`;
+    const authUrl = getGoogleAuthUrl(redirectUri, state);
+    return NextResponse.redirect(authUrl);
+  } catch (err) {
+    console.error("Google OAuth config error:", err);
+    return NextResponse.redirect(`${appUrl}/integrations?error=config_missing`);
+  }
 }
