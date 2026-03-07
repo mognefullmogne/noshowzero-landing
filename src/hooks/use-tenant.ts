@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Tenant {
@@ -26,8 +26,7 @@ export function useTenant() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchTenant() {
+  const fetchTenant = useCallback(async () => {
       const supabase = createClient();
       const {
         data: { user },
@@ -75,10 +74,11 @@ export function useTenant() {
 
       setTenant(data);
       setLoading(false);
-    }
-
-    fetchTenant();
   }, []);
 
-  return { tenant, loading, error };
+  useEffect(() => {
+    fetchTenant();
+  }, [fetchTenant]);
+
+  return { tenant, loading, error, refetch: fetchTenant };
 }

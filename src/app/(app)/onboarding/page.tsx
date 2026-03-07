@@ -179,7 +179,7 @@ export default function OnboardingPage() {
   }
 
   const STEP_LABELS = [
-    "Il tuo studio",
+    "Il tuo business",
     "Piano",
     "Pronti!",
   ];
@@ -233,17 +233,17 @@ export default function OnboardingPage() {
               <Building2 className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Raccontaci del tuo studio</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Raccontaci del tuo business</h1>
               <p className="text-sm text-gray-500">Ci aiuta a personalizzare la tua esperienza.</p>
             </div>
           </div>
 
           <div className="mt-8 space-y-6">
             <div>
-              <Label htmlFor="business-name">Nome dello studio *</Label>
+              <Label htmlFor="business-name">Nome del business *</Label>
               <Input
                 id="business-name"
-                placeholder="es. Studio Dentistico Rossi"
+                placeholder="es. Studio Rossi, Glow Beauty, ..."
                 className="mt-1 rounded-xl"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
@@ -256,7 +256,7 @@ export default function OnboardingPage() {
             <div>
               <Label>Settore <span className="text-gray-400 font-normal">(facoltativo)</span></Label>
               <p className="text-xs text-gray-400 mt-0.5">
-                Ci aiuta a ottimizzare le impostazioni AI per il tuo tipo di studio.
+                Ci aiuta a ottimizzare le impostazioni AI per il tuo tipo di attività.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {INDUSTRIES.map((ind) => (
@@ -475,7 +475,7 @@ export default function OnboardingPage() {
 
           <div className="mt-8 flex flex-col items-center gap-3">
             <Button
-              onClick={() => router.push("/dashboard")}
+              onClick={() => { window.location.href = "/dashboard"; }}
               className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 text-white shadow-lg shadow-blue-600/25"
             >
               Vai alla dashboard
