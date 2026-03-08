@@ -61,27 +61,53 @@ export async function GET(request: NextRequest) {
     const redirectUri = `${appUrl}/api/integrations/google/callback`;
     const tokens = await handleGoogleCallback(code, redirectUri);
 
+    if (!tokens.accessToken) {
+      console.error("[GoogleOAuth] Token exchange returned no access_token");
+      return NextResponse.redirect(`${appUrl}/integrations?error=oauth_failed`);
+    }
+
     // Upsert integration with encrypted tokens
-    await supabase.from("calendar_integrations").upsert(
-      {
-        tenant_id: tenantId,
-        provider: "google",
-        label: "Google Calendar",
-        access_token_enc: encryptToken(tokens.accessToken),
-        refresh_token_enc: encryptToken(tokens.refreshToken),
-        token_expires_at: tokens.expiresAt,
-        status: "active",
-        error_message: null,
-      },
-      { onConflict: "tenant_id,provider" }
-    );
+    const row: Record<string, unknown> = {
+      tenant_id: tenantId,
+      provider: "google",
+      label: "Google Calendar",
+      access_token_enc: encryptToken(tokens.accessToken),
+      token_expires_at: tokens.expiresAt,
+      status: "active",
+      error_message: null,
+    };
+
+    // refreshToken is only returned on first consent — don't overwrite with null on re-auth
+    if (tokens.refreshToken) {
+      row.refresh_token_enc = encryptToken(tokens.refreshToken);
+    }
+
+    const { error: upsertError } = await supabase
+      .from("calendar_integrations")
+      .upsert(row, { onConflict: "tenant_id,provider" });
+
+    if (upsertError) {
+      console.error("[GoogleOAuth] DB upsert failed:", {
+        code: upsertError.code,
+        message: upsertError.message,
+        details: upsertError.details,
+        hint: upsertError.hint,
+        tenantId,
+      });
+      return NextResponse.redirect(`${appUrl}/integrations?error=save_failed`);
+    }
 
     // Redirect to integrations page with success
     return NextResponse.redirect(
       `${appUrl}/integrations?connected=google`
     );
   } catch (err) {
-    console.error("[GoogleOAuth] Callback error:", err);
+    console.error("[GoogleOAuth] Callback error:", {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      tenantId,
+      hasCode: !!code,
+    });
     return NextResponse.redirect(
       `${appUrl}/integrations?error=oauth_failed`
     );

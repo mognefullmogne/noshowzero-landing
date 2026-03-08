@@ -60,25 +60,50 @@ export async function GET(request: NextRequest) {
     const redirectUri = `${appUrl}/api/integrations/outlook/callback`;
     const tokens = await handleOutlookCallback(code, redirectUri);
 
-    await supabase.from("calendar_integrations").upsert(
-      {
-        tenant_id: tenantId,
-        provider: "outlook",
-        label: "Outlook Calendar",
-        access_token_enc: encryptToken(tokens.accessToken),
-        refresh_token_enc: encryptToken(tokens.refreshToken),
-        token_expires_at: tokens.expiresAt,
-        status: "active",
-        error_message: null,
-      },
-      { onConflict: "tenant_id,provider" }
-    );
+    if (!tokens.accessToken) {
+      console.error("[OutlookOAuth] Token exchange returned no access_token");
+      return NextResponse.redirect(`${appUrl}/integrations?error=oauth_failed`);
+    }
+
+    const row: Record<string, unknown> = {
+      tenant_id: tenantId,
+      provider: "outlook",
+      label: "Outlook Calendar",
+      access_token_enc: encryptToken(tokens.accessToken),
+      token_expires_at: tokens.expiresAt,
+      status: "active",
+      error_message: null,
+    };
+
+    if (tokens.refreshToken) {
+      row.refresh_token_enc = encryptToken(tokens.refreshToken);
+    }
+
+    const { error: upsertError } = await supabase
+      .from("calendar_integrations")
+      .upsert(row, { onConflict: "tenant_id,provider" });
+
+    if (upsertError) {
+      console.error("[OutlookOAuth] DB upsert failed:", {
+        code: upsertError.code,
+        message: upsertError.message,
+        details: upsertError.details,
+        hint: upsertError.hint,
+        tenantId,
+      });
+      return NextResponse.redirect(`${appUrl}/integrations?error=save_failed`);
+    }
 
     return NextResponse.redirect(
       `${appUrl}/integrations?connected=outlook`
     );
   } catch (err) {
-    console.error("[OutlookOAuth] Callback error:", err);
+    console.error("[OutlookOAuth] Callback error:", {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      tenantId,
+      hasCode: !!code,
+    });
     return NextResponse.redirect(
       `${appUrl}/integrations?error=oauth_failed`
     );
