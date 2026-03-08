@@ -142,12 +142,14 @@ async function syncGoogle(
 ): Promise<ImportResult> {
   const accessToken = await ensureValidGoogleToken(supabase, integration);
   const calendarIds = (integration.calendar_ids ?? []) as string[];
-  const syncToken = integration.sync_token ?? undefined;
 
   if (calendarIds.length === 0) {
     // Default to primary calendar
     calendarIds.push("primary");
   }
+
+  // sync_token is per-calendar — stored as JSON map { calId: token }
+  const syncTokenMap = parseSyncTokenMap(integration.sync_token);
 
   let totalResult: ImportResult = {
     total: 0, imported: 0, skipped: 0, failed: 0, errors: [],
@@ -157,7 +159,7 @@ async function syncGoogle(
     const { events, nextSyncToken } = await fetchGoogleEvents(
       accessToken,
       calId,
-      syncToken
+      syncTokenMap[calId]
     );
 
     const result = await importCalendarEvents(
@@ -168,16 +170,36 @@ async function syncGoogle(
 
     totalResult = mergeResults(totalResult, result);
 
-    // Store sync token for incremental sync
+    // Update per-calendar sync token
     if (nextSyncToken) {
-      await supabase
-        .from("calendar_integrations")
-        .update({ sync_token: nextSyncToken })
-        .eq("id", integration.id);
+      syncTokenMap[calId] = nextSyncToken;
     }
   }
 
+  // Persist all sync tokens as JSON map
+  await supabase
+    .from("calendar_integrations")
+    .update({ sync_token: JSON.stringify(syncTokenMap) })
+    .eq("id", integration.id);
+
   return totalResult;
+}
+
+/**
+ * Parse sync_token field: supports both legacy single-token string
+ * and new JSON map format { calendarId: syncToken }.
+ */
+function parseSyncTokenMap(raw: string | null): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, string>;
+    }
+  } catch {
+    // Legacy format: single token string — can't map to a calendar, discard
+  }
+  return {};
 }
 
 async function syncOutlook(
