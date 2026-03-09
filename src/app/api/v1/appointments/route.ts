@@ -7,6 +7,7 @@ import { authenticateApiKey } from "@/lib/api-key-auth";
 import { PublicCreateAppointmentSchema } from "@/lib/validations";
 import { computeRiskScore } from "@/lib/scoring/risk-score";
 import { generateContactSchedule, scheduleToReminders } from "@/lib/scoring/contact-timing";
+import { dispatchWebhookEvent } from "@/lib/webhooks/outbound";
 
 export async function POST(request: Request) {
   try {
@@ -143,6 +144,9 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Dispatch webhook for new appointment
+    try { await dispatchWebhookEvent(tenantId, "appointment.created", appointment); } catch { /* webhook delivery is best-effort */ }
 
     // Schedule reminders
     const schedule = generateContactSchedule(riskResult.score, preferredChannel as "email" | "sms" | "whatsapp");

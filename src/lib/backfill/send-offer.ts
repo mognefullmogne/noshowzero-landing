@@ -24,6 +24,7 @@ import {
 } from "@/lib/twilio/templates";
 import { CONTENT_SIDS, buildBackfillOfferVars } from "@/lib/twilio/content-templates";
 import { logAuditEvent } from "@/lib/audit/log-event";
+import { dispatchWebhookEvent } from "@/lib/webhooks/outbound";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -255,6 +256,19 @@ export async function sendOffer(
       channel: effectiveChannel,
     },
   });
+
+  // Dispatch webhook for slot offered
+  try {
+    await dispatchWebhookEvent(input.tenantId, "waitlist.slot_offered", {
+      offer_id: offerId,
+      original_appointment_id: input.originalAppointmentId,
+      patient_id: input.candidate.patientId,
+      patient_name: input.candidate.patientName,
+      service_name: input.serviceName,
+      scheduled_at: input.scheduledAt.toISOString(),
+      channel: effectiveChannel,
+    });
+  } catch { /* webhook delivery is best-effort */ }
 
   return { offerId, status: "sent" };
 }

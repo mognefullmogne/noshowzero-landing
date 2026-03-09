@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureRemindersScheduled } from "@/lib/reminders/schedule-reminders";
 import { triggerBackfill } from "./trigger-backfill";
+import { dispatchWebhookEvent } from "@/lib/webhooks/outbound";
 
 /**
  * Accept flow:
@@ -155,6 +156,19 @@ export async function processAccept(
     riskScore: 10, // Low risk — they actively accepted
     preferredChannel,
   });
+
+  // Dispatch webhook for slot filled
+  try {
+    await dispatchWebhookEvent(offer.tenant_id, "waitlist.slot_filled", {
+      offer_id: offerId,
+      original_appointment_id: offer.original_appointment_id,
+      new_appointment_id: newAppt.id,
+      patient_id: offer.patient_id,
+      service_name: originalAppt.service_name,
+      scheduled_at: originalAppt.scheduled_at,
+      freed_appointment_id: candidateApptId ?? null,
+    });
+  } catch { /* webhook delivery is best-effort */ }
 
   return {
     success: true,

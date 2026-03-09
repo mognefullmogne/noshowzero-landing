@@ -141,6 +141,14 @@ export const PublicCreateAppointmentSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
+export const PublicUpdateAppointmentSchema = z.object({
+  status: z.enum(["cancelled", "completed", "no_show"]).optional(),
+  cancellation_reason: z.string().max(2000).optional(),
+  scheduled_at: z.string().datetime().optional(),
+  duration_min: z.number().int().min(5).max(480).optional(),
+  notes: z.string().max(2000).optional(),
+});
+
 export const PublicUpsertPatientSchema = z.object({
   external_id: z.string().min(1).max(255),
   first_name: z.string().min(1).max(255),
@@ -148,6 +156,45 @@ export const PublicUpsertPatientSchema = z.object({
   phone: z.string().max(50).optional(),
   email: z.string().email().max(255).optional(),
   preferred_channel: z.enum(["whatsapp", "sms", "email"]).default("email"),
+});
+
+export const PublicChatMessageSchema = z.object({
+  message: z.string().min(1).max(4096),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string(),
+      })
+    )
+    .optional(),
+});
+
+export const PublicCreateWaitlistSchema = z.object({
+  patient_external_id: z.string().min(1).max(255),
+  service_name: z.string().min(1).max(255),
+  preferred_providers: z.array(z.string().max(255)).optional(),
+  preferred_times: z.array(z.string().max(255)).optional(),
+  urgency: z.enum(["none", "low", "medium", "high", "critical"]).default("none"),
+  notes: z.string().max(2000).optional(),
+});
+
+export const PublicWaitlistFiltersSchema = z.object({
+  status: z
+    .enum([
+      "waiting",
+      "offer_pending",
+      "offer_accepted",
+      "offer_declined",
+      "offer_timeout",
+      "fulfilled",
+      "expired",
+      "withdrawn",
+    ])
+    .optional(),
+  service_name: z.string().max(255).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  page: z.coerce.number().int().min(1).default(1),
 });
 
 // --- Query filters ---
@@ -324,6 +371,34 @@ export const AuditFiltersSchema = z.object({
   to: z.string().datetime().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+// --- Public API: Webhooks (v1) ---
+
+export const PublicCreateWebhookSchema = z.object({
+  url: z.string().url().max(2048),
+  events: z.array(z.string().min(1).max(100)).min(1).max(50),
+});
+
+export const PublicUpdateWebhookSchema = z.object({
+  url: z.string().url().max(2048).optional(),
+  events: z.array(z.string().min(1).max(100)).min(1).max(50).optional(),
+  is_active: z.boolean().optional(),
+});
+
+// --- Public API: Messages (v1) ---
+
+export const PublicSendMessageSchema = z.object({
+  patient_external_id: z.string().min(1).max(255),
+  message: z.string().min(1).max(4096),
+  channel: z.enum(["whatsapp", "sms"]).optional(),
+});
+
+export const PublicClassifyMessageSchema = z.object({
+  message: z.string().min(1).max(4096),
+  context: z.object({
+    appointment_id: z.string().uuid().optional(),
+  }).optional(),
 });
 
 // --- KPI ---

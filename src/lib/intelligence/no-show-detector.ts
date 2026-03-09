@@ -14,6 +14,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
+import { dispatchWebhookEvent } from "@/lib/webhooks/outbound";
 
 /** Appointments are considered no-show after this many minutes past their start. */
 const NOSHOW_THRESHOLD_MINUTES = 15;
@@ -100,6 +101,16 @@ export async function detectNoShows(
         ),
       },
     });
+
+    // Dispatch webhook for no-show detected
+    try {
+      await dispatchWebhookEvent(tenantId, "appointment.no_show", {
+        appointment_id: appt.id,
+        patient_id: appt.patient_id,
+        scheduled_at: appt.scheduled_at,
+        detected_at: new Date().toISOString(),
+      });
+    } catch { /* webhook delivery is best-effort */ }
 
     // Trigger cascade — the slot may be recoverable if it is part of a
     // same-day schedule where later candidates could still benefit

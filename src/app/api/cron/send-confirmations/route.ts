@@ -15,6 +15,7 @@ import { personalizeConfirmationMessage } from "@/lib/scoring/ai-confirmation-pe
 import { CONTENT_SIDS, buildConfirmationVars } from "@/lib/twilio/content-templates";
 import type { MessageChannel } from "@/lib/types";
 import { verifyCronSecret } from "@/lib/cron-auth";
+import { dispatchWebhookEvent } from "@/lib/webhooks/outbound";
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -24,7 +25,9 @@ export async function GET(request: NextRequest) {
   const supabase = await createServiceClient();
   const now = new Date().toISOString();
 
-  // Fetch workflows ready to send (past deadline, still pending_send)
+  // Fetch workflows ready for Touch 1 confirmation (SI/NO).
+  // Picks up notification_sent (notification already sent, deadline reached)
+  // and pending_send (notification was never sent, e.g. deadline already passed at creation).
   const { data: workflows, error } = await supabase
     .from("confirmation_workflows")
     .select(`
@@ -34,7 +37,7 @@ export async function GET(request: NextRequest) {
         patient:patients(id, first_name, last_name, phone, preferred_channel)
       )
     `)
-    .eq("state", "pending_send")
+    .in("state", ["notification_sent", "pending_send"])
     .lte("deadline_at", now)
     .limit(50);
 
@@ -142,6 +145,16 @@ export async function GET(request: NextRequest) {
 
       if (result.success && result.message) {
         await markMessageSent(supabase, wf.id, result.message.id);
+        // Dispatch webhook for reminder sent
+        try {
+          await dispatchWebhookEvent(wf.tenant_id, "reminder.sent", {
+            workflow_id: wf.id,
+            appointment_id: wf.appointment_id,
+            patient_id: patient.id as string,
+            channel,
+            sent_at: new Date().toISOString(),
+          });
+        } catch { /* webhook delivery is best-effort */ }
         sent++;
       } else {
         failed++;
