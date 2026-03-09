@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { tier, interval } = body as { tier: string; interval: string };
 
-    const VALID_TIERS = ["growth", "pro", "enterprise"] as const;
+    const VALID_TIERS = ["starter", "growth", "enterprise"] as const;
     const VALID_INTERVALS = ["monthly", "annual"] as const;
 
     if (

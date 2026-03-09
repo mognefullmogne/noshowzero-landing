@@ -86,8 +86,8 @@ export function PricingSection() {
                 <p className="mt-1 text-sm text-slate-500">{plan.description}</p>
 
                 <div className="mt-6">
-                  <span className="text-4xl font-extrabold text-slate-900">€{price}</span>
-                  <span className="text-slate-500">/mese</span>
+                  <span className="text-4xl font-extrabold text-slate-900">€{price.toLocaleString("it-IT")}</span>
+                  <span className="text-slate-500">{annual ? "/anno" : "/mese"}</span>
                 </div>
 
                 <Button

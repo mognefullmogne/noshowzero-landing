@@ -20,7 +20,7 @@ export const INDUSTRIES = [
   { name: "Professionisti", icon: "Briefcase", description: "Consulenza, legale, finanziario" },
 ] as const;
 
-export type PlanTier = "growth" | "pro" | "enterprise";
+export type PlanTier = "starter" | "growth" | "enterprise";
 
 export interface PricingPlan {
   readonly name: string;
@@ -40,44 +40,43 @@ export interface PricingPlan {
 
 export const PRICING_PLANS: readonly PricingPlan[] = [
   {
-    name: "Growth",
-    tier: "growth",
-    monthlyPrice: 199,
-    annualPrice: 169,
-    description: "Perfetto per professionisti singoli e piccoli studi.",
+    name: "Starter",
+    tier: "starter",
+    monthlyPrice: 90,
+    annualPrice: 864,
+    description: "Perfetto per professionisti singoli e freelance.",
     highlighted: false,
     cta: "Inizia la Prova Gratuita",
-    limits: { appointments: "1.000/mese", locations: "2", users: "5" },
+    limits: { appointments: "100/mese", locations: "1", users: "1" },
     features: [
-      "1.000 appuntamenti/mese",
-      "Fino a 2 sedi",
+      "100 appuntamenti/mese",
+      "1 sede",
+      "1 membro del team",
       "Promemoria intelligenti con IA (WhatsApp, SMS, Email)",
       "Punteggio rischio no-show con IA",
       "Lista d'attesa IA con riempimento automatico",
-      "Accesso API REST",
-      "5 membri del team",
       "Statistiche e report",
       "Supporto via email",
     ],
   },
   {
-    name: "Professional",
-    tier: "pro",
-    monthlyPrice: 499,
-    annualPrice: 399,
-    description: "Per attività in crescita con più sedi.",
+    name: "Growth",
+    tier: "growth",
+    monthlyPrice: 160,
+    annualPrice: 1536,
+    description: "Per studi e attività in crescita con più sedi.",
     highlighted: true,
     cta: "Inizia la Prova Gratuita",
-    limits: { appointments: "10.000/mese", locations: "10", users: "25" },
+    limits: { appointments: "1.000/mese", locations: "2", users: "5" },
     features: [
-      "10.000 appuntamenti/mese",
-      "Fino a 10 sedi",
-      "Tutto quello di Growth, più:",
+      "1.000 appuntamenti/mese",
+      "Fino a 2 sedi",
+      "5 membri del team",
+      "Tutto quello di Starter, più:",
       "Motore IA di ottimizzazione calendario",
       "Suggerimenti proattivi di riprogrammazione IA",
       "Ranking avanzato lista d'attesa IA",
-      "API REST + Webhooks",
-      "25 membri del team",
+      "Accesso API REST + Webhooks",
       "Statistiche avanzate + dashboard ROI",
       "Template promemoria personalizzabili",
       "Supporto prioritario",
@@ -86,8 +85,8 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
   {
     name: "Enterprise",
     tier: "enterprise",
-    monthlyPrice: 999,
-    annualPrice: 849,
+    monthlyPrice: 499,
+    annualPrice: 4790,
     description: "Per grandi organizzazioni e reti ospedaliere.",
     highlighted: false,
     cta: "Inizia la Prova Gratuita",
@@ -95,11 +94,11 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
     features: [
       "Appuntamenti illimitati",
       "Sedi illimitate",
-      "Tutto quello di Professional, più:",
+      "Membri del team illimitati",
+      "Tutto quello di Growth, più:",
       "Motore decisionale IA completo con modelli personalizzati",
       "Ottimizzazione IA dei tempi di contatto",
       "API completa + FHIR + SSO",
-      "Membri del team illimitati",
       "Statistiche e report personalizzati",
       "Account manager dedicato",
       "Garanzia SLA",

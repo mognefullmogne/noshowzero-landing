@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       const session = event.data.object as Stripe.Checkout.Session;
       const tenantId = session.metadata?.tenant_id;
       const rawTier = session.metadata?.tier ?? "growth";
-      const VALID_TIERS = ["growth", "pro", "enterprise"];
+      const VALID_TIERS = ["starter", "growth", "enterprise"];
       const tier = VALID_TIERS.includes(rawTier) ? rawTier : "growth";
       const customerId = session.customer as string;
       const subscriptionId = session.subscription as string;
