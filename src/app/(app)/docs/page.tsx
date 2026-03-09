@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BookOpen,
   Key,
@@ -22,10 +22,20 @@ import {
   Repeat,
   Settings,
   Info,
+  Brain,
+  BarChart3,
+  Webhook,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const API_BASE = "https://api.noshowzero.com/v1";
+function useApiBase() {
+  const [base, setBase] = useState("https://your-domain.com/api/v1");
+  useEffect(() => {
+    setBase(`${window.location.origin}/api/v1`);
+  }, []);
+  return base;
+}
 
 interface CodeBlockProps {
   readonly code: string;
@@ -70,15 +80,18 @@ const SECTIONS = [
   { id: "quick-start", label: "Developer Setup", icon: Code },
   { id: "authentication", label: "Authentication", icon: Key },
   { id: "appointments", label: "Appointments", icon: CalendarDays },
-  { id: "reminders", label: "Reminders", icon: Bell },
+  { id: "patients", label: "Patients", icon: Users },
   { id: "waitlist", label: "Waitlist", icon: ListChecks },
-  { id: "contacts", label: "Contacts", icon: Users },
-  { id: "webhooks", label: "Webhooks", icon: Send },
+  { id: "intelligence", label: "AI Intelligence", icon: Brain },
+  { id: "messaging", label: "Messaging", icon: MessageSquare },
+  { id: "webhooks", label: "Webhooks", icon: Webhook },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "errors", label: "Error Handling", icon: Settings },
 ] as const;
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("how-it-works");
+  const API_BASE = useApiBase();
 
   function scrollTo(id: string) {
     setActiveSection(id);
@@ -124,7 +137,6 @@ export default function DocsPage() {
           </p>
 
           <div className="mt-8 space-y-0">
-            {/* Flow diagram */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-0">
               {[
                 {
@@ -237,6 +249,7 @@ export default function DocsPage() {
                 <p className="mt-1 text-sm text-gray-500">
                   Go to your <a href="/dashboard" className="text-blue-600 underline">Dashboard</a> and click
                   &quot;Generate New Key&quot;. Your developer adds this key to your software&apos;s configuration.
+                  Keys use the <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">nows_</code> prefix.
                 </p>
               </div>
             </div>
@@ -256,25 +269,32 @@ export default function DocsPage() {
 // whenever a new appointment is created
 
 async function onAppointmentCreated(appointment) {
+  const API_BASE = "${API_BASE}";
+
   // Send the appointment to NowShow — AI handles the rest
-  await fetch("${API_BASE}/appointments", {
+  await fetch(\`\${API_BASE}/appointments\`, {
     method: "POST",
     headers: {
       "X-API-Key": process.env.NOWSHOW_API_KEY,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      patient_name: appointment.clientName,
-      patient_phone: appointment.clientPhone,
-      patient_email: appointment.clientEmail,
+      external_id: appointment.id,
+      patient: {
+        external_id: appointment.clientId,
+        first_name: appointment.firstName,
+        last_name: appointment.lastName,
+        phone: appointment.phone,
+        email: appointment.email,
+      },
+      service_name: appointment.serviceType,
       provider_name: appointment.staffName,
-      scheduled_at: appointment.dateTime,
-      duration_minutes: appointment.duration,
-      type: appointment.serviceType,
+      scheduled_at: appointment.dateTime,  // ISO 8601
+      duration_min: appointment.duration,   // 5-480 minutes
     }),
   });
   // That's it! NowShow now:
-  // ✓ Scores the no-show risk
+  // ✓ Scores the no-show risk with AI
   // ✓ Schedules smart reminders (WhatsApp, SMS, email)
   // ✓ Monitors for cancellations
   // ✓ Auto-fills from waitlist if cancelled
@@ -286,20 +306,27 @@ import requests, os
 
 def on_appointment_created(appointment):
     """Called automatically when a client books."""
+    API_BASE = "${API_BASE}"
+
     requests.post(
-        "${API_BASE}/appointments",
+        f"{API_BASE}/appointments",
         headers={
             "X-API-Key": os.environ["NOWSHOW_API_KEY"],
             "Content-Type": "application/json",
         },
         json={
-            "patient_name": appointment["client_name"],
-            "patient_phone": appointment["client_phone"],
-            "patient_email": appointment["client_email"],
+            "external_id": appointment["id"],
+            "patient": {
+                "external_id": appointment["client_id"],
+                "first_name": appointment["first_name"],
+                "last_name": appointment["last_name"],
+                "phone": appointment["phone"],
+                "email": appointment["email"],
+            },
+            "service_name": appointment["service_type"],
             "provider_name": appointment["staff_name"],
             "scheduled_at": appointment["date_time"],
-            "duration_minutes": appointment["duration"],
-            "type": appointment["service_type"],
+            "duration_min": appointment["duration"],
         },
     )
     # Done! NowShow AI takes it from here.`} />
@@ -318,10 +345,11 @@ def on_appointment_created(appointment):
 
                 <div className="mt-3">
                   <CodeBlock language="javascript" code={`// Also inside your software — runs when a client cancels
+const API_BASE = "${API_BASE}";
 
-async function onAppointmentCancelled(appointmentId, reason) {
-  const response = await fetch(
-    \`${API_BASE}/appointments/\${appointmentId}\`,
+async function onAppointmentCancelled(externalId, reason) {
+  await fetch(
+    \`\${API_BASE}/appointments/\${externalId}\`,
     {
       method: "PATCH",
       headers: {
@@ -334,11 +362,7 @@ async function onAppointmentCancelled(appointmentId, reason) {
       }),
     }
   );
-
-  const result = await response.json();
-  // result.waitlist_triggered = true
-  // result.slot_offered_to = "Jane Doe"
-  // → NowShow already texted Jane to offer her the slot!
+  // NowShow instantly triggers the waitlist backfill cascade
 }`} />
                 </div>
               </div>
@@ -366,12 +390,12 @@ async function onAppointmentCancelled(appointmentId, reason) {
           <h2 className="text-xl font-bold text-gray-900">Authentication</h2>
           <p className="mt-2 text-sm text-gray-600">
             Every API request includes your key in the <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 text-xs">X-API-Key</code> header.
-            This is set up once in your software&apos;s configuration.
+            Keys use the <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 text-xs">nows_</code> prefix.
           </p>
 
           <div className="mt-4">
             <CodeBlock language="javascript" code={`// Set your API key once in your app's config
-const NOWSHOW_API_KEY = process.env.NOWSHOW_API_KEY;
+const NOWSHOW_API_KEY = process.env.NOWSHOW_API_KEY; // nows_...
 
 // Every request to NowShow includes this header automatically
 const headers = {
@@ -389,6 +413,25 @@ const headers = {
               All requests use HTTPS. Store your API key in an environment variable — never in client-side code.
             </p>
           </div>
+
+          <div className="mt-4">
+            <CodeBlock language="json" code={`// All responses follow this envelope format
+{
+  "success": true,
+  "data": { ... },
+  "error": null
+}
+
+// Error responses
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "scheduled_at is required"
+  }
+}`} />
+          </div>
         </section>
 
         {/* Appointments */}
@@ -403,143 +446,188 @@ const headers = {
             <EndpointBlock
               method="POST"
               path="/appointments"
-              description="Send a new appointment to NowShow"
+              description="Create a new appointment"
               requestBody={`{
-  "patient_name": "John Smith",
-  "patient_phone": "+1234567890",
-  "patient_email": "john@example.com",
-  "provider_name": "Dr. Sarah Chen",
-  "scheduled_at": "2026-03-10T14:00:00Z",
-  "duration_minutes": 30,
-  "type": "checkup",
-  "location_id": "loc_abc123"
-}`}
-              responseBody={`{
-  "id": "apt_7f3k9x2m",
-  "status": "confirmed",
-  "risk_score": 0.23,
-  "risk_level": "low",
-  "reminders_scheduled": [
-    { "channel": "whatsapp", "send_at": "2026-03-09T10:00:00Z" },
-    { "channel": "sms", "send_at": "2026-03-10T08:00:00Z" }
-  ],
-  "created_at": "2026-03-03T12:00:00Z"
-}
-
-→ NowShow immediately scheduled 2 reminders
-→ Risk score 0.23 = low risk, standard reminders`}
-            />
-
-            <EndpointBlock
-              method="GET"
-              path="/appointments"
-              description="List appointments (with filters)"
-              requestBody={null}
-              responseBody={`{
-  "data": [...],
-  "total": 156,
-  "page": 1,
-  "limit": 50
-}
-
-Query params:
-  ?status=confirmed|cancelled|completed|no_show
-  ?from=2026-03-01&to=2026-03-31
-  ?provider=Dr. Sarah Chen
-  ?page=1&limit=50`}
-            />
-
-            <EndpointBlock
-              method="GET"
-              path="/appointments/:id"
-              description="Get full details + AI analysis for one appointment"
-              requestBody={null}
-              responseBody={`{
-  "id": "apt_7f3k9x2m",
-  "patient_name": "John Smith",
-  "provider_name": "Dr. Sarah Chen",
-  "scheduled_at": "2026-03-10T14:00:00Z",
-  "status": "confirmed",
-  "risk_score": 0.23,
-  "risk_level": "low",
-  "risk_factors": {
-    "history_score": 0.9,
-    "timing_score": 0.7,
-    "recency_score": 0.8
+  "external_id": "apt-12345",
+  "patient": {
+    "external_id": "pat-678",
+    "first_name": "John",
+    "last_name": "Smith",
+    "phone": "+1234567890",
+    "email": "john@example.com"
   },
-  "reminders": [...]
+  "service_name": "General Checkup",
+  "service_code": "GEN-CHK",
+  "provider_name": "Dr. Sarah Chen",
+  "location_name": "Main Clinic",
+  "scheduled_at": "2026-03-10T14:00:00Z",
+  "duration_min": 30,
+  "payment_category": "insurance",
+  "notes": "Follow-up visit"
+}`}
+              responseBody={`// 201 Created
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "pending",
+    "risk_score": 0.23,
+    "reminders_scheduled": 2
+  }
+}
+
+// Patient is auto-created or updated from the patient object.
+// AI immediately scores risk and schedules reminders.`}
+            />
+
+            <EndpointBlock
+              method="GET"
+              path="/appointments/:externalId"
+              description="Get appointment details by your external ID"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "external_id": "apt-12345",
+    "status": "confirmed",
+    "risk_score": 0.23,
+    "risk_reasoning": "Low risk: regular patient with good history",
+    "scheduled_at": "2026-03-10T14:00:00Z",
+    "duration_min": 30,
+    "service_name": "General Checkup",
+    "provider_name": "Dr. Sarah Chen",
+    "confirmed_at": "2026-03-08T15:30:00Z",
+    "declined_at": null,
+    "created_at": "2026-03-03T12:00:00Z",
+    "reminders": [
+      { "id": "...", "channel": "whatsapp", "status": "delivered", "sent_at": "..." },
+      { "id": "...", "channel": "sms", "status": "scheduled", "send_at": "..." }
+    ]
+  }
 }`}
             />
 
             <EndpointBlock
               method="PATCH"
-              path="/appointments/:id"
-              description="Cancel or reschedule (triggers waitlist)"
+              path="/appointments/:externalId"
+              description="Update status or reschedule"
               requestBody={`{
   "status": "cancelled",
-  "cancellation_reason": "patient_request"
-}`}
-              responseBody={`{
-  "id": "apt_7f3k9x2m",
-  "status": "cancelled",
-  "waitlist_triggered": true,
-  "slot_offered_to": "Jane Doe"
+  "cancellation_reason": "Patient requested reschedule"
 }
 
-→ Slot was instantly offered to the top waitlist match`}
+// Or reschedule:
+{
+  "scheduled_at": "2026-03-12T10:00:00Z",
+  "duration_min": 45,
+  "notes": "Rescheduled from March 10"
+}
+
+// Valid statuses: "cancelled", "completed", "no_show"`}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "external_id": "apt-12345",
+    "status": "cancelled",
+    "reminders": [...]
+  }
+}
+
+// Cancellation triggers waitlist backfill cascade automatically.
+// Webhooks fire for appointment.cancelled event.`}
             />
           </div>
         </section>
 
-        {/* Reminders */}
-        <section id="reminders">
-          <h2 className="text-xl font-bold text-gray-900">Reminders</h2>
+        {/* Patients */}
+        <section id="patients">
+          <h2 className="text-xl font-bold text-gray-900">Patients</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Reminders are <strong>100% automatic</strong>. When you send an appointment to NowShow,
-            the AI picks the best channel and timing. You can also check reminder status or manually
-            trigger extras if needed.
+            NowShow automatically builds a reliability profile for each patient over time.
+            Patients are created automatically when you create appointments, or you can manage them directly.
           </p>
 
           <div className="mt-6 space-y-4">
             <EndpointBlock
-              method="GET"
-              path="/appointments/:id/reminders"
-              description="Check reminder status for an appointment"
-              requestBody={null}
-              responseBody={`{
-  "data": [
-    {
-      "id": "rem_abc123",
-      "channel": "whatsapp",
-      "status": "delivered",
-      "sent_at": "2026-03-09T10:00:00Z",
-      "delivered_at": "2026-03-09T10:00:05Z",
-      "read_at": "2026-03-09T10:15:00Z"
-    },
-    {
-      "id": "rem_def456",
-      "channel": "sms",
-      "status": "scheduled",
-      "send_at": "2026-03-10T08:00:00Z"
-    }
-  ]
+              method="POST"
+              path="/patients"
+              description="Create or update a patient"
+              requestBody={`{
+  "external_id": "pat-678",
+  "first_name": "John",
+  "last_name": "Smith",
+  "phone": "+1234567890",
+  "email": "john@example.com",
+  "preferred_channel": "whatsapp"
+}
+
+// preferred_channel: "whatsapp" | "sms" | "email"
+// If patient exists by external_id, updates instead of creating.`}
+              responseBody={`// 201 Created (or 200 if updated)
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "external_id": "pat-678",
+    "first_name": "John",
+    "last_name": "Smith",
+    "email": "john@example.com",
+    "preferred_channel": "whatsapp",
+    "is_active": true,
+    "created": true
+  }
 }`}
             />
 
             <EndpointBlock
-              method="POST"
-              path="/appointments/:id/reminders"
-              description="Manually send an extra reminder (optional)"
-              requestBody={`{
-  "channel": "sms",
-  "message": "Reminder: Your appointment is tomorrow at 2 PM."
-}`}
-              responseBody={`{
-  "id": "rem_ghi789",
-  "channel": "sms",
-  "status": "queued",
-  "send_at": "2026-03-03T12:05:00Z"
-}`}
+              method="GET"
+              path="/patients/:externalId/memory"
+              description="Get AI-extracted patient preferences"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "preferences": {
+      "preferred_times": ["morning"],
+      "preferred_days": ["monday", "wednesday"],
+      "preferred_provider": "Dr. Sarah Chen",
+      "communication_style": "brief",
+      "language": "en",
+      "notes": "Prefers early morning slots"
+    },
+    "extracted_from_conversations": 8,
+    "last_updated": "2026-03-05T09:00:00Z"
+  }
+}
+
+// Preferences are extracted from patient conversations by AI.`}
+            />
+
+            <EndpointBlock
+              method="GET"
+              path="/patients/:externalId/reliability"
+              description="Get reliability score and history"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "reliability_score": 85,
+    "total_appointments": 12,
+    "completed": 10,
+    "no_shows": 1,
+    "cancellations": 1,
+    "last_visit": "2026-02-28T14:00:00Z"
+  }
+}
+
+// Score = (completed / total) * 100
+// AI uses this to calibrate reminder intensity.`}
             />
           </div>
         </section>
@@ -548,87 +636,342 @@ Query params:
         <section id="waitlist">
           <h2 className="text-xl font-bold text-gray-900">Waitlist</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Add clients to the waitlist, and the AI automatically fills cancelled slots by scoring
-            candidates on urgency, reliability, time preferences, and distance — no manual matching needed.
+            Add patients to the waitlist, and the AI automatically fills cancelled slots by scoring
+            candidates on urgency, reliability, time preferences, and history — no manual matching needed.
           </p>
 
           <div className="mt-6 space-y-4">
             <EndpointBlock
               method="POST"
               path="/waitlist"
-              description="Add someone to the waitlist"
+              description="Add a patient to the waitlist"
               requestBody={`{
-  "patient_name": "Jane Doe",
-  "patient_phone": "+1987654321",
-  "patient_email": "jane@example.com",
+  "patient_external_id": "pat-678",
+  "service_name": "General Checkup",
   "preferred_providers": ["Dr. Sarah Chen"],
   "preferred_times": ["morning", "afternoon"],
   "urgency": "medium",
-  "appointment_type": "followup"
-}`}
-              responseBody={`{
-  "id": "wl_xyz789",
-  "status": "active",
-  "smart_score": 78,
-  "position": 3,
-  "created_at": "2026-03-03T12:00:00Z"
+  "notes": "Needs follow-up within 2 weeks"
 }
 
-→ AI scored this entry 78/100 (position #3)
-→ When a slot opens, higher scores get offered first`}
+// urgency: "none" | "low" | "medium" | "high" | "critical"
+// Patient must exist first (create via POST /patients or POST /appointments).`}
+              responseBody={`// 201 Created
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "waiting",
+    "service_name": "General Checkup",
+    "clinical_urgency": "medium",
+    "smart_score": 78,
+    "priority_score": 82,
+    "created_at": "2026-03-03T12:00:00Z"
+  }
+}
+
+// smart_score: AI-calculated from patient history
+// priority_score: combines urgency + smart_score + wait time
+// When a slot opens, higher priority gets offered first.`}
             />
 
             <EndpointBlock
               method="GET"
               path="/waitlist"
-              description="See all waitlisted clients with AI scores"
+              description="List waitlist entries with filters"
               requestBody={null}
-              responseBody={`{
-  "data": [
-    {
-      "id": "wl_xyz789",
-      "patient_name": "Jane Doe",
-      "smart_score": 78,
-      "urgency": "medium",
-      "status": "active"
-    }
-  ],
-  "total": 12
+              responseBody={`// 200 OK — GET /waitlist?status=waiting&limit=20&page=1
+{
+  "success": true,
+  "data": {
+    "data": [
+      {
+        "id": "...",
+        "status": "waiting",
+        "service_name": "General Checkup",
+        "smart_score": 78,
+        "priority_score": 82
+      }
+    ],
+    "total": 12,
+    "page": 1,
+    "limit": 20,
+    "total_pages": 1
+  }
+}
+
+// Query params:
+//   status: waiting | offer_pending | offer_accepted |
+//           offer_declined | offer_timeout | fulfilled |
+//           expired | withdrawn
+//   service_name: partial match filter
+//   limit: 1-100 (default 50)
+//   page: starts at 1
+// Sorted by priority_score descending.`}
+            />
+
+            <EndpointBlock
+              method="GET"
+              path="/waitlist/:id"
+              description="Get waitlist entry with offer history"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "offer_pending",
+    "service_name": "General Checkup",
+    "smart_score": 78,
+    "priority_score": 82,
+    "offers": [
+      {
+        "id": "...",
+        "status": "pending",
+        "slot_start": "2026-03-10T14:00:00Z",
+        "slot_end": "2026-03-10T14:30:00Z",
+        "offered_at": "2026-03-08T09:00:00Z",
+        "responded_at": null,
+        "expires_at": "2026-03-08T11:00:00Z"
+      }
+    ]
+  }
 }`}
+            />
+
+            <EndpointBlock
+              method="DELETE"
+              path="/waitlist/:id"
+              description="Withdraw from the waitlist"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "message": "Entry withdrawn"
+  }
+}
+
+// Sets status to "withdrawn". Idempotent — already-withdrawn entries return success.`}
             />
           </div>
         </section>
 
-        {/* Contacts */}
-        <section id="contacts">
-          <h2 className="text-xl font-bold text-gray-900">Contacts</h2>
+        {/* AI Intelligence */}
+        <section id="intelligence">
+          <h2 className="text-xl font-bold text-gray-900">AI Intelligence</h2>
           <p className="mt-2 text-sm text-gray-600">
-            NowShow automatically builds a reliability profile for each client over time.
-            The more appointments they have, the better the AI predicts their no-show risk.
+            Access NowShow&apos;s AI-powered features directly: risk scoring, rebooking suggestions,
+            no-show pattern analysis, overbooking recommendations, morning briefings, and operator chat.
           </p>
 
-          <div className="mt-6">
+          <div className="mt-6 space-y-4">
+            <EndpointBlock
+              method="GET"
+              path="/appointments/:externalId/risk"
+              description="Get current risk score"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "score": 0.23,
+    "reasoning": "Low risk: regular patient, 85% reliability, morning slot",
+    "scored_at": "2026-03-03T12:00:00Z"
+  }
+}`}
+            />
+
             <EndpointBlock
               method="POST"
-              path="/contacts"
-              description="Create or update a client profile"
-              requestBody={`{
-  "name": "John Smith",
-  "phone": "+1234567890",
-  "email": "john@example.com",
-  "tags": ["regular", "morning-preferred"]
+              path="/appointments/:externalId/risk"
+              description="Recalculate risk score with AI"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "score": 0.31,
+    "reasoning": "Slight increase: appointment rescheduled once",
+    "ai_generated": true,
+    "previous_score": 0.23
+  }
 }`}
-              responseBody={`{
-  "id": "ct_abc123",
-  "name": "John Smith",
-  "reliability_score": 0.85,
-  "total_appointments": 12,
-  "no_shows": 1,
-  "created_at": "2026-01-15T10:00:00Z"
+            />
+
+            <EndpointBlock
+              method="GET"
+              path="/appointments/:externalId/rebook"
+              description="Get AI rebooking suggestions for cancelled appointment"
+              requestBody={null}
+              responseBody={`// 200 OK — Only works when appointment status is "cancelled"
+{
+  "success": true,
+  "data": {
+    "available_slots": [
+      { "start": "2026-03-12T09:00:00Z", "end": "2026-03-12T09:30:00Z" },
+      { "start": "2026-03-12T14:00:00Z", "end": "2026-03-12T14:30:00Z" }
+    ],
+    "suggested_slots": [
+      { "start": "2026-03-12T09:00:00Z", "end": "2026-03-12T09:30:00Z" }
+    ],
+    "message": "Based on patient preferences, morning slots recommended"
+  }
+}`}
+            />
+
+            <EndpointBlock
+              method="POST"
+              path="/chat"
+              description="Operator chat — ask the AI about your practice"
+              requestBody={`{
+  "message": "Which patients are high risk this week?",
+  "history": [
+    { "role": "user", "content": "Show me today's schedule" },
+    { "role": "assistant", "content": "You have 12 appointments today..." }
+  ]
 }
 
-→ 85% reliability (1 no-show out of 12 visits)
-→ AI uses this to calibrate reminder intensity`}
+// history is optional — include for multi-turn conversations.`}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "response": "You have 3 high-risk appointments this week...",
+    "tool_calls": [],
+    "tokens_used": 450
+  }
+}`}
+            />
+
+            <EndpointBlock
+              method="GET"
+              path="/briefing"
+              description="AI morning briefing for a date"
+              requestBody={null}
+              responseBody={`// 200 OK — GET /briefing?date=2026-03-10
+{
+  "success": true,
+  "data": {
+    "briefing": {
+      "summary": "14 appointments today, 2 high-risk...",
+      "high_risk": [...],
+      "waitlist_opportunities": [...]
+    },
+    "date": "2026-03-10",
+    "generated_at": "2026-03-10T06:00:00Z",
+    "cached": false
+  }
+}
+
+// Query params:
+//   date: YYYY-MM-DD (defaults to today)
+//   refresh: 1 (force regeneration, skip cache)`}
+            />
+
+            <EndpointBlock
+              method="GET"
+              path="/analytics/no-show-analysis"
+              description="AI-powered no-show pattern analysis"
+              requestBody={null}
+              responseBody={`// 200 OK — GET /analytics/no-show-analysis
+{
+  "success": true,
+  "data": {
+    "analysis": {
+      "patterns": [...],
+      "recommendations": [...],
+      "risk_factors": [...]
+    },
+    "generated_at": "2026-03-09T08:00:00Z",
+    "cached": true
+  }
+}
+
+// Add ?refresh=1 to force regeneration.
+// Results are cached for performance.`}
+            />
+
+            <EndpointBlock
+              method="GET"
+              path="/analytics/overbooking"
+              description="Overbooking recommendations for a date"
+              requestBody={null}
+              responseBody={`// 200 OK — GET /analytics/overbooking?date=2026-03-10
+{
+  "success": true,
+  "data": {
+    "recommendations": [
+      {
+        "time_slot": "09:00-10:00",
+        "current_bookings": 3,
+        "suggested_bookings": 4,
+        "confidence": 0.82
+      }
+    ],
+    "date": "2026-03-10"
+  }
+}
+
+// date: YYYY-MM-DD (defaults to today)`}
+            />
+          </div>
+        </section>
+
+        {/* Messaging */}
+        <section id="messaging">
+          <h2 className="text-xl font-bold text-gray-900">Messaging</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Send messages to patients via WhatsApp or SMS, and classify incoming message intent with AI.
+          </p>
+
+          <div className="mt-6 space-y-4">
+            <EndpointBlock
+              method="POST"
+              path="/messages/send"
+              description="Send a message to a patient"
+              requestBody={`{
+  "patient_external_id": "pat-678",
+  "message": "Your lab results are ready. Please call to schedule a follow-up.",
+  "channel": "whatsapp"
+}
+
+// channel: "whatsapp" | "sms" (optional, defaults to patient's preferred_channel)
+// Patient must have a phone number on file.`}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "message_sid": "SM1234567890abcdef",
+    "channel": "whatsapp",
+    "status": "queued"
+  }
+}`}
+            />
+
+            <EndpointBlock
+              method="POST"
+              path="/messages/classify"
+              description="Classify a message's intent with AI"
+              requestBody={`{
+  "message": "I need to cancel my appointment tomorrow",
+  "context": {
+    "appointment_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+
+// context is optional — improves classification accuracy.`}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "intent": "cancel",
+    "confidence": 0.95,
+    "source": "intent-engine"
+  }
+}
+
+// Common intents: confirm, cancel, reschedule, question, greeting`}
             />
           </div>
         </section>
@@ -637,23 +980,18 @@ Query params:
         <section id="webhooks">
           <h2 className="text-xl font-bold text-gray-900">Webhooks</h2>
           <p className="mt-2 text-sm text-gray-600">
-            NowShow can notify your software in real-time when things happen — like a reminder
-            being delivered, a slot being filled, or a high-risk appointment detected. Your software
-            receives these events automatically (no polling needed).
+            Register webhook endpoints to receive real-time notifications when events happen.
+            NowShow signs payloads with HMAC-SHA256 so you can verify authenticity.
           </p>
 
           <div className="mt-4 rounded-xl border border-black/[0.06] bg-white p-4">
-            <p className="text-sm font-semibold text-gray-900 mb-3">Events NowShow sends to you</p>
+            <p className="text-sm font-semibold text-gray-900 mb-3">Available webhook events</p>
             <div className="space-y-2">
               {[
                 { event: "appointment.created", desc: "New appointment registered" },
                 { event: "appointment.cancelled", desc: "Appointment was cancelled" },
-                { event: "appointment.no_show", desc: "Client didn't show up" },
-                { event: "reminder.sent", desc: "Reminder sent to client" },
-                { event: "reminder.delivered", desc: "Reminder confirmed delivered" },
-                { event: "waitlist.slot_offered", desc: "Open slot offered to waitlist client" },
-                { event: "waitlist.slot_filled", desc: "Waitlist client confirmed the slot" },
-                { event: "risk.high_detected", desc: "High no-show risk detected" },
+                { event: "appointment.completed", desc: "Appointment completed successfully" },
+                { event: "appointment.no_show", desc: "Patient didn't show up" },
               ].map(({ event, desc }) => (
                 <div key={event} className="flex items-start gap-3">
                   <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono text-gray-700 flex-shrink-0">
@@ -665,20 +1003,124 @@ Query params:
             </div>
           </div>
 
-          <div className="mt-4">
-            <p className="text-sm font-medium text-gray-900 mb-2">Example: Your software receives this when a waitlist slot is filled</p>
-            <CodeBlock language="json" code={`{
-  "event": "waitlist.slot_filled",
-  "timestamp": "2026-03-03T14:30:00Z",
+          <div className="mt-6 space-y-4">
+            <EndpointBlock
+              method="POST"
+              path="/webhooks"
+              description="Register a webhook endpoint"
+              requestBody={`{
+  "url": "https://your-app.com/webhooks/nowshow",
+  "events": ["appointment.cancelled", "appointment.no_show"]
+}`}
+              responseBody={`// 201 Created
+{
+  "success": true,
   "data": {
-    "appointment_id": "apt_7f3k9x2m",
-    "waitlist_entry_id": "wl_xyz789",
-    "patient_name": "Jane Doe",
-    "provider_name": "Dr. Sarah Chen",
-    "scheduled_at": "2026-03-10T14:00:00Z",
-    "smart_score": 78
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "url": "https://your-app.com/webhooks/nowshow",
+    "secret": "a1b2c3d4e5f6...",
+    "events": ["appointment.cancelled", "appointment.no_show"],
+    "is_active": true,
+    "created_at": "2026-03-03T12:00:00Z"
   }
-}`} />
+}
+
+// Save the "secret" — use it to verify HMAC-SHA256 signatures on incoming payloads.`}
+            />
+
+            <EndpointBlock
+              method="GET"
+              path="/webhooks"
+              description="List all webhook endpoints"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": [
+    {
+      "id": "...",
+      "url": "https://your-app.com/webhooks/nowshow",
+      "events": ["appointment.cancelled", "appointment.no_show"],
+      "is_active": true,
+      "created_at": "2026-03-03T12:00:00Z",
+      "updated_at": "2026-03-03T12:00:00Z"
+    }
+  ]
+}`}
+            />
+
+            <EndpointBlock
+              method="PATCH"
+              path="/webhooks/:id"
+              description="Update webhook configuration"
+              requestBody={`{
+  "url": "https://your-app.com/webhooks/v2/nowshow",
+  "events": ["appointment.cancelled", "appointment.no_show", "appointment.completed"],
+  "is_active": true
+}
+
+// All fields are optional — send only what you want to change.`}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "url": "https://your-app.com/webhooks/v2/nowshow",
+    "events": ["appointment.cancelled", "appointment.no_show", "appointment.completed"],
+    "is_active": true,
+    "updated_at": "2026-03-09T15:00:00Z"
+  }
+}`}
+            />
+
+            <EndpointBlock
+              method="DELETE"
+              path="/webhooks/:id"
+              description="Deactivate a webhook endpoint"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "message": "Webhook deactivated",
+    "id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+
+// Soft-deletes (sets is_active to false). Does not permanently delete.`}
+            />
+          </div>
+        </section>
+
+        {/* Analytics */}
+        <section id="analytics">
+          <h2 className="text-xl font-bold text-gray-900">Analytics</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Get high-level metrics about your practice&apos;s appointment performance and no-show rates.
+          </p>
+
+          <div className="mt-6">
+            <EndpointBlock
+              method="GET"
+              path="/analytics/summary"
+              description="Practice performance dashboard metrics"
+              requestBody={null}
+              responseBody={`// 200 OK
+{
+  "success": true,
+  "data": {
+    "total_appointments": 1256,
+    "no_show_rate": 8.2,
+    "no_show_count": 103,
+    "completed_count": 987,
+    "confirmed_count": 142,
+    "waitlist_fills": 24,
+    "revenue_saved": 12400
+  }
+}
+
+// revenue_saved is calculated from your avg_appointment_value setting.`}
+            />
           </div>
         </section>
 
@@ -686,7 +1128,7 @@ Query params:
         <section id="errors">
           <h2 className="text-xl font-bold text-gray-900">Error Handling</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Standard HTTP status codes. Your developer handles these once during setup.
+            Standard HTTP status codes. All errors return the same envelope format with an error code and message.
           </p>
 
           <div className="mt-4 rounded-xl border border-black/[0.06] bg-white overflow-hidden">
@@ -701,12 +1143,11 @@ Query params:
                 {[
                   { code: "200", meaning: "Success" },
                   { code: "201", meaning: "Created" },
-                  { code: "400", meaning: "Bad request — check the request body" },
+                  { code: "400", meaning: "Validation error — check the request body" },
                   { code: "401", meaning: "Invalid or missing API key" },
-                  { code: "403", meaning: "Feature not available on your plan" },
-                  { code: "404", meaning: "Not found" },
-                  { code: "429", meaning: "Too many requests — slow down" },
+                  { code: "404", meaning: "Resource not found" },
                   { code: "500", meaning: "Server error — contact support" },
+                  { code: "502", meaning: "External service failed (e.g. SMS delivery)" },
                 ].map(({ code, meaning }) => (
                   <tr key={code}>
                     <td className="px-4 py-2.5">
@@ -719,11 +1160,35 @@ Query params:
             </table>
           </div>
 
-          <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
-            <p className="text-sm font-medium text-blue-800">Rate Limits</p>
-            <p className="text-xs text-blue-600 mt-1">
-              Growth: 100 req/min | Professional: 500 req/min | Enterprise: Unlimited
-            </p>
+          <div className="mt-4">
+            <p className="text-sm font-medium text-gray-900 mb-2">Error codes in responses</p>
+            <div className="rounded-xl border border-black/[0.06] bg-white overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-black/[0.04]">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Error Code</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Description</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/[0.04]">
+                  {[
+                    { code: "UNAUTHORIZED", meaning: "API key missing, invalid, or expired" },
+                    { code: "VALIDATION_ERROR", meaning: "Request body failed schema validation" },
+                    { code: "NOT_FOUND", meaning: "Resource does not exist or belongs to another tenant" },
+                    { code: "INVALID_STATUS", meaning: "Status transition not allowed" },
+                    { code: "DB_ERROR", meaning: "Database operation failed" },
+                    { code: "INTERNAL_ERROR", meaning: "Unexpected server error" },
+                  ].map(({ code, meaning }) => (
+                    <tr key={code}>
+                      <td className="px-4 py-2.5">
+                        <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{code}</code>
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-600">{meaning}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 

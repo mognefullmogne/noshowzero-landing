@@ -1,6 +1,6 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-03
+**Analysis Date:** 2026-03-09
 
 ## Directory Layout
 
@@ -9,6 +9,7 @@ noshowzero-landing/
 ├── src/
 │   ├── app/                          # Next.js App Router
 │   │   ├── layout.tsx                # Root layout (global styles, metadata, fonts)
+│   │   ├── page.tsx                  # Landing page
 │   │   ├── (app)/                    # Authenticated route group
 │   │   │   ├── layout.tsx            # App layout (sidebar, tenant check)
 │   │   │   ├── dashboard/            # Dashboard page
@@ -18,8 +19,10 @@ noshowzero-landing/
 │   │   │   ├── offers/               # Offer tracking
 │   │   │   ├── messages/             # Message thread viewer
 │   │   │   ├── ai-chat/              # AI chat interface
+│   │   │   ├── strategy-log/         # AI strategy log viewer
 │   │   │   ├── integrations/         # Calendar integrations
 │   │   │   ├── optimization/         # Optimization decisions
+│   │   │   ├── organizzazione/       # Organization management (operators, services)
 │   │   │   ├── rules/                # Business rules editor
 │   │   │   ├── audit/                # Activity audit log
 │   │   │   ├── analytics/            # Analytics dashboard
@@ -33,52 +36,86 @@ noshowzero-landing/
 │   │   │   └── forgot-password/      # Password reset
 │   │   ├── api/                      # API route handlers
 │   │   │   ├── v1/                   # Public API v1
-│   │   │   │   ├── appointments/     # Public: create appointments
+│   │   │   │   ├── appointments/     # Public: create/get appointments
+│   │   │   │   │   └── [externalId]/ # GET by external ID
 │   │   │   │   ├── patients/         # Public: upsert patients
-│   │   │   │   └── analytics/        # Public: fetch analytics
+│   │   │   │   └── analytics/
+│   │   │   │       └── summary/      # Public: fetch analytics summary
 │   │   │   ├── appointments/         # Appointments CRUD + actions
 │   │   │   │   ├── [id]/             # GET/PATCH single appointment
 │   │   │   │   ├── [id]/remind/      # POST send manual reminder
 │   │   │   │   ├── [id]/score/       # GET risk score details
 │   │   │   │   └── [id]/send-confirmation/ # POST start confirmation flow
 │   │   │   ├── patients/             # Patients CRUD
+│   │   │   │   └── [id]/             # GET/PATCH single patient
+│   │   │   ├── operators/            # Operators CRUD
+│   │   │   │   └── [id]/             # GET/PATCH/DELETE operator
+│   │   │   │       └── services/     # GET/PUT operator-service assignments
+│   │   │   ├── services/             # Services CRUD
+│   │   │   │   └── [id]/             # GET/PATCH/DELETE service
 │   │   │   ├── waitlist/             # Waitlist CRUD
+│   │   │   │   └── [id]/             # GET/PATCH single entry
 │   │   │   ├── offers/               # Offer management
-│   │   │   │   ├── [offerId]/        # GET/PATCH single offer
-│   │   │   │   ├── [offerId]/accept/ # POST accept offer
-│   │   │   │   └── [offerId]/decline/ # POST decline offer
+│   │   │   │   └── [offerId]/        # GET/PATCH single offer
+│   │   │   │       ├── accept/       # POST accept offer
+│   │   │   │       └── decline/      # POST decline offer
 │   │   │   ├── messages/             # Message threads
+│   │   │   │   └── [threadId]/       # GET thread messages
 │   │   │   ├── chat/                 # Multi-turn chat
 │   │   │   ├── ai/                   # AI endpoints
-│   │   │   │   ├── chat/             # General AI chat
-│   │   │   │   └── appointment-chat/ # Appointment-scoped chat
+│   │   │   │   ├── chat/             # General AI chat (operator-facing)
+│   │   │   │   ├── appointment-chat/ # Appointment-scoped AI chat
+│   │   │   │   ├── morning-briefing/ # GET daily AI briefing
+│   │   │   │   ├── strategy-log/     # GET/POST AI decision log
+│   │   │   │   └── no-show-analysis/ # POST AI no-show pattern analysis
+│   │   │   ├── intelligence/         # Intelligence layer
+│   │   │   │   └── overbooking/      # POST overbooking recommendations
 │   │   │   ├── integrations/         # Calendar sync
-│   │   │   │   ├── google/           # Google Calendar auth/sync
-│   │   │   │   ├── outlook/          # Outlook Calendar auth/sync
-│   │   │   │   └── csv/              # CSV import
+│   │   │   │   ├── [id]/             # GET/DELETE integration
+│   │   │   │   │   └── sync/         # POST trigger sync
+│   │   │   │   ├── google/           # Google Calendar
+│   │   │   │   │   ├── auth/         # GET start OAuth flow
+│   │   │   │   │   ├── callback/     # GET OAuth callback
+│   │   │   │   │   └── calendars/    # GET list calendars
+│   │   │   │   ├── outlook/          # Outlook Calendar
+│   │   │   │   │   ├── auth/         # GET start OAuth flow
+│   │   │   │   │   ├── callback/     # GET OAuth callback
+│   │   │   │   │   └── calendars/    # GET list calendars
+│   │   │   │   └── csv/
+│   │   │   │       └── upload/       # POST CSV import
 │   │   │   ├── slots/                # Appointment slot management
 │   │   │   │   ├── generate/         # POST generate slots
 │   │   │   │   └── [id]/             # GET/PATCH single slot
 │   │   │   ├── optimization/         # Optimization engine
 │   │   │   │   ├── run/              # POST trigger optimization
-│   │   │   │   ├── decisions/        # GET decisions
-│   │   │   │   └── decisions/[id]/   # PATCH approve/reject
+│   │   │   │   └── decisions/        # GET decisions
+│   │   │   │       └── [id]/         # PATCH approve/reject
 │   │   │   ├── rules/                # Business rules
 │   │   │   │   ├── [id]/             # GET/PATCH ruleset
-│   │   │   │   ├── [id]/versions/    # GET versions history
+│   │   │   │   │   └── versions/     # GET versions history
 │   │   │   │   └── seed/             # POST seed default rules
+│   │   │   ├── settings/             # Settings endpoints
+│   │   │   │   ├── tenant/           # GET/PATCH tenant settings
+│   │   │   │   └── sidebar-order/    # GET/PATCH sidebar order
+│   │   │   ├── admin/                # Admin endpoints
+│   │   │   │   └── trigger-backfill/ # POST manually trigger backfill
 │   │   │   ├── cron/                 # Background jobs
 │   │   │   │   ├── process-reminders/        # Send due reminders
-│   │   │   │   ├── run-optimization/        # Backfill algorithm
-│   │   │   │   ├── send-confirmations/      # Send confirmation messages
-│   │   │   │   ├── expire-offers/           # Expire old offers
-│   │   │   │   ├── check-timeouts/          # Timeout confirmations
-│   │   │   │   ├── cleanup-proposals/       # Expire old proposals
-│   │   │   │   ├── sync-calendars/          # Sync integrations
-│   │   │   │   └── kpi-snapshot/            # Record metrics
+│   │   │   │   ├── run-optimization/         # Backfill algorithm
+│   │   │   │   ├── send-confirmations/       # Send confirmation messages
+│   │   │   │   ├── expire-offers/            # Expire old offers
+│   │   │   │   ├── check-timeouts/           # Timeout confirmations
+│   │   │   │   ├── cleanup-proposals/        # Expire old proposals
+│   │   │   │   ├── sync-calendars/           # Sync integrations
+│   │   │   │   ├── kpi-snapshot/             # Record metrics
+│   │   │   │   ├── detect-no-shows/          # Detect no-show appointments
+│   │   │   │   └── escalate-confirmations/   # Escalate unconfirmed appointments
 │   │   │   ├── webhooks/             # Webhook handlers
 │   │   │   │   └── twilio/           # Incoming SMS/WhatsApp
-│   │   │   ├── stripe/               # Payment webhooks
+│   │   │   ├── stripe/               # Stripe endpoints
+│   │   │   │   ├── checkout/         # POST create checkout session
+│   │   │   │   ├── portal/           # POST create billing portal
+│   │   │   │   └── webhook/          # POST Stripe webhook handler
 │   │   │   ├── dashboard/            # Dashboard data
 │   │   │   ├── audit/                # Audit log queries
 │   │   │   ├── kpi/                  # KPI snapshots
@@ -89,22 +126,34 @@ noshowzero-landing/
 │   │
 │   ├── components/                   # UI components
 │   │   ├── ui/                       # shadcn primitives
+│   │   │   ├── accordion.tsx
+│   │   │   ├── avatar.tsx
+│   │   │   ├── badge.tsx
 │   │   │   ├── button.tsx
 │   │   │   ├── card.tsx
 │   │   │   ├── dialog.tsx
+│   │   │   ├── dropdown-menu.tsx
 │   │   │   ├── input.tsx
-│   │   │   ├── table.tsx
-│   │   │   ├── badge.tsx
+│   │   │   ├── label.tsx
+│   │   │   ├── scroll-area.tsx
 │   │   │   ├── select.tsx
+│   │   │   ├── separator.tsx
+│   │   │   ├── sheet.tsx
+│   │   │   ├── sonner.tsx
+│   │   │   ├── switch.tsx
+│   │   │   ├── table.tsx
 │   │   │   ├── tabs.tsx
-│   │   │   └── ... (20+ primitives)
+│   │   │   └── textarea.tsx
 │   │   ├── layout/                   # Layout components
-│   │   │   ├── sidebar.tsx           # App sidebar
-│   │   │   └── header.tsx            # Page header
+│   │   │   ├── navbar.tsx            # Top navigation bar
+│   │   │   └── footer.tsx            # Page footer
 │   │   ├── appointments/             # Appointment feature
 │   │   │   ├── appointments-table.tsx # List view
 │   │   │   ├── appointment-dialog.tsx # Create/edit dialog
-│   │   │   └── appointment-details.tsx # Detail card
+│   │   │   ├── appointment-detail.tsx # Detail view
+│   │   │   ├── appointment-ai-chat.tsx # Per-appointment AI chat
+│   │   │   ├── risk-badge.tsx        # Risk level indicator
+│   │   │   └── status-badge.tsx      # Appointment status indicator
 │   │   ├── waitlist/                 # Waitlist feature
 │   │   │   ├── waitlist-table.tsx    # List view
 │   │   │   ├── waitlist-dialog.tsx   # Create/edit dialog
@@ -112,49 +161,106 @@ noshowzero-landing/
 │   │   │   └── score-breakdown.tsx   # Smart score display
 │   │   ├── offers/                   # Offer tracking
 │   │   │   ├── offers-table.tsx
-│   │   │   └── offer-card.tsx
+│   │   │   └── offer-status-badge.tsx
 │   │   ├── dashboard/                # Dashboard components
-│   │   │   ├── kpi-cards.tsx         # Summary metrics
-│   │   │   ├── today-section.tsx     # Today's appointments
-│   │   │   └── urgent-deadlines.tsx  # Urgent items
+│   │   │   ├── operational-dashboard.tsx # Main dashboard layout
+│   │   │   ├── morning-briefing.tsx  # AI morning briefing card
+│   │   │   ├── strategy-log-section.tsx # AI strategy log
+│   │   │   ├── no-show-insights.tsx  # No-show pattern insights
+│   │   │   ├── active-offers-section.tsx # Active offers summary
+│   │   │   └── activity-feed-section.tsx # Recent activity feed
 │   │   ├── analytics/                # Analytics charts
-│   │   │   └── metrics-chart.tsx
+│   │   │   └── kpi-card.tsx          # KPI metric card
 │   │   ├── chat/                     # Chat/messaging
-│   │   │   ├── chat-widget.tsx       # Floating chat button
-│   │   │   ├── chat-panel.tsx        # Chat panel
-│   │   │   └── message-item.tsx      # Message display
+│   │   │   └── chat-widget.tsx       # Floating chat button + panel
 │   │   ├── auth/                     # Auth components
-│   │   │   ├── login-form.tsx
-│   │   │   ├── signup-form.tsx
-│   │   │   └── oauth-buttons.tsx
-│   │   ├── billing/                  # Billing components
-│   │   │   ├── plan-selector.tsx
-│   │   │   └── usage-meter.tsx
-│   │   ├── landing/                  # Landing page
-│   │   │   ├── hero.tsx
-│   │   │   ├── features.tsx
-│   │   │   └── cta.tsx
-│   │   └── shared/                   # Shared components
-│   │       ├── loading-spinner.tsx
-│   │       ├── error-boundary.tsx
-│   │       └── empty-state.tsx
+│   │   │   └── google-button.tsx     # Google OAuth button
+│   │   ├── landing/                  # Landing page sections
+│   │   │   ├── hero.tsx              # Hero section
+│   │   │   ├── features-grid.tsx     # Features grid
+│   │   │   ├── how-it-works.tsx      # How it works steps
+│   │   │   ├── problem-stats.tsx     # Problem statistics
+│   │   │   ├── industries.tsx        # Target industries
+│   │   │   ├── testimonials.tsx      # Customer testimonials
+│   │   │   ├── social-proof.tsx      # Social proof section
+│   │   │   ├── faq.tsx               # FAQ section
+│   │   │   ├── pricing-section.tsx   # Pricing plans
+│   │   │   └── final-cta.tsx         # Final call-to-action
+│   │   ├── shared/                   # Shared components
+│   │   │   ├── animated-counter.tsx  # Animated number counter
+│   │   │   ├── connection-status.tsx # Realtime connection indicator
+│   │   │   ├── empty-state.tsx       # Empty state placeholder
+│   │   │   ├── loading-spinner.tsx   # Loading spinner
+│   │   │   ├── page-header.tsx       # Page header with title
+│   │   │   ├── pagination.tsx        # Pagination controls
+│   │   │   ├── scroll-reveal.tsx     # Scroll-triggered reveal
+│   │   │   ├── section-wrapper.tsx   # Section layout wrapper
+│   │   │   └── status-badge.tsx      # Generic status badge
+│   │   └── sortable-sidebar.tsx      # Drag-sortable sidebar
 │   │
 │   ├── lib/                          # Business logic
-│   │   ├── supabase/                 # Data access
-│   │   │   ├── client.ts             # Browser client factory
-│   │   │   ├── server.ts             # Server client factory + service role
-│   │   │   └── middleware.ts         # Session refresh logic
 │   │   ├── types.ts                  # Core type definitions
 │   │   ├── validations.ts            # Zod validation schemas (25+ schemas)
 │   │   ├── utils.ts                  # Utility functions
+│   │   ├── constants.ts              # App-wide constants
 │   │   ├── auth-helpers.ts           # getAuthenticatedTenant()
 │   │   ├── api-key-auth.ts           # API key validation
+│   │   ├── cron-auth.ts              # Cron job authentication
+│   │   ├── sidebar-links.ts          # Sidebar navigation config
+│   │   ├── stripe.ts                 # Stripe client
+│   │   │
+│   │   ├── supabase/                 # Data access
+│   │   │   ├── client.ts             # Browser client factory
+│   │   │   ├── server.ts             # Server client factory + service role
+│   │   │   └── middleware.ts          # Session refresh logic
+│   │   │
+│   │   ├── ai/                       # AI/Claude integration
+│   │   │   ├── operator-chat.ts      # Operator-facing AI chat logic
+│   │   │   ├── appointment-chat.ts   # Appointment-scoped AI chat
+│   │   │   ├── decision-engine.ts    # AI-driven decision making
+│   │   │   ├── morning-briefing.ts   # Daily AI briefing generation
+│   │   │   ├── no-show-analysis.ts   # No-show pattern analysis
+│   │   │   ├── patient-memory.ts     # AI patient context/history
+│   │   │   ├── smart-rebook.ts       # AI-assisted rebooking
+│   │   │   ├── tool-registry.ts      # AI tool definitions registry
+│   │   │   ├── tools/                # Individual AI tools
+│   │   │   │   ├── get-calendar-overview.ts
+│   │   │   │   ├── send-message-to-patient.ts
+│   │   │   │   ├── find-available-slots.ts
+│   │   │   │   ├── get-patient-info.ts
+│   │   │   │   ├── get-appointment-details.ts
+│   │   │   │   ├── search-appointments.ts
+│   │   │   │   ├── add-to-waitlist.ts
+│   │   │   │   ├── reschedule-appointment.ts
+│   │   │   │   ├── check-waitlist.ts
+│   │   │   │   └── cancel-appointment.ts
+│   │   │   └── __tests__/            # AI module tests
+│   │   │       ├── decision-engine.test.ts
+│   │   │       ├── morning-briefing.test.ts
+│   │   │       ├── no-show-analysis.test.ts
+│   │   │       ├── patient-memory.test.ts
+│   │   │       └── smart-rebook.test.ts
+│   │   │
+│   │   ├── intelligence/             # Intelligence layer
+│   │   │   ├── index.ts              # Module exports
+│   │   │   ├── overbooking.ts        # Overbooking recommendations
+│   │   │   ├── no-show-detector.ts   # No-show detection logic
+│   │   │   ├── slot-recommendations.ts # Smart slot suggestions
+│   │   │   └── response-patterns.ts  # Patient response pattern analysis
 │   │   │
 │   │   ├── scoring/                  # Scoring algorithms
 │   │   │   ├── risk-score.ts         # Appointment risk assessment
-│   │   │   ├── smart-score.ts        # Waitlist candidate ranking
+│   │   │   ├── ai-risk-score.ts      # AI-enhanced risk scoring
+│   │   │   ├── waitlist-score.ts     # Waitlist entry scoring
+│   │   │   ├── candidate-score.ts    # Backfill candidate ranking
+│   │   │   ├── ai-candidate-ranker.ts # AI-enhanced candidate ranking
 │   │   │   ├── contact-timing.ts     # Reminder scheduling logic
-│   │   │   └── reliability.ts        # Patient reliability metrics
+│   │   │   ├── auto-score.ts         # Automatic scoring triggers
+│   │   │   ├── ai-confirmation-personalizer.ts # AI-personalized confirmations
+│   │   │   └── __tests__/            # Scoring tests
+│   │   │       ├── ai-candidate-ranker.test.ts
+│   │   │       ├── ai-confirmation-personalizer.test.ts
+│   │   │       └── candidate-score.test.ts
 │   │   │
 │   │   ├── booking/                  # Conversational booking
 │   │   │   ├── booking-orchestrator.ts # Main state machine
@@ -163,20 +269,32 @@ noshowzero-landing/
 │   │   │   ├── date-parser.ts        # Natural language date parsing
 │   │   │   ├── appointment-creator.ts # Appointment record creation
 │   │   │   ├── tenant-resolver.ts    # Tenant lookup
+│   │   │   ├── provider-conflict.ts  # Provider scheduling conflicts
 │   │   │   ├── types.ts              # Session types
 │   │   │   └── messages.ts           # Bot reply templates
 │   │   │
 │   │   ├── backfill/                 # Waitlist offer engine
+│   │   │   ├── trigger-backfill.ts   # Main orchestrator
 │   │   │   ├── find-candidates.ts    # Smart ranking
+│   │   │   ├── find-available-slots.ts # Slot availability check
 │   │   │   ├── send-offer.ts         # Create offer + send message
 │   │   │   ├── offer-tokens.ts       # One-time token generation
 │   │   │   ├── process-response.ts   # Handle patient response
 │   │   │   ├── expire-offers.ts      # Cleanup job
-│   │   │   └── trigger-backfill.ts   # Main orchestrator
+│   │   │   ├── check-expired-offers.ts # Expired offer check
+│   │   │   ├── preemptive-cascade.ts # Cascading backfill logic
+│   │   │   ├── time-aware-config.ts  # Time-sensitive configuration
+│   │   │   └── __tests__/            # Backfill tests
+│   │   │       ├── find-candidates.test.ts
+│   │   │       ├── process-response.test.ts
+│   │   │       ├── trigger-backfill.test.ts
+│   │   │       └── helpers.ts
 │   │   │
 │   │   ├── confirmation/             # Confirmation workflow
 │   │   │   ├── workflow.ts           # State machine
-│   │   │   └── templates.ts          # Message templates
+│   │   │   ├── templates.ts          # Message templates
+│   │   │   ├── escalation.ts         # Escalation logic for unconfirmed
+│   │   │   └── timing.ts            # Confirmation timing rules
 │   │   │
 │   │   ├── reminders/                # Reminder processing
 │   │   │   ├── schedule-reminders.ts # Create reminder records
@@ -184,8 +302,18 @@ noshowzero-landing/
 │   │   │
 │   │   ├── messaging/                # Message delivery
 │   │   │   ├── send-message.ts       # Twilio dispatcher
-│   │   │   ├── twilio-client.ts      # Twilio SDK wrapper
-│   │   │   └── intent-detector.ts    # Parse patient intent
+│   │   │   ├── intent-engine.ts      # Parse patient intent (AI-powered)
+│   │   │   └── patient-bot.ts        # Patient-facing bot logic
+│   │   │
+│   │   ├── twilio/                   # Twilio utilities
+│   │   │   ├── client.ts             # Twilio SDK wrapper
+│   │   │   ├── templates.ts          # Twilio message templates
+│   │   │   ├── content-templates.ts  # WhatsApp Content Templates
+│   │   │   └── send-notification.ts  # Notification dispatcher
+│   │   │
+│   │   ├── webhooks/                 # Webhook handlers
+│   │   │   ├── twilio-verify.ts      # Request signature validation
+│   │   │   └── message-router.ts     # Inbound message routing
 │   │   │
 │   │   ├── optimization/             # Slot optimization
 │   │   │   ├── calendar-optimizer.ts # Main orchestrator
@@ -193,12 +321,11 @@ noshowzero-landing/
 │   │   │   └── slot-management.ts    # Slot queries + state
 │   │   │
 │   │   ├── integrations/             # Calendar sync
-│   │   │   ├── sync-engine.ts        # Orchestrator
 │   │   │   ├── google-calendar.ts    # Google API wrapper
 │   │   │   ├── outlook-calendar.ts   # Outlook API wrapper
+│   │   │   ├── appointment-importer.ts # Record creation from sync
 │   │   │   ├── csv-parser.ts         # CSV import
 │   │   │   ├── ical-parser.ts        # iCalendar parsing
-│   │   │   ├── appointment-importer.ts # Record creation
 │   │   │   ├── token-refresh.ts      # OAuth token refresh
 │   │   │   ├── encryption.ts         # Token encryption
 │   │   │   ├── oauth-state.ts        # CSRF protection
@@ -206,28 +333,35 @@ noshowzero-landing/
 │   │   │   └── types.ts              # Integration types
 │   │   │
 │   │   ├── proposals/                # Slot proposals
-│   │   │   └── slot-proposal.ts      # Proposal logic
+│   │   │   ├── create-proposal.ts    # Proposal creation
+│   │   │   └── find-slots.ts         # Slot search for proposals
+│   │   │
+│   │   ├── engine/                   # Processing engine
+│   │   │   └── process-pending.ts    # Process pending items
 │   │   │
 │   │   ├── rules/                    # Business rules engine
-│   │   │   └── rule-evaluator.ts     # Condition evaluation
+│   │   │   └── rule-engine.ts        # Condition evaluation
 │   │   │
 │   │   ├── audit/                    # Activity logging
 │   │   │   └── log-event.ts          # Record audit event
 │   │   │
 │   │   ├── kpi/                      # Metrics & analytics
-│   │   │   └── snapshot.ts           # Record KPI snapshot
+│   │   │   └── compute-snapshot.ts   # Compute KPI snapshot
 │   │   │
-│   │   ├── twilio/                   # Twilio utilities
-│   │   │   └── webhook-validator.ts  # Request signature validation
+│   │   ├── metrics/                  # Recovery metrics
+│   │   │   ├── recovery-metrics.ts   # Revenue recovery tracking
+│   │   │   └── recovery-metrics.test.ts
 │   │   │
-│   │   ├── webhooks/                 # Generic webhook handlers
-│   │   │   └── processor.ts          # Webhook event routing
+│   │   ├── strategy-log/             # Strategy logging
+│   │   │   └── types.ts              # Strategy log types
 │   │   │
-│   │   ├── stripe.ts                 # Stripe client
-│   │   └── ai.ts                     # Claude SDK client
+│   │   └── realtime/                 # Realtime updates
+│   │       ├── types.ts              # Realtime event types
+│   │       └── apply-delta.ts        # Apply realtime deltas
 │   │
 │   ├── hooks/                        # React hooks
-│   │   └── use-tenant.ts             # Fetch tenant data
+│   │   ├── use-tenant.ts             # Fetch tenant data
+│   │   └── use-realtime-appointments.ts # Realtime appointment updates
 │   │
 │   └── middleware.ts                 # Request middleware
 │
@@ -236,11 +370,34 @@ noshowzero-landing/
 │   └── ...
 ├── supabase/                         # Supabase migrations
 │   ├── migrations/
-│   │   ├── 20250101000000_init.sql   # Initial schema
-│   │   ├── 20250115000000_add_smart_scoring.sql
-│   │   └── ... (20+ migrations)
+│   │   ├── 001_initial_schema.sql
+│   │   ├── 002_product_tables.sql
+│   │   ├── 003_waitlist_offers.sql
+│   │   ├── 004_messaging.sql
+│   │   ├── 005_appointment_slots.sql
+│   │   ├── 006_optimization.sql
+│   │   ├── 007_rules.sql
+│   │   ├── 008_audit.sql
+│   │   ├── 009_workflows.sql
+│   │   ├── 010_booking_sessions.sql
+│   │   ├── 011_integrations.sql
+│   │   ├── 012_candidate_detection.sql
+│   │   ├── 013_tenant_appointment_value.sql
+│   │   ├── 014_intelligence_layer.sql
+│   │   ├── 015_sidebar_order.sql
+│   │   ├── 016_waitlist_offer_columns.sql
+│   │   ├── 017_organization.sql
+│   │   ├── 018_phone_index.sql
+│   │   └── 019_cal_integrations_update_policy.sql
 │   └── .temp/                        # Supabase CLI temp files
 ├── scripts/                          # Utility scripts
+│   ├── run-migrations.mjs            # Migration runner
+│   ├── verify-infrastructure.mjs     # Infrastructure verification
+│   ├── seed-hairdresser.mjs          # Seed demo data
+│   ├── test-backfill.ts              # Backfill testing
+│   ├── debug-google-cal.ts           # Google Calendar debugging
+│   ├── combined_migrations_004_009.sql # Combined migration SQL
+│   └── all-migrations-sql-editor.sql # All migrations for SQL editor
 ├── .planning/                        # GSD planning docs
 │   └── codebase/                     # This directory
 │
@@ -270,7 +427,7 @@ noshowzero-landing/
 
 **src/lib/**
 - Purpose: Business logic, data access, utilities
-- Contains: Domain-organized modules (booking/, optimization/, etc.)
+- Contains: Domain-organized modules (ai/, booking/, optimization/, etc.)
 - Pattern: Each module exports pure functions and orchestrators
 - Key files: `types.ts` (core types), `validations.ts` (Zod schemas)
 
@@ -279,13 +436,58 @@ noshowzero-landing/
 - Contains: Client creation, session management
 - Key files: `client.ts` (browser), `server.ts` (server + service role)
 
-**src/lib/[domain]/**
-- Purpose: Domain-specific business logic
-- Domains: `booking/` (conversational flow), `backfill/` (offers), `optimization/` (slot management), `scoring/` (risk/smart scores), `reminders/`, `messaging/`, `confirmation/`, `integrations/`, `rules/`, `audit/`, `kpi/`
+**src/lib/ai/**
+- Purpose: Claude AI integration, tool-use agents, analysis engines
+- Contains: Operator chat, appointment chat, morning briefing, decision engine, no-show analysis, patient memory, smart rebook
+- Key files: `tool-registry.ts` (registers all AI tools), `operator-chat.ts` (main chat logic)
+- Subdirectories: `tools/` (10 individual tool implementations), `__tests__/` (5 test files)
+
+**src/lib/intelligence/**
+- Purpose: Intelligence layer for predictions and recommendations
+- Contains: Overbooking engine, no-show detection, slot recommendations, response patterns
+- Key files: `overbooking.ts`, `no-show-detector.ts`
+
+**src/lib/scoring/**
+- Purpose: Risk scoring, candidate ranking, confirmation personalization
+- Contains: Rule-based and AI-enhanced scoring algorithms
+- Key files: `risk-score.ts`, `ai-risk-score.ts`, `candidate-score.ts`, `ai-candidate-ranker.ts`
+
+**src/lib/booking/**
+- Purpose: Conversational booking via WhatsApp
+- Contains: State machine, session management, slot finding, date parsing
+- Key files: `booking-orchestrator.ts` (main state machine), `date-parser.ts`
+
+**src/lib/backfill/**
+- Purpose: Waitlist offer engine — fill cancelled slots
+- Contains: Candidate finding, offer sending, response processing, cascading
+- Key files: `trigger-backfill.ts` (orchestrator), `find-candidates.ts`
+
+**src/lib/confirmation/**
+- Purpose: Appointment confirmation workflow
+- Contains: State machine, templates, escalation, timing rules
+- Key files: `workflow.ts` (state machine), `escalation.ts`, `timing.ts`
+
+**src/lib/twilio/**
+- Purpose: Twilio SDK wrapper and message dispatch
+- Contains: Client, templates, content templates, notification sender
+- Key files: `client.ts`, `send-notification.ts`, `content-templates.ts`
+
+**src/lib/webhooks/**
+- Purpose: Inbound webhook handling and message routing
+- Contains: Twilio signature verification, message routing
+- Key files: `message-router.ts` (routes inbound messages), `twilio-verify.ts`
+
+**src/lib/messaging/**
+- Purpose: Message delivery and intent detection
+- Contains: Twilio dispatcher, AI intent engine, patient bot
+- Key files: `send-message.ts`, `intent-engine.ts`, `patient-bot.ts`
+
+**src/lib/[other domains]/**
+- Domains: `optimization/` (slot optimization), `integrations/` (calendar sync), `reminders/` (reminder processing), `proposals/` (slot proposals), `rules/` (business rules), `audit/` (activity logging), `kpi/` (metrics), `engine/` (processing), `metrics/` (recovery tracking), `strategy-log/` (AI strategy types), `realtime/` (live updates)
 
 **supabase/migrations/**
-- Purpose: Database schema versioning
-- Contains: SQL migration files with timestamps
+- Purpose: Database schema versioning (19 migrations)
+- Contains: SQL migration files with sequential numbering
 - Pattern: Migrations applied sequentially, immutable once committed
 
 ## Key File Locations
@@ -307,10 +509,17 @@ noshowzero-landing/
 - `src/lib/types.ts`: 30+ interfaces defining appointments, patients, offers, etc.
 - `src/lib/validations.ts`: 25+ Zod schemas for request validation
 - `src/lib/auth-helpers.ts`: `getAuthenticatedTenant()` for API auth
-- `src/lib/scoring/smart-score.ts`: Waitlist ranking algorithm
+- `src/lib/cron-auth.ts`: Cron job authentication
+- `src/lib/ai/tool-registry.ts`: AI tool definitions for Claude tool-use
+- `src/lib/intelligence/overbooking.ts`: Overbooking recommendation engine
 
 **Testing:**
-- No test files in current codebase (test directory does not exist)
+- `src/lib/ai/__tests__/`: 5 test files (decision-engine, morning-briefing, no-show-analysis, patient-memory, smart-rebook)
+- `src/lib/scoring/__tests__/`: 3 test files (ai-candidate-ranker, ai-confirmation-personalizer, candidate-score)
+- `src/lib/backfill/__tests__/`: 3 test files + helpers (find-candidates, process-response, trigger-backfill)
+- `src/lib/metrics/recovery-metrics.test.ts`: Recovery metrics test
+- `src/app/api/webhooks/twilio/__tests__/route.test.ts`: Twilio webhook test
+- `src/app/api/ai/strategy-log/__tests__/route.test.ts`: Strategy log API test
 
 ## Naming Conventions
 
@@ -374,8 +583,8 @@ noshowzero-landing/
 5. Scope queries by `tenant_id`
 
 **Database Migration:**
-1. Create file: `supabase/migrations/YYYYMMDDHHMMSS_description.sql`
-2. Timestamp must be unique and sequential
+1. Create file: `supabase/migrations/NNN_description.sql` (sequential number)
+2. Number must be unique and sequential
 3. SQL is immutable once committed
 4. Run locally: `supabase db push`
 
@@ -392,13 +601,19 @@ noshowzero-landing/
 - Generated: No
 - Committed: Yes
 - Pattern: Protected by `CRON_SECRET` env var
-- Jobs: process-reminders (15 min), run-optimization (hourly), expire-offers, sync-calendars
+- Jobs: process-reminders, run-optimization, send-confirmations, expire-offers, check-timeouts, cleanup-proposals, sync-calendars, kpi-snapshot, detect-no-shows, escalate-confirmations
 
 **src/app/api/webhooks/**
-- Purpose: Inbound webhooks (Twilio, Stripe, etc.)
+- Purpose: Inbound webhooks (Twilio)
 - Generated: No
 - Committed: Yes
-- Pattern: Use signature validation (e.g., Twilio request verification)
+- Pattern: Use signature validation (Twilio request verification)
+
+**src/app/api/admin/**
+- Purpose: Admin-only endpoints for manual operations
+- Generated: No
+- Committed: Yes
+- Pattern: trigger-backfill for manually starting backfill
 
 **src/components/ui/**
 - Purpose: shadcn primitives
@@ -424,4 +639,4 @@ noshowzero-landing/
 
 ---
 
-*Structure analysis: 2026-03-03*
+*Structure analysis: 2026-03-09*
