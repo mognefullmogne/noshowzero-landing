@@ -25,7 +25,7 @@ Regole:
 - Sii conciso e professionale
 - Quando presenti dati, usa formattazione chiara con date leggibili
 
-Contesto: Stai aiutando un operatore della clinica a gestire le attivita' quotidiane.`;
+Contesto: Stai aiutando un operatore della clinica a gestire le attività quotidiane.`;
 
 export async function runOperatorChat(
   supabase: SupabaseClient,

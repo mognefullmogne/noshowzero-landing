@@ -1,152 +1,151 @@
-# Project Handoff — NowShow
+# Project Handoff — NoShowZero
 
-> Last updated: 2026-03-06 00:30
-> Session: Fixed critical backfill bug — waitlist_entries now included in candidate search
+> Last updated: 2026-03-09 ~21:00
+> Session: Complete V1 API (18 endpoints), AI intelligence, outbound webhooks, docs rewrite
 
 ## Active Project
 
 - **Path**: /Users/aiassistant/products/noshowzero-landing
 - **Stack**: Next.js 15 + Supabase + Twilio WhatsApp + Claude AI
 - **Branch**: `main`
-- **Build status**: PASSING (76 pages, zero errors)
+- **Build status**: PASSING (commit c3bd46a)
 - **Production**: https://noshowzero-landing.vercel.app
 - **Git remote**: https://github.com/mognefullmogne/noshowzero-landing.git
 
 ## What Was Done This Session
 
-### P0 — Waitlist Backfill Bug Fixed (THE MAIN FIX)
+### V1 API Expansion (commit 2f01bce)
+- **PATCH /v1/appointments/:externalId** — cancel/update with automatic backfill trigger
+- **Waitlist endpoints** — GET/POST /v1/waitlist, GET/DELETE /v1/waitlist/:id
+- **AI Intelligence endpoints**:
+  - GET/POST /v1/appointments/:externalId/risk — AI risk score + recalculate
+  - GET /v1/appointments/:externalId/rebook — smart rebook suggestions
+  - GET /v1/analytics/no-show-analysis — AI 90-day pattern analysis
+  - GET /v1/analytics/overbooking — overbooking recommendations
+  - GET /v1/briefing — AI morning briefing
+  - POST /v1/chat — AI operator chat with 10 tools
+  - GET /v1/patients/:externalId/memory — AI-extracted preferences
+  - GET /v1/patients/:externalId/reliability — reliability score
+- **Messaging endpoints** — POST /v1/messages/send (WhatsApp/SMS), POST /v1/messages/classify (AI intent)
+- **Outbound webhook system**:
+  - Migration 020: webhook_endpoints + webhook_deliveries tables
+  - src/lib/webhooks/outbound.ts — HMAC-signed delivery dispatcher
+  - GET/POST /v1/webhooks, PATCH/DELETE /v1/webhooks/:id
+  - Webhook dispatch integrated into: appointment create/cancel, backfill offer/accept, no-show detect, confirmation send
+- **Zod schemas** added for all new endpoints in src/lib/validations.ts
 
-**Root cause**: `findCandidates()` in `src/lib/backfill/find-candidates.ts` only searched the `appointments` table for patients with later appointments who could move earlier. It **never queried `waitlist_entries`**. Patients like Aimone Pitacco (on the waitlist with no existing appointment) were invisible to the backfill pipeline.
+### API Docs Page Rewrite (commit c3bd46a)
+- Rewrote src/app/(app)/docs/page.tsx with all 18+ real V1 endpoints
+- Fixed base URL from fake api.noshowzero.com to actual app URL
+- Corrected all request/response field names to match real Zod schemas
 
-**Fix applied across 10 files**:
-
-1. **`src/lib/backfill/find-candidates.ts`** — Core fix:
-   - Updated `RankedCandidate` interface: added `source` (`'appointment'|'waitlist'`), `waitlistEntryId` (`string|null`), made `candidateAppointmentId` and `currentAppointmentAt` nullable
-   - Added `OpenSlotDetails.serviceName` and `providerName` for waitlist matching
-   - Added waitlist query: `waitlist_entries WHERE status='waiting' AND service_name=slot.serviceName`
-   - Merges both candidate sources, deduplicates by patientId (appointment-based wins), sorts by score
-
-2. **`src/lib/scoring/candidate-score.ts`** — `appointmentScheduledAt` accepts `Date | null`; waitlist candidates get distance score 45 (mid-high, "they benefit significantly from any slot")
-
-3. **`src/lib/backfill/trigger-backfill.ts`** — Passes `serviceName` and `providerName` to `findCandidates`
-
-4. **`src/lib/backfill/send-offer.ts`** — Uses `waitlistEntryId` in offer insert; null-safe `currentAppointmentAt` formatting
-
-5. **`src/lib/twilio/templates.ts`** — WhatsApp template conditionally shows "Sei in lista di attesa per questo servizio." for waitlist candidates (instead of broken "Il tuo appuntamento attuale è il  alle .")
-
-6. **`src/lib/backfill/process-response.ts`** — On accept, marks waitlist entry as `status: 'fulfilled'`
-
-7. **`src/lib/backfill/preemptive-cascade.ts`** — Added `waitlistEntryId`/`source` to rebuilt candidates
-
-8. **`src/lib/scoring/ai-candidate-ranker.ts`** — Null-safe `currentAppointmentAt` in AI prompt
-
-9. **Test helpers** (2 files) — Added new `RankedCandidate` fields to `makeCandidate()`
-
-### Work Method — Multi-Agent via cmux
-
-This session used 5 parallel Claude Code agents via cmux split panes:
-- **ORCHESTRATOR** (pane:1/surface:1) — main coordinator, dispatches tasks, reviews outputs, fixes issues
-- **INVESTIGATOR** (pane:14/surface:14) — schema research, codebase scanning, null-safety audit
-- **FRONTEND** (pane:15/surface:15) — available but not used this session
-- **BACKEND** (pane:16/surface:16) — implemented core find-candidates.ts + trigger-backfill.ts + candidate-score.ts
-- **AI ENGINE** (pane:17/surface:17) — implemented templates.ts conditional WhatsApp message
-- **QA** (pane:18/surface:18) — ran type checks and build verification
+### Planning Docs Updated (commit c3bd46a)
+- .planning/codebase/ARCHITECTURE.md — added AI decision engine, 3-touch escalation, operator chat, patient memory
+- .planning/codebase/INTEGRATIONS.md — all 9 AI features, purchased Twilio number, new pricing tiers
+- .planning/codebase/STRUCTURE.md — all new directories and files
+- .planning/PROJECT.md — v1.1 requirements marked as completed
 
 ## What Is In Progress
 
-### UNCOMMITTED — 10 files modified, build passing
-All changes are staged but NOT committed. Need to:
-1. `git add` the 10 modified files
-2. Commit with message: `fix: include waitlist_entries in backfill candidate search`
-3. Push to main
-4. Verify Vercel deployment
+### Google Calendar Integration — NOT WORKING (from previous session)
+- OAuth flow completes but callback crashes silently → `?error=oauth_failed`
+- Root cause unknown — needs logging in callback catch block
+- NEXT STEP: Add console.error logging, redeploy, check Vercel runtime logs
 
 ## What To Do Next
 
-### P0 — Commit and Deploy
-1. Commit the 10 modified files
-2. Push to main → Vercel auto-deploys
-3. Verify deployment succeeded
-
-### P0 — End-to-End Test
-1. Cancel an appointment (Taglio Uomo, Marco Stylist) via the dashboard
-2. Verify Aimone Pitacco (waitlist entry b9c9d955, phone +393516761840) receives a WhatsApp offer
-3. Check Twilio Console → Messaging → Logs for delivery status
-4. Test the accept flow: reply SI → verify new appointment created + waitlist entry marked fulfilled
-
-### P1 — Pre-existing Type Errors (not from our changes)
-- `src/app/api/webhooks/twilio/__tests__/route.test.ts` has 6 TS2345 errors about `IntentResult` type
-- These existed before our changes — separate fix needed
-
-### P2 — Enhancements
-- Add provider_name matching for waitlist entries (currently only service_name is matched)
-- Consider waitlist entry `preferred_time_slots` and `flexible_time` when matching
-- Add waitlist-specific scoring that factors in `clinical_urgency` from the entry itself
+1. **DEBUG Google Calendar callback** — Add error logging, redeploy, check Vercel logs
+2. **Apply migration 020** — Run `supabase db push` to create webhook_endpoints/webhook_deliveries tables
+3. **Test V1 API endpoints** — Verify all 18 endpoints work with real API key
+4. **Deploy to Vercel** — Push is done, Vercel auto-deploys from main
+5. **Webhook retry cron** — Create a cron job to retry failed webhook deliveries
+6. **Google app verification** — Submit for verification (unverified app warning)
+7. **Outlook integration** — MICROSOFT_CLIENT_ID/SECRET still not configured
 
 ## Key Decisions Made
 
-- **Waitlist candidates get appointmentDistance score 45** — mid-high range (equivalent to 14-30 day appointment). They benefit from any slot but don't automatically outrank 60-day appointment holders.
-- **candidateAppointmentId is null for waitlist candidates** — prevents double-cancel bug in accept flow (process-response.ts already null-checks this)
-- **Service name exact match** for waitlist→appointment matching (no fuzzy matching yet)
-- **`satisfies` replaced with explicit return types** in map/filter chains to fix TS type predicate errors
+### This Session
+- **Expand API over trim docs** — chose to build all missing endpoints rather than document only existing 4
+- **Full AI exposure via API** — external integrations get same AI intelligence as dashboard (risk scoring, decision engine, chat, memory, etc.)
+- **Outbound webhooks with HMAC** — signed with per-endpoint secrets, best-effort delivery (try/catch wrapping)
+- **Webhook dispatch is non-blocking** — failures never break the main flow
+
+### Previous Sessions
+- **Google Calendar scope is `calendar.readonly`** — read-only
+- **Sync is poll-based** — cron every 30 min + manual sync
+- **`window.location.href` over `router.push`** — forces full reload after onboarding
 
 ## Known Issues & Gotchas
 
-- **Pre-existing**: route.test.ts has 6 IntentResult type errors (not from our changes)
-- **AI Rerank timeout at 3s** — math ranking fallback is safe, just log noise
-- **`smart_score` null on waitlist entries** → scoring defaults are reasonable
-- **Calendar sync for modified events** not yet implemented (new + cancelled only)
-- **Preemptive cascade** only snapshots appointment-based candidates (waitlist candidates from prequalification would be silently dropped on re-fetch — low risk since prequalification runs on appointment data)
-
-## Test Data
-
-- Patient **Aimone Pitacco** (10ca6f7f) — phone +393516761840, WhatsApp
-- Waitlist entry (b9c9d955) — Taglio Uomo, Marco Stylist, urgency=high, morning, waiting
-- Cancelled appointment (ae7f695e) — Taglio Uomo, Marco Stylist, 16/03 09:00, cancelled
-- Tenant: `e1d14300-10cb-42d0-9e9d-eb8fee866570`
+- **Google Calendar callback crashes** — MUST debug with logging (highest priority)
+- **Migration 020 not yet applied** — webhook tables don't exist in Supabase yet
+- **No webhook retry cron** — failed deliveries are recorded but not retried
+- **UI silently swallows sync errors** — integrations page handleSync ignores API response
+- **Google Calendar events have no phone numbers** — WhatsApp reminders won't work without manual phone entry
+- **Unverified Google app warning** — users must click "Advanced" → "Continue"
+- **Rate limiting is in-memory** — resets on cold start (Vercel serverless)
+- **Pre-existing test TS errors** — `IntentResult` missing `source` property
 
 ## Files Changed (This Session)
 
-### Backfill pipeline (core fix)
-- `src/lib/backfill/find-candidates.ts` — RankedCandidate interface + waitlist query
-- `src/lib/backfill/trigger-backfill.ts` — pass serviceName/providerName
-- `src/lib/backfill/send-offer.ts` — waitlistEntryId + null-safe formatting
-- `src/lib/backfill/process-response.ts` — waitlist entry fulfillment on accept
-- `src/lib/backfill/preemptive-cascade.ts` — new interface fields
+### Commits
+- `c3bd46a` — docs: rewrite API docs page and update planning files
+- `2f01bce` — feat: complete V1 API with 18 endpoints, AI intelligence, webhooks
 
-### Scoring & AI
-- `src/lib/scoring/candidate-score.ts` — nullable appointmentScheduledAt
-- `src/lib/scoring/ai-candidate-ranker.ts` — null-safe currentAppointmentAt
+### Created (16 new files)
+- `src/app/api/v1/analytics/no-show-analysis/route.ts`
+- `src/app/api/v1/analytics/overbooking/route.ts`
+- `src/app/api/v1/appointments/[externalId]/rebook/route.ts`
+- `src/app/api/v1/appointments/[externalId]/risk/route.ts`
+- `src/app/api/v1/briefing/route.ts`
+- `src/app/api/v1/chat/route.ts`
+- `src/app/api/v1/messages/classify/route.ts`
+- `src/app/api/v1/messages/send/route.ts`
+- `src/app/api/v1/patients/[externalId]/memory/route.ts`
+- `src/app/api/v1/patients/[externalId]/reliability/route.ts`
+- `src/app/api/v1/waitlist/route.ts`
+- `src/app/api/v1/waitlist/[id]/route.ts`
+- `src/app/api/v1/webhooks/route.ts`
+- `src/app/api/v1/webhooks/[id]/route.ts`
+- `src/lib/webhooks/outbound.ts`
+- `supabase/migrations/020_webhook_endpoints.sql`
 
-### Messaging
-- `src/lib/twilio/templates.ts` — conditional WhatsApp template for waitlist
+### Modified (7 files)
+- `src/app/(app)/docs/page.tsx` — complete rewrite with real endpoints
+- `src/app/api/v1/appointments/[externalId]/route.ts` — added PATCH handler
+- `src/app/api/v1/appointments/route.ts` — webhook dispatch on create
+- `src/app/api/cron/send-confirmations/route.ts` — webhook dispatch on send
+- `src/lib/backfill/process-response.ts` — webhook dispatch on slot filled
+- `src/lib/backfill/send-offer.ts` — webhook dispatch on offer sent
+- `src/lib/intelligence/no-show-detector.ts` — webhook dispatch on no-show
+- `src/lib/validations.ts` — all new Zod schemas
+- `.planning/codebase/ARCHITECTURE.md`
+- `.planning/codebase/INTEGRATIONS.md`
+- `.planning/codebase/STRUCTURE.md`
+- `.planning/PROJECT.md`
 
-### Tests
-- `src/lib/backfill/__tests__/trigger-backfill.test.ts` — added new fields
-- `src/lib/scoring/__tests__/ai-candidate-ranker.test.ts` — added new fields
+### Unstaged Changes (from previous sessions)
+- HANDOFF.md, src/lib/ai/operator-chat.ts, src/lib/booking/date-parser.ts, src/lib/confirmation/escalation.ts, src/lib/confirmation/workflow.ts, src/lib/intelligence/overbooking.ts, src/lib/twilio/send-notification.ts, src/lib/types.ts, src/lib/webhooks/message-router.ts, src/app/api/appointments/route.ts
 
 ## Environment
 
-- `.env.local` has all vars (Supabase, Stripe, Twilio, Anthropic)
-- `TWILIO_WHATSAPP_NUMBER=whatsapp:+393399957337` (production, verified correct)
-- `TWILIO_SMS_NUMBER=+393399957337`
-- Supabase project: `hwxebnmrgrdzpfappyvk`
+- `.env.local` has all variables
+- **Vercel env vars**: INTEGRATION_ENCRYPTION_KEY, OAUTH_STATE_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ANTHROPIC_API_KEY, TWILIO_*, STRIPE_*, SUPABASE_*
+- **Google Cloud project**: `skilful-tiger-489022-b8`, app published
+- **cmux workers**: BOSS (surface:1), INVESTIGATOR (surface:2), QA (surface:3), FRONTEND (surface:4/9), AI ENGINE (surface:5), BACKEND (surface:7)
 
 ## How to Verify
 
 ```bash
-npm run build          # Should pass, 76 pages
-npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "route.test.ts"  # Should be empty
-git diff --stat        # 10 files, ~294 insertions, ~174 deletions
+npm run build          # Should pass — commit c3bd46a
+git log --oneline -5   # c3bd46a is latest
+
+# V1 API test:
+# curl -H "X-API-Key: nows_..." https://noshowzero-landing.vercel.app/api/v1/analytics/summary
+
+# Apply webhook migration:
+# supabase db push
+
+# Check docs page:
+# https://noshowzero-landing.vercel.app/docs
 ```
-
-## cmux Agent Panes (if still open)
-
-| Surface | Role | State |
-|---------|------|-------|
-| surface:1 | ORCHESTRATOR | main coordinator |
-| surface:14 | INVESTIGATOR | idle, cleared |
-| surface:15 | FRONTEND | idle, unused |
-| surface:16 | BACKEND | idle, cleared |
-| surface:17 | AI ENGINE | idle, cleared |
-| surface:18 | QA | idle |

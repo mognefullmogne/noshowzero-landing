@@ -11,9 +11,8 @@ import {
 } from "@/lib/validations";
 import { computeRiskScore } from "@/lib/scoring/risk-score";
 import { generateContactSchedule, scheduleToReminders } from "@/lib/scoring/contact-timing";
-import { createConfirmationWorkflow } from "@/lib/confirmation/workflow";
+import { createConfirmationWorkflow, markNotificationSent } from "@/lib/confirmation/workflow";
 import { sendMessage } from "@/lib/messaging/send-message";
-import { markMessageSent } from "@/lib/confirmation/workflow";
 import { renderNotificationWhatsApp, renderNotificationSms } from "@/lib/confirmation/templates";
 import { CONTENT_SIDS, buildNotificationVars } from "@/lib/twilio/content-templates";
 import { maybeProcessPending } from "@/lib/engine/process-pending";
@@ -444,7 +443,7 @@ async function createAndMaybeSendConfirmation(
 
   if (result.success) {
     if (workflowId && result.message) {
-      await markMessageSent(supabase, workflowId, result.message.id);
+      await markNotificationSent(supabase, workflowId, result.message.id);
     }
     console.info(
       `[Appointments] Conferma inviata immediatamente per appuntamento ${appointmentId}`

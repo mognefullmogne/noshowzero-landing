@@ -29,11 +29,6 @@ interface SendParams {
   readonly contentVariables?: string;
 }
 
-// Demo phone override DISABLED — was routing all messages to the owner's phone.
-// To re-enable for testing, set DEMO_PHONE_OVERRIDE env var.
-const DEMO_TENANT_ID = "e1d14300-10cb-42d0-9e9d-eb8fee866570";
-const DEMO_PHONE_OVERRIDE = process.env.DEMO_PHONE_OVERRIDE ?? null;
-
 const MAX_RETRIES = 3;
 const BACKOFF_BASE_MS = 1000;
 
@@ -50,13 +45,8 @@ async function sendWithRetry(params: SendParams, attempt: number = 1): Promise<S
   }
 
   try {
-    // Explicit statusCallback avoids sandbox "none" default that blocks sends (error 21609)
     const statusCallback = process.env.TWILIO_WEBHOOK_URL || undefined;
-
-    // Demo tenant: redirect all messages to owner's phone for testing (only if override is set)
-    const effectiveTo = (params.tenantId === DEMO_TENANT_ID && DEMO_PHONE_OVERRIDE)
-      ? DEMO_PHONE_OVERRIDE
-      : params.to.replace(/^whatsapp:/, "");
+    const effectiveTo = params.to.replace(/^whatsapp:/, "");
 
     if (params.channel === "whatsapp") {
       const whatsappPayload = params.contentSid

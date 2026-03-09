@@ -100,14 +100,17 @@ async function handleConfirm(
     return { reply: "L'appuntamento è già stato aggiornato. Contatta la segreteria per assistenza." };
   }
 
-  // Update confirmation workflow if table exists (graceful — table may not be migrated yet)
+  // Close the confirmation workflow only if the real confirmation (Touch 1+)
+  // has been sent. If workflow is still in pending_send/notification_sent, keep
+  // it alive so the cron sends the actual SI/NO confirmation later. The patient
+  // can still change their mind when the reminder arrives.
   try {
     await supabase
       .from("confirmation_workflows")
       .update({ state: "confirmed" })
       .eq("appointment_id", input.appointmentId)
       .eq("tenant_id", input.tenantId)
-      .in("state", ["pending_send", "message_sent"]);
+      .in("state", ["message_sent", "reminder_sent", "final_warning_sent"]);
   } catch (err: unknown) {
     const pgCode = (err as { code?: string })?.code;
     if (pgCode !== "42P01") {
@@ -396,7 +399,7 @@ async function handleTimePreference(
     const timeStr = date.toLocaleTimeString("it-IT", { timeZone: TENANT_TIMEZONE, hour: "2-digit", minute: "2-digit" });
 
     return {
-      reply: `Purtroppo non c'e' disponibilita' per quel giorno/ora. Lo slot piu' vicino e': ${dayStr} alle ${timeStr}. Rispondi *${nearest.index}* per prenotare, oppure indica un'altra preferenza.`,
+      reply: `Purtroppo non c'è disponibilità per quel giorno/ora. Lo slot più vicino è: ${dayStr} alle ${timeStr}. Rispondi *${nearest.index}* per prenotare, oppure indica un'altra preferenza.`,
       action: "time_preference_nearest",
     };
   }
@@ -461,7 +464,7 @@ async function confirmSlotSelection(
 
   if (createErr) {
     console.error("[Router] Create appointment from slot failed:", createErr);
-    return { reply: "Si e' verificato un errore nella prenotazione. Contatta la segreteria." };
+    return { reply: "Si è verificato un errore nella prenotazione. Contatta la segreteria." };
   }
 
   // Mark any waiting waitlist entry for this patient as fulfilled
@@ -477,7 +480,7 @@ async function confirmSlotSelection(
   const timeStr = date.toLocaleTimeString("it-IT", { timeZone: TENANT_TIMEZONE, hour: "2-digit", minute: "2-digit" });
 
   return {
-    reply: `Perfetto! Il tuo appuntamento e' confermato per ${dateStr} alle ${timeStr}. Ti aspettiamo!`,
+    reply: `Perfetto! Il tuo appuntamento è confermato per ${dateStr} alle ${timeStr}. Ti aspettiamo!`,
     action: "slot_selected",
   };
 }
@@ -644,7 +647,7 @@ async function handleJoinWaitlist(
 
   // Build message with backfill slot options
   const lines = [
-    `Sei in lista d'attesa per ${serviceName}. Abbiamo gia' degli slot disponibili:`,
+    `Sei in lista d'attesa per ${serviceName}. Abbiamo già degli slot disponibili:`,
     "",
   ];
 
@@ -656,7 +659,7 @@ async function handleJoinWaitlist(
 
   lines.push(
     "",
-    "Rispondi con il numero per prenotare, oppure scrivi il giorno e l'ora che preferisci e verificheremo la disponibilita'."
+    "Rispondi con il numero per prenotare, oppure scrivi il giorno e l'ora che preferisci e verificheremo la disponibilità."
   );
 
   return {

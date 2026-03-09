@@ -132,17 +132,34 @@ async function escalateToTouch2(
       if (scheduledAt <= now) continue;
 
       const vars = buildTemplateVars(appt, appt.patient);
+      const channel = (appt.patient.preferred_channel as MessageChannel) ?? "whatsapp";
 
-      // Touch 2 uses SMS regardless of preferred channel for channel diversity
-      const body = renderReminderSms(vars);
+      // Touch 2 uses the patient's preferred channel (WhatsApp by default)
+      const body = channel === "whatsapp"
+        ? renderReminderWhatsApp(vars)
+        : renderReminderSms(vars);
+
+      // Use Content Template for WhatsApp (required outside 24h window)
+      const useTemplate = channel === "whatsapp";
+      const touch2ContentSid = useTemplate ? CONTENT_SIDS.confirmation_reminder : undefined;
+      const touch2ContentVars = useTemplate
+        ? buildConfirmationReminderVars({
+            patientName: vars.patientName,
+            serviceName: vars.serviceName,
+            date: vars.date,
+            time: vars.time,
+          })
+        : undefined;
 
       const sendResult = await sendMessage(supabase, {
         tenantId: wf.tenant_id,
         patientId: appt.patient.id,
         patientPhone: appt.patient.phone,
-        channel: "sms" as MessageChannel,
+        channel,
         body,
         contextAppointmentId: wf.appointment_id,
+        contentSid: touch2ContentSid,
+        contentVariables: touch2ContentVars,
       });
 
       if (sendResult.success) {

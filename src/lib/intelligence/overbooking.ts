@@ -143,7 +143,7 @@ function buildRecommendationText(
   confidence: "alta" | "media"
 ): string {
   const timeLabel = `${hour.toString().padStart(2, "0")}:00`;
-  const confidenceLabel = confidence === "alta" ? "affidabilita' alta" : "affidabilita' media";
+  const confidenceLabel = confidence === "alta" ? "affidabilità alta" : "affidabilità media";
 
   return (
     `Lo slot ${dayLabel} alle ${timeLabel} ha un tasso di assenza del ${noShowPercent}% ` +

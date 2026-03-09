@@ -234,7 +234,7 @@ export type SlotStatus = "available" | "booked" | "blocked" | "cancelled";
 export type OptimizationType = "gap_fill" | "proactive_reschedule" | "slot_swap" | "load_balance";
 export type DecisionStatus = "proposed" | "approved" | "rejected" | "executed" | "expired";
 export type ActorType = "user" | "system" | "ai" | "cron" | "webhook";
-export type ConfirmationState = "pending_send" | "message_sent" | "reminder_sent" | "final_warning_sent" | "confirmed" | "declined" | "timed_out" | "cancelled";
+export type ConfirmationState = "pending_send" | "notification_sent" | "message_sent" | "reminder_sent" | "final_warning_sent" | "confirmed" | "declined" | "timed_out" | "cancelled";
 
 export type MessageIntent =
   | "confirm"

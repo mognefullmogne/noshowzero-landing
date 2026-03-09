@@ -26,7 +26,8 @@ export const ESCALATION_TOUCH_3_HOURS_BEFORE = 6;
 export const FINAL_WARNING_TIMEOUT_HOURS = 2;
 
 const VALID_WORKFLOW_TRANSITIONS: Record<ConfirmationState, readonly ConfirmationState[]> = {
-  pending_send: ["message_sent", "confirmed", "cancelled"],
+  pending_send: ["notification_sent", "confirmed", "cancelled"],
+  notification_sent: ["message_sent", "confirmed", "cancelled"],
   message_sent: ["reminder_sent", "confirmed", "declined", "timed_out", "cancelled"],
   reminder_sent: ["final_warning_sent", "confirmed", "declined", "timed_out", "cancelled"],
   final_warning_sent: ["confirmed", "declined", "timed_out", "cancelled"],
@@ -81,8 +82,31 @@ export async function createConfirmationWorkflow(
 }
 
 /**
- * Transition a workflow to message_sent state after sending confirmation.
- * Sets new deadline for timeout check (NOW + TIMEOUT_HOURS).
+ * Transition a workflow to notification_sent after sending the initial
+ * informational notification. The workflow deadline stays unchanged —
+ * the cron will pick it up later to send the real confirmation (Touch 1).
+ */
+export async function markNotificationSent(
+  supabase: SupabaseClient,
+  workflowId: string,
+  messageEventId: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("confirmation_workflows")
+    .update({
+      state: "notification_sent",
+      message_event_id: messageEventId,
+    })
+    .eq("id", workflowId)
+    .eq("state", "pending_send");
+
+  return !error;
+}
+
+/**
+ * Transition a workflow to message_sent state after sending Touch 1
+ * confirmation request (SI/NO). Sets deadline for timeout check
+ * (NOW + TIMEOUT_HOURS).
  */
 export async function markMessageSent(
   supabase: SupabaseClient,
@@ -98,7 +122,7 @@ export async function markMessageSent(
       attempts: 1,
     })
     .eq("id", workflowId)
-    .eq("state", "pending_send");
+    .in("state", ["notification_sent", "pending_send"]);
 
   return !error;
 }

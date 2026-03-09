@@ -25,8 +25,9 @@ export async function parseItalianDate(
     return null;
   }
 
-  const refDateStr = referenceDate.toISOString().split("T")[0];
-  const dayOfWeek = referenceDate.toLocaleDateString("it-IT", { weekday: "long" });
+  const TENANT_TIMEZONE = "Europe/Rome";
+  const refDateStr = referenceDate.toLocaleDateString("en-CA", { timeZone: TENANT_TIMEZONE }); // YYYY-MM-DD
+  const dayOfWeek = referenceDate.toLocaleDateString("it-IT", { timeZone: TENANT_TIMEZONE, weekday: "long" });
 
   try {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
