@@ -280,7 +280,7 @@ async function createProposalAndBuildMessage(
     end_at: s.endAt,
   }));
 
-  const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
   const { error } = await supabase
     .from("slot_proposals")

@@ -358,6 +358,9 @@ async function handleSlotSelect(
       .maybeSingle();
 
     if (!proposal) {
+      // No active proposal — try freeform rebook in case patient is responding to an expired one
+      const freeformResult = await handleFreeformRebook(supabase, input);
+      if (freeformResult) return freeformResult;
       return { reply: "Non ho trovato una proposta attiva. Contatta la segreteria." };
     }
 
@@ -430,7 +433,7 @@ async function handleTimePreference(
       .from("slot_proposals")
       .update({
         proposed_slots: [proposedSlot],
-        expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       })
       .eq("id", proposal.id as string)
       .eq("tenant_id", input.tenantId);
@@ -671,7 +674,7 @@ async function handleJoinWaitlist(
     end_at: new Date(new Date(s.scheduledAt).getTime() + s.durationMin * 60_000).toISOString(),
   }));
 
-  const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 2 hours
 
   // Use the cancelled appointment as reference (or first backfill slot's appointment)
   const referenceApptId = recentAppt?.id ?? backfillSlots[0].appointmentId;
@@ -725,21 +728,41 @@ function parseTimePreferenceFromText(text: string): TimePreference {
   if (/\b(mattina|mattino)\b/.test(lower)) return "morning";
   if (/\b(pomeriggio)\b/.test(lower)) return "afternoon";
   if (/\b(sera|tardi)\b/.test(lower)) return "evening";
+
+  // Detect explicit hour ranges like "12-18", "dalle 14 alle 17"
+  const rangeMatch = lower.match(/(\d{1,2})\s*[-–]\s*(\d{1,2})/);
+  if (rangeMatch) {
+    const start = parseInt(rangeMatch[1], 10);
+    const end = parseInt(rangeMatch[2], 10);
+    const midpoint = (start + end) / 2;
+    if (midpoint < 13) return "morning";
+    if (midpoint < 17) return "afternoon";
+    return "evening";
+  }
+
   return null;
 }
 
 /**
- * If the patient has an active slot_proposals and sends free-text,
- * try to parse it as a day/time preference and search for matching gaps.
- * Returns null if no active proposal exists (caller falls through to AI).
+ * Handle freeform date/time preference from a patient in a rebook context.
+ * Works with OR without an active slot_proposals — if no proposal exists,
+ * falls back to the patient's most recent cancelled appointment for context.
+ * Returns null only if the message doesn't contain a parseable date.
  */
 async function handleFreeformRebook(
   supabase: SupabaseClient,
   input: RouteInput
 ): Promise<RouteResult | null> {
   const TENANT_TIMEZONE = "Europe/Rome";
+  const PROPOSAL_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-  // Check for active slot proposal
+  // Try to parse a date from the message FIRST — if no date, bail early
+  const parsed = await parseItalianDate(input.messageBody);
+  if (!parsed) return null;
+
+  const timePref = parseTimePreferenceFromText(input.messageBody);
+
+  // Check for active slot proposal (may or may not exist)
   const { data: proposal } = await supabase
     .from("slot_proposals")
     .select("id, appointment_id, tenant_id")
@@ -751,22 +774,37 @@ async function handleFreeformRebook(
     .limit(1)
     .maybeSingle();
 
-  if (!proposal) return null;
+  // Get appointment context: from proposal ref or most recent cancelled appointment
+  let durationMin = 30;
+  let serviceName = "Visita";
+  let referenceApptId: string | null = null;
 
-  // Try to parse a date from the message
-  const parsed = await parseItalianDate(input.messageBody);
-  if (!parsed) return null;
+  if (proposal) {
+    referenceApptId = proposal.appointment_id;
+    const { data: refAppt } = await supabase
+      .from("appointments")
+      .select("duration_min, service_name")
+      .eq("id", proposal.appointment_id)
+      .maybeSingle();
+    durationMin = refAppt?.duration_min ?? 30;
+    serviceName = refAppt?.service_name ?? "Visita";
+  } else {
+    // No active proposal — look up most recent cancelled appointment
+    const { data: recentAppt } = await supabase
+      .from("appointments")
+      .select("id, duration_min, service_name")
+      .eq("tenant_id", input.tenantId)
+      .eq("patient_id", input.patientId)
+      .in("status", ["cancelled", "declined"])
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  const timePref = parseTimePreferenceFromText(input.messageBody);
-
-  // Look up the reference appointment for duration
-  const { data: refAppt } = await supabase
-    .from("appointments")
-    .select("duration_min, service_name")
-    .eq("id", proposal.appointment_id)
-    .maybeSingle();
-
-  const durationMin = refAppt?.duration_min ?? 30;
+    if (!recentAppt) return null; // No rebook context at all
+    referenceApptId = recentAppt.id;
+    durationMin = recentAppt.duration_min ?? 30;
+    serviceName = recentAppt.service_name ?? "Visita";
+  }
 
   const gaps = await findCalendarGapsForDate(
     supabase,
@@ -796,7 +834,7 @@ async function handleFreeformRebook(
     };
   }
 
-  // Build proposed_slots and update the existing proposal
+  // Build proposed_slots
   const proposedSlots = gaps.map((s, i) => ({
     index: i + 1,
     slot_id: `gap_${s.startAt}`,
@@ -804,14 +842,28 @@ async function handleFreeformRebook(
     end_at: s.endAt,
   }));
 
-  await supabase
-    .from("slot_proposals")
-    .update({
-      proposed_slots: proposedSlots,
-      expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-    })
-    .eq("id", proposal.id)
-    .eq("tenant_id", input.tenantId);
+  const expiresAt = new Date(Date.now() + PROPOSAL_EXPIRY_MS).toISOString();
+
+  if (proposal) {
+    // Update existing proposal
+    await supabase
+      .from("slot_proposals")
+      .update({ proposed_slots: proposedSlots, expires_at: expiresAt })
+      .eq("id", proposal.id)
+      .eq("tenant_id", input.tenantId);
+  } else {
+    // Create new proposal
+    await supabase
+      .from("slot_proposals")
+      .insert({
+        tenant_id: input.tenantId,
+        appointment_id: referenceApptId!,
+        patient_id: input.patientId,
+        proposed_slots: proposedSlots,
+        status: "pending",
+        expires_at: expiresAt,
+      });
+  }
 
   const lines: string[] = [
     `Ecco gli slot disponibili per ${dayLabel}${fasciaLabel}:`,
