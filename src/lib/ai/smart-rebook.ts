@@ -171,6 +171,79 @@ function buildGapSlot(startDate: Date, durationMin: number): GapSlot {
 }
 
 // ---------------------------------------------------------------------------
+// Single-day calendar gap finder (for freeform rebook)
+// ---------------------------------------------------------------------------
+
+export type TimePreference = "morning" | "afternoon" | "evening" | null;
+
+/** Time ranges for each preference (in local hours). */
+const TIME_RANGES: Record<string, { start: number; end: number }> = {
+  morning: { start: 9, end: 13 },
+  afternoon: { start: 13, end: 17 },
+  evening: { start: 17, end: 19 },
+};
+
+/**
+ * Find calendar gaps for a specific date, optionally filtered by time preference.
+ * Returns up to 3 slots.
+ */
+export async function findCalendarGapsForDate(
+  supabase: SupabaseClient,
+  tenantId: string,
+  durationMin: number,
+  targetDate: string,
+  timePreference: TimePreference = null
+): Promise<readonly GapSlot[]> {
+  // Determine search boundaries in local time
+  const range = timePreference ? TIME_RANGES[timePreference] : null;
+  const startHour = range?.start ?? BIZ_START_HOUR;
+  const endHour = range?.end ?? BIZ_END_HOUR;
+
+  const bizStartMs = localToUtcMs(targetDate, startHour, TENANT_TIMEZONE);
+  const bizEndMs = localToUtcMs(targetDate, endHour, TENANT_TIMEZONE);
+  const dayStart = new Date(bizStartMs).toISOString();
+  const dayEnd = new Date(bizEndMs).toISOString();
+
+  const { data: appts } = await supabase
+    .from("appointments")
+    .select("scheduled_at, duration_min")
+    .eq("tenant_id", tenantId)
+    .gte("scheduled_at", dayStart)
+    .lt("scheduled_at", dayEnd)
+    .not("status", "in", "(cancelled,declined,no_show)")
+    .order("scheduled_at", { ascending: true });
+
+  const occupied = (appts ?? []).map((a) => {
+    const start = new Date(a.scheduled_at).getTime();
+    const end = start + (a.duration_min ?? 30) * 60_000;
+    return { start, end };
+  });
+
+  const gaps: GapSlot[] = [];
+  let cursor = bizStartMs;
+
+  for (const interval of occupied) {
+    if (interval.start > cursor) {
+      const gapDuration = (interval.start - cursor) / 60_000;
+      if (gapDuration >= durationMin) {
+        gaps.push(buildGapSlot(new Date(cursor), durationMin));
+        if (gaps.length >= MAX_SLOTS) break;
+      }
+    }
+    cursor = Math.max(cursor, interval.end);
+  }
+
+  if (gaps.length < MAX_SLOTS && cursor < bizEndMs) {
+    const gapDuration = (bizEndMs - cursor) / 60_000;
+    if (gapDuration >= durationMin) {
+      gaps.push(buildGapSlot(new Date(cursor), durationMin));
+    }
+  }
+
+  return gaps;
+}
+
+// ---------------------------------------------------------------------------
 // Slot proposal creation + message send
 // ---------------------------------------------------------------------------
 
@@ -189,12 +262,13 @@ async function createProposalAndBuildMessage(
   slots: readonly GapSlot[]
 ): Promise<string> {
   if (slots.length === 0) {
-    // No slots available — offer waitlist only
+    // No slots available — offer freeform preference + waitlist
     return [
       `Ciao ${firstName}!`,
       `Al momento non ci sono slot disponibili per ${serviceName} nei prossimi giorni.`,
       "",
-      `Rispondi LISTA per essere inserito in lista d'attesa: ti contatteremo appena si libera un posto.`,
+      `Dimmi il giorno e la fascia oraria che preferisci e cercherò una soluzione.`,
+      `Oppure rispondi LISTA per essere inserito in lista d'attesa.`,
     ].join("\n");
   }
 
@@ -244,8 +318,9 @@ async function createProposalAndBuildMessage(
   lines.push(
     "",
     "Rispondi con 1, 2 o 3 per scegliere.",
+    `Oppure dimmi il giorno e la fascia oraria che preferisci (es. "giovedì pomeriggio") e troverò lo slot migliore per te.`,
     "",
-    "Se nessun orario va bene, rispondi LISTA per essere messo in lista d'attesa e ti contatteremo appena si libera un posto."
+    "Se nessun orario va bene, rispondi LISTA per la lista d'attesa."
   );
 
   return lines.join("\n");

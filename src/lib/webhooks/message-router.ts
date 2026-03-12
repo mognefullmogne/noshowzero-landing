@@ -12,7 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MessageIntent } from "@/lib/types";
 import { processAccept, processDecline } from "@/lib/backfill/process-response";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
-import { generateRebookingSuggestions } from "@/lib/ai/smart-rebook";
+import { generateRebookingSuggestions, findCalendarGapsForDate, type TimePreference } from "@/lib/ai/smart-rebook";
 import { findAvailableBackfillSlots, type AvailableBackfillSlot } from "@/lib/backfill/find-available-slots";
 import { parseItalianDate } from "@/lib/booking/date-parser";
 
@@ -63,9 +63,14 @@ export async function routeIntent(
         action: "book_redirect",
       };
     case "question":
-      return handleQuestionWithAI(supabase, input);
-    default:
-      return handleUnknownWithAI(supabase, input);
+    default: {
+      // If patient has an active slot proposal, treat free-text as a rebook preference
+      const freeformResult = await handleFreeformRebook(supabase, input);
+      if (freeformResult) return freeformResult;
+      return input.intent === "question"
+        ? handleQuestionWithAI(supabase, input)
+        : handleUnknownWithAI(supabase, input);
+    }
   }
 }
 
@@ -710,6 +715,122 @@ async function handleJoinWaitlist(
   return {
     reply: lines.join("\n"),
     action: "joined_waitlist_with_slots",
+  };
+}
+
+// --- Freeform rebook handler ---
+
+function parseTimePreferenceFromText(text: string): TimePreference {
+  const lower = text.toLowerCase();
+  if (/\b(mattina|mattino)\b/.test(lower)) return "morning";
+  if (/\b(pomeriggio)\b/.test(lower)) return "afternoon";
+  if (/\b(sera|tardi)\b/.test(lower)) return "evening";
+  return null;
+}
+
+/**
+ * If the patient has an active slot_proposals and sends free-text,
+ * try to parse it as a day/time preference and search for matching gaps.
+ * Returns null if no active proposal exists (caller falls through to AI).
+ */
+async function handleFreeformRebook(
+  supabase: SupabaseClient,
+  input: RouteInput
+): Promise<RouteResult | null> {
+  const TENANT_TIMEZONE = "Europe/Rome";
+
+  // Check for active slot proposal
+  const { data: proposal } = await supabase
+    .from("slot_proposals")
+    .select("id, appointment_id, tenant_id")
+    .eq("tenant_id", input.tenantId)
+    .eq("patient_id", input.patientId)
+    .eq("status", "pending")
+    .gte("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!proposal) return null;
+
+  // Try to parse a date from the message
+  const parsed = await parseItalianDate(input.messageBody);
+  if (!parsed) return null;
+
+  const timePref = parseTimePreferenceFromText(input.messageBody);
+
+  // Look up the reference appointment for duration
+  const { data: refAppt } = await supabase
+    .from("appointments")
+    .select("duration_min, service_name")
+    .eq("id", proposal.appointment_id)
+    .maybeSingle();
+
+  const durationMin = refAppt?.duration_min ?? 30;
+
+  const gaps = await findCalendarGapsForDate(
+    supabase,
+    input.tenantId,
+    durationMin,
+    parsed.date,
+    timePref
+  );
+
+  // Format the date for display
+  const dateObj = new Date(`${parsed.date}T12:00:00`);
+  const dayLabel = dateObj.toLocaleDateString("it-IT", {
+    timeZone: TENANT_TIMEZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const fasciaLabel = timePref === "morning" ? " di mattina"
+    : timePref === "afternoon" ? " di pomeriggio"
+    : timePref === "evening" ? " di sera"
+    : "";
+
+  if (gaps.length === 0) {
+    return {
+      reply: `Non ho trovato slot disponibili per ${dayLabel}${fasciaLabel}. Vuoi provare un altro giorno?`,
+      action: "freeform_rebook_no_match",
+    };
+  }
+
+  // Build proposed_slots and update the existing proposal
+  const proposedSlots = gaps.map((s, i) => ({
+    index: i + 1,
+    slot_id: `gap_${s.startAt}`,
+    start_at: s.startAt,
+    end_at: s.endAt,
+  }));
+
+  await supabase
+    .from("slot_proposals")
+    .update({
+      proposed_slots: proposedSlots,
+      expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+    })
+    .eq("id", proposal.id)
+    .eq("tenant_id", input.tenantId);
+
+  const lines: string[] = [
+    `Ecco gli slot disponibili per ${dayLabel}${fasciaLabel}:`,
+    "",
+  ];
+
+  for (const slot of gaps) {
+    const idx = gaps.indexOf(slot) + 1;
+    lines.push(`*${idx}* - ${slot.dayLabel} alle ${slot.timeLabel}`);
+  }
+
+  lines.push(
+    "",
+    `Rispondi con il numero per prenotare, oppure indica un altro giorno.`
+  );
+
+  return {
+    reply: lines.join("\n"),
+    action: "freeform_rebook_slots_found",
   };
 }
 
