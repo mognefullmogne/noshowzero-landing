@@ -413,7 +413,7 @@ async function loadPatientContext(
     .eq("patient_id", patientId)
     .in("status", ["cancelled", "declined"])
     .gte("scheduled_at", sevenDaysAgo)
-    .order("scheduled_at", { ascending: true })
+    .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle()).data;
 
