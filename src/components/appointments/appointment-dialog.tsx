@@ -220,7 +220,7 @@ export function AppointmentDialog({ onCreated }: AppointmentDialogProps) {
           provider_name: form.provider_name.trim() || undefined,
           operator_id: form.operator_id || undefined,
           location_name: form.location_name.trim() || undefined,
-          scheduled_at: form.scheduled_at,
+          scheduled_at: new Date(form.scheduled_at).toISOString(),
           duration_min: form.duration_min,
           notes: form.notes.trim() || undefined,
         }),

@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RiskBadge } from "./risk-badge";
+import { formatDate, formatTime } from "@/lib/utils/datetime";
 import { StatusBadge } from "./status-badge";
 import { AppointmentDetail } from "./appointment-detail";
 import type { Appointment, Reminder } from "@/lib/types";
@@ -121,10 +122,10 @@ export function AppointmentsTable({ appointments, loading, onRefresh }: Appointm
                 </TableCell>
                 <TableCell>
                   <p className="text-sm text-gray-900">
-                    {new Date(appt.scheduled_at).toLocaleDateString()}
+                    {formatDate(appt.scheduled_at)}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {new Date(appt.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {formatTime(appt.scheduled_at)}
                     {" · "}{appt.duration_min}min
                   </p>
                 </TableCell>

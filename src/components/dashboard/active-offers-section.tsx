@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Zap, TimerOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatDateObj } from "@/lib/utils/datetime";
 
 // --- Types ---
 
@@ -33,7 +34,7 @@ function computeMinutesLeft(expiresAt: string): number {
 
 function formatSlotTime(scheduledAt: string): string {
   const date = new Date(scheduledAt);
-  return date.toLocaleDateString("it-IT", {
+  return formatDateObj(date, {
     weekday: "short",
     day: "2-digit",
     month: "short",

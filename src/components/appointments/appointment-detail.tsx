@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { formatDateTime } from "@/lib/utils/datetime";
 import { Separator } from "@/components/ui/separator";
 import { RiskBadge } from "./risk-badge";
 import { StatusBadge } from "./status-badge";
@@ -361,7 +362,7 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
             <div>
               <p className="text-sm font-medium text-gray-500">Scheduled</p>
               <p className="text-sm text-gray-900">
-                {new Date(appointment.scheduled_at).toLocaleString()}
+                {formatDateTime(appointment.scheduled_at)}
               </p>
             </div>
             <div>
@@ -433,7 +434,7 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
                   <div key={r.id} className="flex items-center gap-2 text-xs">
                     <Clock className="h-3 w-3 text-gray-400" />
                     <span className="text-gray-600">
-                      {new Date(r.scheduled_at).toLocaleString()}
+                      {formatDateTime(r.scheduled_at)}
                     </span>
                     <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
                     <Badge
@@ -502,7 +503,7 @@ export function AppointmentDetail({ appointment, open, onClose, onUpdated }: App
                                 : "Patient"}
                             </p>
                             <p className="text-[10px] text-gray-400">
-                              {new Date(offer.offered_at).toLocaleString()}
+                              {formatDateTime(offer.offered_at)}
                               {offer.smart_score != null && ` · Score: ${offer.smart_score}`}
                             </p>
                           </div>

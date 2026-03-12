@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Sparkles, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatDateObj, formatTime } from "@/lib/utils/datetime";
 import { MarkdownBlock } from "@/lib/render-markdown";
 
 // ---------------------------------------------------------------------------
@@ -82,7 +83,7 @@ export function MorningBriefing() {
           <div>
             <p className="text-sm font-semibold text-indigo-800">Briefing del mattino</p>
             <p className="text-xs text-indigo-500">
-              {today.toLocaleDateString("it-IT", {
+              {formatDateObj(today, {
                 weekday: "long",
                 day: "numeric",
                 month: "long",
@@ -144,10 +145,7 @@ export function MorningBriefing() {
               {result.generatedAt && (
                 <p className="mt-3 text-[10px] text-indigo-400">
                   Generato alle{" "}
-                  {new Date(result.generatedAt).toLocaleTimeString("it-IT", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatTime(result.generatedAt)}
                 </p>
               )}
             </>

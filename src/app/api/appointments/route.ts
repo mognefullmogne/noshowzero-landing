@@ -163,15 +163,13 @@ export async function POST(request: Request) {
         preferredChannel = (newPatient.preferred_channel ?? patientInfo.preferred_channel) as MessageChannel;
       }
 
-      // Parse scheduled_at — the form sends datetime-local format (no timezone)
-      const scheduledDate = new Date(apptInfo.scheduled_at);
       appointmentData = {
         service_name: apptInfo.service_name,
         service_id: apptInfo.service_id,
         provider_name: apptInfo.provider_name,
         operator_id: apptInfo.operator_id,
         location_name: apptInfo.location_name,
-        scheduled_at: scheduledDate.toISOString(),
+        scheduled_at: apptInfo.scheduled_at,
         duration_min: apptInfo.duration_min,
         notes: apptInfo.notes,
       };

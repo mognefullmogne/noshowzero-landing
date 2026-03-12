@@ -13,6 +13,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { formatTimeObj, formatDateObj } from "@/lib/utils/datetime";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
@@ -157,9 +158,8 @@ const STATUS_TEXT: Record<string, string> = {
 };
 
 /** Format minutes-from-midnight as "HH:MM". */
-function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+function formatCalTime(dateStr: string): string {
+  return formatTimeObj(new Date(dateStr));
 }
 
 export default function CalendarPage() {
@@ -397,8 +397,8 @@ export default function CalendarPage() {
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium text-gray-700">
-          {weekStart.toLocaleDateString("it-IT", { day: "numeric", month: "long" })} –{" "}
-          {weekDates[4].toLocaleDateString("it-IT", {
+          {formatDateObj(weekStart, { day: "numeric", month: "long" })} –{" "}
+          {formatDateObj(weekDates[4], {
             day: "numeric",
             month: "long",
             year: "numeric",
@@ -549,7 +549,7 @@ export default function CalendarPage() {
                     const accent = STATUS_ACCENT[appt.status] ?? "border-l-gray-400";
                     const bg = STATUS_BG[appt.status] ?? "bg-gray-50 hover:bg-gray-100/80";
                     const text = STATUS_TEXT[appt.status] ?? "text-gray-700";
-                    const timeStr = formatTime(appt.scheduled_at);
+                    const timeStr = formatCalTime(appt.scheduled_at);
 
                     return (
                       <button

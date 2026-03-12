@@ -4,6 +4,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDate, formatTime, formatDateTime } from "@/lib/utils/datetime";
 import {
   Table,
   TableBody,
@@ -118,8 +119,8 @@ export function OffersTable({ offers, loading }: OffersTableProps) {
                     <p className="text-sm text-gray-900">{appt?.service_name ?? "—"}</p>
                     {appt?.scheduled_at && (
                       <p className="text-xs text-gray-400">
-                        {new Date(appt.scheduled_at).toLocaleDateString()}{" "}
-                        {new Date(appt.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {formatDate(appt.scheduled_at)}{" "}
+                        {formatTime(appt.scheduled_at)}
                       </p>
                     )}
                   </TableCell>
@@ -135,7 +136,7 @@ export function OffersTable({ offers, loading }: OffersTableProps) {
                   <TableCell>
                     <p className="text-sm text-gray-700">{formatRelativeTime(offer.offered_at)}</p>
                     <p className="text-xs text-gray-400">
-                      {new Date(offer.offered_at).toLocaleDateString()}
+                      {formatDate(offer.offered_at)}
                     </p>
                   </TableCell>
                   <TableCell>
@@ -188,7 +189,7 @@ export function OffersTable({ offers, loading }: OffersTableProps) {
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 ml-6">
-                    {new Date(selected.original_appointment.scheduled_at).toLocaleString()}
+                    {formatDateTime(selected.original_appointment.scheduled_at)}
                     {" · "}{selected.original_appointment.duration_min}min
                   </p>
                   {selected.original_appointment.provider_name && (
@@ -206,7 +207,7 @@ export function OffersTable({ offers, loading }: OffersTableProps) {
                   <div className="flex items-center gap-1 mt-0.5">
                     <Clock className="h-3.5 w-3.5 text-gray-400" />
                     <p className="text-sm text-gray-900">
-                      {new Date(selected.offered_at).toLocaleString()}
+                      {formatDateTime(selected.offered_at)}
                     </p>
                   </div>
                 </div>
@@ -215,7 +216,7 @@ export function OffersTable({ offers, loading }: OffersTableProps) {
                   <div className="flex items-center gap-1 mt-0.5">
                     <Clock className="h-3.5 w-3.5 text-gray-400" />
                     <p className="text-sm text-gray-900">
-                      {new Date(selected.expires_at).toLocaleString()}
+                      {formatDateTime(selected.expires_at)}
                     </p>
                   </div>
                 </div>

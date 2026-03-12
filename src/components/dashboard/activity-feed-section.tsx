@@ -5,6 +5,7 @@
 
 import { Activity, CheckCircle, Clock, Send, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatTimeObj, formatDateObj } from "@/lib/utils/datetime";
 
 // --- Types ---
 
@@ -85,14 +86,11 @@ function formatEventTimestamp(
     date.getMonth() === now.getMonth() &&
     date.getFullYear() === now.getFullYear();
 
-  const time = date.toLocaleTimeString("it-IT", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const time = formatTimeObj(date);
 
   if (isToday) return time;
 
-  const day = date.toLocaleDateString("it-IT", {
+  const day = formatDateObj(date, {
     day: "numeric",
     month: "short",
   });
@@ -100,8 +98,7 @@ function formatEventTimestamp(
 }
 
 function formatSlotTime(scheduledAt: string): string {
-  const date = new Date(scheduledAt);
-  return date.toLocaleDateString("it-IT", {
+  return formatDateObj(new Date(scheduledAt), {
     day: "2-digit",
     month: "short",
     hour: "2-digit",

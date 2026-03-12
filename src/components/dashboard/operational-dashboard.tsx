@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTenant } from "@/hooks/use-tenant";
 import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
+import { formatDate, formatTime, formatDateObj } from "@/lib/utils/datetime";
 import {
   CalendarDays,
   CalendarRange,
@@ -225,7 +226,7 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Benvenuto su {tenantName} —{" "}
-            {today.toLocaleDateString("it-IT", {
+            {formatDateObj(today, {
               weekday: "long",
               day: "numeric",
               month: "long",
@@ -308,8 +309,8 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
                       </span>
                     )}
                     <span className="text-xs text-gray-400 shrink-0">
-                      {new Date(a.scheduled_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}{" "}
-                      {new Date(a.scheduled_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                      {formatDate(a.scheduled_at, { day: "2-digit", month: "short" })}{" "}
+                      {formatTime(a.scheduled_at)}
                     </span>
                   </li>
                 );
@@ -464,7 +465,7 @@ export function OperationalDashboard({ tenantName }: OperationalDashboardProps) 
                     <p className="text-xs text-gray-400 truncate">
                       {offer.original_appointment?.service_name ?? "Servizio"}{" "}
                       {offer.original_appointment?.scheduled_at
-                        ? `· ${new Date(offer.original_appointment.scheduled_at).toLocaleDateString("it-IT")}`
+                        ? `· ${formatDate(offer.original_appointment.scheduled_at)}`
                         : ""}
                     </p>
                   </div>
