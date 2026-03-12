@@ -97,6 +97,30 @@ async function handleConfirm(
   }
 
   if (!data || data.length === 0) {
+    // UPDATE matched 0 rows — check why by reading current status
+    const { data: current } = await supabase
+      .from("appointments")
+      .select("status")
+      .eq("id", input.appointmentId)
+      .eq("tenant_id", input.tenantId)
+      .maybeSingle();
+
+    const currentStatus = current?.status as string | undefined;
+    console.warn("[Router] Confirm: 0 rows updated. Current status:", currentStatus, "appointmentId:", input.appointmentId);
+
+    if (currentStatus === "confirmed") {
+      return { reply: "Il tuo appuntamento è già confermato! Ti aspettiamo 🎉" };
+    }
+    if (currentStatus === "completed") {
+      return { reply: "L'appuntamento è già stato completato." };
+    }
+    if (currentStatus === "cancelled" || currentStatus === "declined") {
+      return { reply: "L'appuntamento risulta cancellato. Rispondi SI se vuoi riconfermarlo." };
+    }
+    if (currentStatus === "no_show") {
+      return { reply: "L'appuntamento risulta come non presentato. Contatta la segreteria per assistenza." };
+    }
+
     return { reply: "L'appuntamento è già stato aggiornato. Contatta la segreteria per assistenza." };
   }
 
@@ -149,6 +173,27 @@ async function handleCancel(
   }
 
   if (!data || data.length === 0) {
+    // UPDATE matched 0 rows — check why by reading current status
+    const { data: current } = await supabase
+      .from("appointments")
+      .select("status")
+      .eq("id", input.appointmentId)
+      .eq("tenant_id", input.tenantId)
+      .maybeSingle();
+
+    const currentStatus = current?.status as string | undefined;
+    console.warn("[Router] Cancel: 0 rows updated. Current status:", currentStatus, "appointmentId:", input.appointmentId);
+
+    if (currentStatus === "cancelled" || currentStatus === "declined") {
+      return { reply: "Il tuo appuntamento era già stato cancellato." };
+    }
+    if (currentStatus === "completed") {
+      return { reply: "L'appuntamento è già stato completato e non può essere cancellato." };
+    }
+    if (currentStatus === "no_show") {
+      return { reply: "L'appuntamento risulta come non presentato. Contatta la segreteria." };
+    }
+
     return { reply: "L'appuntamento è già stato aggiornato. Contatta la segreteria per assistenza." };
   }
 
