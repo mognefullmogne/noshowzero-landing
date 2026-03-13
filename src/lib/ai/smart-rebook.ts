@@ -183,8 +183,15 @@ const TIME_RANGES: Record<string, { start: number; end: number }> = {
   evening: { start: 17, end: 19 },
 };
 
+export interface GapSearchOptions {
+  readonly timePreference?: TimePreference;
+  readonly customStartHour?: number;
+  readonly customEndHour?: number;
+}
+
 /**
- * Find calendar gaps for a specific date, optionally filtered by time preference.
+ * Find calendar gaps for a specific date, optionally filtered by time preference
+ * or explicit hour range. Custom hours override time preference.
  * Returns up to 3 slots.
  */
 export async function findCalendarGapsForDate(
@@ -192,12 +199,19 @@ export async function findCalendarGapsForDate(
   tenantId: string,
   durationMin: number,
   targetDate: string,
-  timePreference: TimePreference = null
+  timePreferenceOrOptions: TimePreference | GapSearchOptions = null
 ): Promise<readonly GapSlot[]> {
-  // Determine search boundaries in local time
-  const range = timePreference ? TIME_RANGES[timePreference] : null;
-  const startHour = range?.start ?? BIZ_START_HOUR;
-  const endHour = range?.end ?? BIZ_END_HOUR;
+  // Normalize options: GapSearchOptions object or bare TimePreference string/null
+  const opts: GapSearchOptions = (
+    typeof timePreferenceOrOptions === "object" && timePreferenceOrOptions !== null && !Array.isArray(timePreferenceOrOptions)
+      ? timePreferenceOrOptions as GapSearchOptions
+      : { timePreference: timePreferenceOrOptions as TimePreference }
+  );
+
+  // Custom hours take precedence over time preference
+  const range = opts.timePreference ? TIME_RANGES[opts.timePreference] : null;
+  const startHour = opts.customStartHour ?? range?.start ?? BIZ_START_HOUR;
+  const endHour = opts.customEndHour ?? range?.end ?? BIZ_END_HOUR;
 
   const bizStartMs = localToUtcMs(targetDate, startHour, TENANT_TIMEZONE);
   const bizEndMs = localToUtcMs(targetDate, endHour, TENANT_TIMEZONE);

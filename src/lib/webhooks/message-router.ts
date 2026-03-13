@@ -12,9 +12,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MessageIntent } from "@/lib/types";
 import { processAccept, processDecline } from "@/lib/backfill/process-response";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
-import { generateRebookingSuggestions, findCalendarGapsForDate, type TimePreference } from "@/lib/ai/smart-rebook";
+import { generateRebookingSuggestions, findCalendarGapsForDate, type TimePreference, type GapSlot, type GapSearchOptions } from "@/lib/ai/smart-rebook";
 import { findAvailableBackfillSlots, type AvailableBackfillSlot } from "@/lib/backfill/find-available-slots";
 import { parseItalianDate } from "@/lib/booking/date-parser";
+import { parseAvailabilityRequest } from "@/lib/ai/parse-availability";
 
 // AI input sanitization
 const MAX_AI_INPUT_CHARS = 500;
@@ -377,7 +378,9 @@ async function handleSlotSelect(
       return { reply: `Opzione non valida. Per favore scegli tra 1 e ${slots.length}.` };
     }
 
-    // Not a number — try to parse as time preference
+    // Not a number — try AI-powered freeform rebook first, then legacy time preference
+    const freeformResult = await handleFreeformRebook(supabase, input);
+    if (freeformResult) return freeformResult;
     return handleTimePreference(supabase, input, proposal, slots);
   } catch (err) {
     console.error("[Router] Slot select error:", err);
@@ -745,9 +748,10 @@ function parseTimePreferenceFromText(text: string): TimePreference {
 
 /**
  * Handle freeform date/time preference from a patient in a rebook context.
+ * Uses AI to parse complex availability requests (multi-date, hour ranges).
  * Works with OR without an active slot_proposals — if no proposal exists,
  * falls back to the patient's most recent cancelled appointment for context.
- * Returns null only if the message doesn't contain a parseable date.
+ * Returns null only if the message doesn't contain a parseable availability request.
  */
 async function handleFreeformRebook(
   supabase: SupabaseClient,
@@ -756,12 +760,46 @@ async function handleFreeformRebook(
   const TENANT_TIMEZONE = "Europe/Rome";
   const PROPOSAL_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-  // Try to parse a date from the message FIRST — if no date, bail early
-  const parsed = await parseItalianDate(input.messageBody);
-  if (!parsed) return null;
+  // Try AI-powered availability parsing first, fall back to simple date parser
+  const availability = await parseAvailabilityRequest(input.messageBody);
+  if (!availability) {
+    const simpleParsed = await parseItalianDate(input.messageBody);
+    if (!simpleParsed) return null;
+    // Convert simple parse to availability format and continue
+    return handleFreeformWithDates(
+      supabase, input, [simpleParsed.date],
+      { timePreference: parseTimePreferenceFromText(input.messageBody) },
+      TENANT_TIMEZONE, PROPOSAL_EXPIRY_MS
+    );
+  }
 
-  const timePref = parseTimePreferenceFromText(input.messageBody);
+  // Build search options from AI-parsed availability
+  let searchOpts: GapSearchOptions;
+  if (availability.timeStart && availability.timeEnd) {
+    const [sh, sm] = availability.timeStart.split(":").map(Number);
+    const [eh, em] = availability.timeEnd.split(":").map(Number);
+    searchOpts = { customStartHour: sh + sm / 60, customEndHour: eh + em / 60 };
+  } else if (availability.timePreference && availability.timePreference !== "any") {
+    searchOpts = { timePreference: availability.timePreference };
+  } else {
+    searchOpts = {};
+  }
 
+  return handleFreeformWithDates(
+    supabase, input, [...availability.dates],
+    searchOpts, TENANT_TIMEZONE, PROPOSAL_EXPIRY_MS
+  );
+}
+
+/** Shared logic for freeform rebook: search gaps across dates, build proposal. */
+async function handleFreeformWithDates(
+  supabase: SupabaseClient,
+  input: RouteInput,
+  dates: readonly string[],
+  searchOpts: GapSearchOptions,
+  tz: string,
+  proposalExpiryMs: number
+): Promise<RouteResult | null> {
   // Check for active slot proposal (may or may not exist)
   const { data: proposal } = await supabase
     .from("slot_proposals")
@@ -776,23 +814,20 @@ async function handleFreeformRebook(
 
   // Get appointment context: from proposal ref or most recent cancelled appointment
   let durationMin = 30;
-  let serviceName = "Visita";
   let referenceApptId: string | null = null;
 
   if (proposal) {
     referenceApptId = proposal.appointment_id;
     const { data: refAppt } = await supabase
       .from("appointments")
-      .select("duration_min, service_name")
+      .select("duration_min")
       .eq("id", proposal.appointment_id)
       .maybeSingle();
     durationMin = refAppt?.duration_min ?? 30;
-    serviceName = refAppt?.service_name ?? "Visita";
   } else {
-    // No active proposal — look up most recent cancelled appointment
     const { data: recentAppt } = await supabase
       .from("appointments")
-      .select("id, duration_min, service_name")
+      .select("id, duration_min")
       .eq("tenant_id", input.tenantId)
       .eq("patient_id", input.patientId)
       .in("status", ["cancelled", "declined"])
@@ -800,59 +835,61 @@ async function handleFreeformRebook(
       .limit(1)
       .maybeSingle();
 
-    if (!recentAppt) return null; // No rebook context at all
+    if (!recentAppt) return null;
     referenceApptId = recentAppt.id;
     durationMin = recentAppt.duration_min ?? 30;
-    serviceName = recentAppt.service_name ?? "Visita";
   }
 
-  const gaps = await findCalendarGapsForDate(
-    supabase,
-    input.tenantId,
-    durationMin,
-    parsed.date,
-    timePref
-  );
+  // Search for gaps across all requested dates (stop at 3 total)
+  const allGaps: GapSlot[] = [];
+  for (const date of dates) {
+    if (allGaps.length >= 3) break;
+    const dateGaps = await findCalendarGapsForDate(
+      supabase, input.tenantId, durationMin, date, searchOpts
+    );
+    for (const gap of dateGaps) {
+      if (allGaps.length >= 3) break;
+      allGaps.push(gap);
+    }
+  }
 
-  // Format the date for display
-  const dateObj = new Date(`${parsed.date}T12:00:00`);
-  const dayLabel = dateObj.toLocaleDateString("it-IT", {
-    timeZone: TENANT_TIMEZONE,
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-  const fasciaLabel = timePref === "morning" ? " di mattina"
-    : timePref === "afternoon" ? " di pomeriggio"
-    : timePref === "evening" ? " di sera"
+  // Build display label from first date
+  const firstDateObj = new Date(`${dates[0]}T12:00:00`);
+  const dayLabel = dates.length === 1
+    ? firstDateObj.toLocaleDateString("it-IT", { timeZone: tz, weekday: "long", day: "numeric", month: "long" })
+    : "le date richieste";
+
+  const fasciaLabel = searchOpts.customStartHour != null && searchOpts.customEndHour != null
+    ? ` (${formatHour(searchOpts.customStartHour)}-${formatHour(searchOpts.customEndHour)})`
+    : searchOpts.timePreference === "morning" ? " di mattina"
+    : searchOpts.timePreference === "afternoon" ? " di pomeriggio"
+    : searchOpts.timePreference === "evening" ? " di sera"
     : "";
 
-  if (gaps.length === 0) {
+  if (allGaps.length === 0) {
     return {
-      reply: `Non ho trovato slot disponibili per ${dayLabel}${fasciaLabel}. Vuoi provare un altro giorno?`,
+      reply: `Non ho trovato slot disponibili per ${dayLabel}${fasciaLabel}. Vuoi provare un altro giorno o fascia oraria?`,
       action: "freeform_rebook_no_match",
     };
   }
 
   // Build proposed_slots
-  const proposedSlots = gaps.map((s, i) => ({
+  const proposedSlots = allGaps.map((s, i) => ({
     index: i + 1,
     slot_id: `gap_${s.startAt}`,
     start_at: s.startAt,
     end_at: s.endAt,
   }));
 
-  const expiresAt = new Date(Date.now() + PROPOSAL_EXPIRY_MS).toISOString();
+  const expiresAt = new Date(Date.now() + proposalExpiryMs).toISOString();
 
   if (proposal) {
-    // Update existing proposal
     await supabase
       .from("slot_proposals")
       .update({ proposed_slots: proposedSlots, expires_at: expiresAt })
       .eq("id", proposal.id)
       .eq("tenant_id", input.tenantId);
   } else {
-    // Create new proposal
     await supabase
       .from("slot_proposals")
       .insert({
@@ -870,9 +907,8 @@ async function handleFreeformRebook(
     "",
   ];
 
-  for (const slot of gaps) {
-    const idx = gaps.indexOf(slot) + 1;
-    lines.push(`*${idx}* - ${slot.dayLabel} alle ${slot.timeLabel}`);
+  for (let i = 0; i < allGaps.length; i++) {
+    lines.push(`*${i + 1}* - ${allGaps[i].dayLabel} alle ${allGaps[i].timeLabel}`);
   }
 
   lines.push(
@@ -884,6 +920,12 @@ async function handleFreeformRebook(
     reply: lines.join("\n"),
     action: "freeform_rebook_slots_found",
   };
+}
+
+function formatHour(h: number): string {
+  const hours = Math.floor(h);
+  const mins = Math.round((h - hours) * 60);
+  return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
 }
 
 // --- AI-powered handlers (reply-only, no action execution) ---
