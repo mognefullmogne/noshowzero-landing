@@ -361,7 +361,7 @@ async function findPatientByPhone(
   // Priority: reminder_sent > reminder_pending > scheduled, then by soonest date.
   const now = new Date().toISOString();
   const patientIds = patients.map((p) => p.id);
-  const STATUS_PRIORITY = ["reminder_sent", "reminder_pending", "scheduled", "confirmed"] as const;
+  const STATUS_PRIORITY = ["reminder_sent", "reminder_pending", "scheduled", "confirmed", "cancelled"] as const;
 
   for (const targetStatus of STATUS_PRIORITY) {
     const { data: nearestAppt } = await supabase

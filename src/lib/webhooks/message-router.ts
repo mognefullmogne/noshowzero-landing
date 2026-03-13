@@ -367,7 +367,7 @@ async function handleSlotSelect(
     const slots = proposal.proposed_slots as Array<{ index: number; slot_id: string; start_at: string; end_at: string }>;
 
     // Try numeric selection first
-    const numMatch = input.messageBody.match(/[123]/);
+    const numMatch = input.messageBody.match(/^\s*([123])\s*$/);
     if (numMatch) {
       const selectedIndex = parseInt(numMatch[0], 10);
       const selected = slots.find((s) => s.index === selectedIndex);
