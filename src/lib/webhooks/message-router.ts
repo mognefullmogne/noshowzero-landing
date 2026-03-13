@@ -12,8 +12,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MessageIntent } from "@/lib/types";
 import { processAccept, processDecline } from "@/lib/backfill/process-response";
 import { triggerBackfill } from "@/lib/backfill/trigger-backfill";
-import { generateRebookingSuggestions, findCalendarGapsForDate, type TimePreference, type GapSlot, type GapSearchOptions } from "@/lib/ai/smart-rebook";
-import { findAvailableBackfillSlots, type AvailableBackfillSlot } from "@/lib/backfill/find-available-slots";
+import { generateRebookingSuggestions, findCalendarGapsForDate, combineBackfillAndGaps, type TimePreference, type GapSlot, type GapSearchOptions, type ProposedSlotData } from "@/lib/ai/smart-rebook";
+import { findAvailableBackfillSlots, findAvailableBackfillSlotsForDate, type AvailableBackfillSlot } from "@/lib/backfill/find-available-slots";
 import { parseItalianDate } from "@/lib/booking/date-parser";
 import { parseAvailabilityRequest } from "@/lib/ai/parse-availability";
 
@@ -840,18 +840,27 @@ async function handleFreeformWithDates(
     durationMin = recentAppt.duration_min ?? 30;
   }
 
-  // Search for gaps across all requested dates (stop at 3 total)
+  // Search for backfill + gaps across all requested dates, combine with backfill priority
+  const allBackfill: AvailableBackfillSlot[] = [];
   const allGaps: GapSlot[] = [];
+
   for (const date of dates) {
-    if (allGaps.length >= 3) break;
-    const dateGaps = await findCalendarGapsForDate(
-      supabase, input.tenantId, durationMin, date, searchOpts
-    );
-    for (const gap of dateGaps) {
-      if (allGaps.length >= 3) break;
-      allGaps.push(gap);
-    }
+    if (allBackfill.length + allGaps.length >= 6) break; // fetch extra for dedup
+
+    // Compute day boundaries for backfill query
+    const dayStart = new Date(`${date}T00:00:00Z`).toISOString();
+    const dayEnd = new Date(`${date}T23:59:59Z`).toISOString();
+
+    const [dateBf, dateGaps] = await Promise.all([
+      findAvailableBackfillSlotsForDate(supabase, input.tenantId, { dayStart, dayEnd, limit: 3 }),
+      findCalendarGapsForDate(supabase, input.tenantId, durationMin, date, searchOpts),
+    ]);
+
+    for (const bf of dateBf) allBackfill.push(bf);
+    for (const gap of dateGaps) allGaps.push(gap);
   }
+
+  const combined = combineBackfillAndGaps(allBackfill, allGaps, 3);
 
   // Build display label from first date
   const firstDateObj = new Date(`${dates[0]}T12:00:00`);
@@ -866,7 +875,7 @@ async function handleFreeformWithDates(
     : searchOpts.timePreference === "evening" ? " di sera"
     : "";
 
-  if (allGaps.length === 0) {
+  if (combined.length === 0) {
     return {
       reply: `Non ho trovato slot disponibili per ${dayLabel}${fasciaLabel}. Vuoi provare un altro giorno o fascia oraria?`,
       action: "freeform_rebook_no_match",
@@ -874,11 +883,11 @@ async function handleFreeformWithDates(
   }
 
   // Build proposed_slots
-  const proposedSlots = allGaps.map((s, i) => ({
+  const proposedSlots = combined.map((s, i) => ({
     index: i + 1,
-    slot_id: `gap_${s.startAt}`,
-    start_at: s.startAt,
-    end_at: s.endAt,
+    slot_id: s.slot_id,
+    start_at: s.start_at,
+    end_at: s.end_at,
   }));
 
   const expiresAt = new Date(Date.now() + proposalExpiryMs).toISOString();
@@ -907,8 +916,8 @@ async function handleFreeformWithDates(
     "",
   ];
 
-  for (let i = 0; i < allGaps.length; i++) {
-    lines.push(`*${i + 1}* - ${allGaps[i].dayLabel} alle ${allGaps[i].timeLabel}`);
+  for (let i = 0; i < combined.length; i++) {
+    lines.push(`*${i + 1}* - ${combined[i].dayLabel} alle ${combined[i].timeLabel}`);
   }
 
   lines.push(

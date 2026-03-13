@@ -118,3 +118,99 @@ export async function findAvailableBackfillSlots(
 
   return finalSlots;
 }
+
+export interface BackfillDateOptions {
+  readonly dayStart: string; // ISO string — start of day/range
+  readonly dayEnd: string; // ISO string — end of day/range
+  readonly serviceName?: string;
+  readonly limit?: number;
+}
+
+/**
+ * Find cancelled appointments available for backfill on a specific date/range.
+ * Same filtering logic as findAvailableBackfillSlots but scoped to a time window.
+ */
+export async function findAvailableBackfillSlotsForDate(
+  supabase: SupabaseClient,
+  tenantId: string,
+  options: BackfillDateOptions
+): Promise<readonly AvailableBackfillSlot[]> {
+  const now = new Date();
+  const minTime = new Date(now.getTime() + MIN_LEAD_TIME_MS);
+  const limit = options.limit ?? 3;
+
+  // Use the later of minTime and dayStart
+  const effectiveStart = minTime.toISOString() > options.dayStart
+    ? minTime.toISOString()
+    : options.dayStart;
+
+  let query = supabase
+    .from("appointments")
+    .select("id, scheduled_at, duration_min, service_name, provider_name, location_name")
+    .eq("tenant_id", tenantId)
+    .in("status", ["cancelled", "no_show", "timeout"])
+    .gte("scheduled_at", effectiveStart)
+    .lt("scheduled_at", options.dayEnd)
+    .order("scheduled_at", { ascending: true })
+    .limit(limit * 3);
+
+  if (options.serviceName) {
+    query = query.eq("service_name", options.serviceName);
+  }
+
+  const { data: cancelledAppts, error } = await query;
+  if (error || !cancelledAppts || cancelledAppts.length === 0) {
+    return [];
+  }
+
+  const apptIds = cancelledAppts.map((a) => a.id);
+  const { data: activeOffers } = await supabase
+    .from("waitlist_offers")
+    .select("original_appointment_id")
+    .in("original_appointment_id", apptIds)
+    .in("status", ["pending", "accepted"]);
+
+  const blockedIds = new Set(
+    (activeOffers ?? []).map((o: { original_appointment_id: string }) => o.original_appointment_id)
+  );
+
+  const unblockedAppts = cancelledAppts.filter((a) => !blockedIds.has(a.id));
+  const finalSlots: AvailableBackfillSlot[] = [];
+
+  for (const appt of unblockedAppts) {
+    if (finalSlots.length >= limit) break;
+
+    const { data: existing } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("scheduled_at", appt.scheduled_at)
+      .not("status", "in", "(cancelled,declined,no_show,timeout)")
+      .limit(1);
+
+    if (existing && existing.length > 0) continue;
+
+    const date = new Date(appt.scheduled_at);
+    finalSlots.push({
+      appointmentId: appt.id,
+      scheduledAt: appt.scheduled_at,
+      durationMin: appt.duration_min ?? 30,
+      serviceName: appt.service_name ?? "Visita",
+      providerName: appt.provider_name ?? null,
+      locationName: appt.location_name ?? null,
+      dayLabel: date.toLocaleDateString("it-IT", {
+        timeZone: TENANT_TIMEZONE,
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }),
+      timeLabel: date.toLocaleTimeString("it-IT", {
+        timeZone: TENANT_TIMEZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    });
+  }
+
+  return finalSlots;
+}

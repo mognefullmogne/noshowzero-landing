@@ -12,6 +12,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { findAvailableBackfillSlots, type AvailableBackfillSlot } from "@/lib/backfill/find-available-slots";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -258,6 +259,65 @@ export async function findCalendarGapsForDate(
 }
 
 // ---------------------------------------------------------------------------
+// Backfill + gap combination (backfill slots get priority)
+// ---------------------------------------------------------------------------
+
+/** Unified slot for proposals — works for both backfill and calendar gaps. */
+export interface ProposedSlotData {
+  readonly slot_id: string;
+  readonly start_at: string;
+  readonly end_at: string;
+  readonly dayLabel: string;
+  readonly timeLabel: string;
+}
+
+const DEDUP_TOLERANCE_MS = 15 * 60_000; // 15 minutes
+
+/**
+ * Combine backfill slots (priority) with calendar gaps (filler).
+ * Deduplicates: a gap is dropped if its start_at is within 15 min of any backfill.
+ * Returns up to `limit` slots.
+ */
+export function combineBackfillAndGaps(
+  backfill: readonly AvailableBackfillSlot[],
+  gaps: readonly GapSlot[],
+  limit: number = 3
+): readonly ProposedSlotData[] {
+  const combined: ProposedSlotData[] = [];
+
+  // Add backfill first
+  for (const bf of backfill) {
+    if (combined.length >= limit) break;
+    combined.push({
+      slot_id: bf.appointmentId,
+      start_at: bf.scheduledAt,
+      end_at: new Date(new Date(bf.scheduledAt).getTime() + bf.durationMin * 60_000).toISOString(),
+      dayLabel: bf.dayLabel,
+      timeLabel: bf.timeLabel,
+    });
+  }
+
+  // Add non-overlapping gaps
+  const backfillTimes = backfill.map((bf) => new Date(bf.scheduledAt).getTime());
+  for (const gap of gaps) {
+    if (combined.length >= limit) break;
+    const gapMs = new Date(gap.startAt).getTime();
+    const overlaps = backfillTimes.some((bfMs) => Math.abs(gapMs - bfMs) < DEDUP_TOLERANCE_MS);
+    if (!overlaps) {
+      combined.push({
+        slot_id: `gap_${gap.startAt}`,
+        start_at: gap.startAt,
+        end_at: gap.endAt,
+        dayLabel: gap.dayLabel,
+        timeLabel: gap.timeLabel,
+      });
+    }
+  }
+
+  return combined;
+}
+
+// ---------------------------------------------------------------------------
 // Slot proposal creation + message send
 // ---------------------------------------------------------------------------
 
@@ -273,7 +333,7 @@ async function createProposalAndBuildMessage(
   patientId: string,
   firstName: string,
   serviceName: string,
-  slots: readonly GapSlot[]
+  slots: readonly ProposedSlotData[]
 ): Promise<string> {
   if (slots.length === 0) {
     // No slots available — offer freeform preference + waitlist
@@ -289,9 +349,9 @@ async function createProposalAndBuildMessage(
   // Build proposed_slots in the format expected by slot_proposals table
   const proposedSlots = slots.map((s, i) => ({
     index: i + 1,
-    slot_id: `gap_${s.startAt}`, // synthetic ID for calendar gap slots
-    start_at: s.startAt,
-    end_at: s.endAt,
+    slot_id: s.slot_id,
+    start_at: s.start_at,
+    end_at: s.end_at,
   }));
 
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -372,13 +432,22 @@ export async function generateRebookingSuggestions(
     return { message: "", suggestedSlots: [] };
   }
 
-  // Find calendar gaps — exclude the cancelled slot (patient can't make that time)
+  // 1. Find backfill slots (cancelled appointments from other patients — highest priority)
+  const backfill = await findAvailableBackfillSlots(supabase, tenantId, {
+    serviceName: cancelledAppointment.service_name,
+    limit: 3,
+  });
+
+  // 2. Find calendar gaps — exclude the cancelled slot (patient can't make that time)
   const gaps = await findCalendarGaps(
     supabase,
     tenantId,
     cancelledAppointment.duration_min,
     { excludeSlotAt: cancelledAppointment.scheduled_at }
   );
+
+  // 3. Combine: backfill first, then non-overlapping gaps
+  const combined = combineBackfillAndGaps(backfill, gaps, MAX_SLOTS);
 
   // Create proposal + build message (does NOT send — caller includes in TwiML reply)
   const messageBody = await createProposalAndBuildMessage(
@@ -388,7 +457,7 @@ export async function generateRebookingSuggestions(
     patientId,
     firstName,
     cancelledAppointment.service_name,
-    gaps
+    combined
   );
 
   return { message: messageBody, suggestedSlots: gaps };
